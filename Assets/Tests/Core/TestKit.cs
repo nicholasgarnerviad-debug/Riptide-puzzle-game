@@ -209,6 +209,7 @@ namespace Riptide.Core.Tests
     ""dailyRetryCost"": 100, ""streakFreezeCost"": 300
   },
   ""boosters"": { ""drainPump"": 150, ""bubblePop"": 100, ""newTide"": 120 },
+  ""ads"": { ""minLevelCompletions"": 8, ""minGapSeconds"": 150, ""maxPerDay"": 6 },
   ""bot"": {
     ""greedyHeuristic"": {
       ""clears"": 100, ""rescues"": 130, ""waterHeadroom"": 8, ""bumpiness"": 2,

@@ -174,6 +174,7 @@ namespace Riptide.Core
         public GreedyHeuristicWeights GreedyHeuristic { get; }
         public CoinsConfig Coins { get; }
         public BoosterPrices Boosters { get; }
+        public AdsConfig Ads { get; }
 
         public EconomyConfig(
             int pointsPerCell, int rowClearBase, int comboStartHalves, int comboStepHalves, int comboCapHalves,
@@ -184,7 +185,8 @@ namespace Riptide.Core
             DailyTuning daily,
             GreedyHeuristicWeights greedyHeuristic,
             CoinsConfig coins,
-            BoosterPrices boosters)
+            BoosterPrices boosters,
+            AdsConfig ads)
         {
             this.pointsPerCell = pointsPerCell;
             this.rowClearBase = rowClearBase;
@@ -202,6 +204,7 @@ namespace Riptide.Core
             GreedyHeuristic = greedyHeuristic ?? throw new ArgumentNullException(nameof(greedyHeuristic));
             Coins = coins ?? throw new ArgumentNullException(nameof(coins));
             Boosters = boosters ?? throw new ArgumentNullException(nameof(boosters));
+            Ads = ads ?? throw new ArgumentNullException(nameof(ads));
         }
 
         /// <summary>The mode decides survival scoring (GDD 10: Endless/Daily only).</summary>
@@ -290,6 +293,12 @@ namespace Riptide.Core
                     RequirePositive(boosters, "bubblePop"),
                     RequirePositive(boosters, "newTide"));
 
+                JsonObject ads = root.Require("ads").AsObject();
+                var adsConfig = new AdsConfig(
+                    RequireNonNegative(ads, "minLevelCompletions"),
+                    RequireNonNegative(ads, "minGapSeconds"),
+                    RequirePositive(ads, "maxPerDay"));
+
                 var coinsConfig = new CoinsConfig(
                     RequirePositive(coins, "levelCompleteBase"),
                     RequireNonNegative(coins, "levelCompletePerBand"),
@@ -327,7 +336,8 @@ namespace Riptide.Core
                     dailyTuning,
                     heuristicWeights,
                     coinsConfig,
-                    boosterPrices);
+                    boosterPrices,
+                    adsConfig);
             }
             catch (JsonParseException ex)
             {

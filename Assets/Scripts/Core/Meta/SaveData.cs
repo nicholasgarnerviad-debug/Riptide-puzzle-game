@@ -12,7 +12,7 @@ namespace Riptide.Core
     /// </summary>
     public sealed class SaveData
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public long Coins;
         public string VoyageProgress = "";
@@ -26,6 +26,11 @@ namespace Riptide.Core
         public int ChestClaims;
         public bool RemoveAds;
         public bool RecoveredFromCorruption;
+
+        // v2: interstitial cap state (GDD 6).
+        public long LastInterstitialUnixSeconds;
+        public long InterstitialDay = -1;
+        public int InterstitialsToday;
 
         public string Serialize()
         {
@@ -56,7 +61,10 @@ namespace Riptide.Core
             sb.Append("],\n");
             sb.Append($"  \"chestDay\": {ChestDay},\n");
             sb.Append($"  \"chestClaims\": {ChestClaims},\n");
-            sb.Append($"  \"removeAds\": {(RemoveAds ? "true" : "false")}\n");
+            sb.Append($"  \"removeAds\": {(RemoveAds ? "true" : "false")},\n");
+            sb.Append($"  \"lastInterstitialAt\": {LastInterstitialUnixSeconds},\n");
+            sb.Append($"  \"interstitialDay\": {InterstitialDay},\n");
+            sb.Append($"  \"interstitialsToday\": {InterstitialsToday}\n");
             sb.Append("}");
             return sb.ToString();
         }
@@ -73,10 +81,9 @@ namespace Riptide.Core
             {
                 JsonObject root = JsonParser.Parse(text!).AsObject();
                 int version = root.Require("version").AsInt();
-                if (version != CurrentVersion)
+                if (version < 1 || version > CurrentVersion)
                 {
-                    // v1 is the first schema; unknown versions get a fresh save.
-                    // Future schema bumps migrate here (contract 6D migration harness).
+                    // Unknown/future versions get a fresh save (contract 6D).
                     return null;
                 }
 
@@ -125,6 +132,14 @@ namespace Riptide.Core
                     {
                         save.DecorationsOwned.Add(id);
                     }
+                }
+
+                // v1 → v2 migration: cap state simply defaults (contract 6D harness).
+                if (version >= 2)
+                {
+                    save.LastInterstitialUnixSeconds = Math.Max(0, root.Require("lastInterstitialAt").AsLong());
+                    save.InterstitialDay = root.Require("interstitialDay").AsLong();
+                    save.InterstitialsToday = Math.Max(0, root.Require("interstitialsToday").AsInt());
                 }
 
                 return save;

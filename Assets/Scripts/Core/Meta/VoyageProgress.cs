@@ -40,6 +40,9 @@ namespace Riptide.Core
             return IsCompleted(LevelId(prevZone, prevIndex));
         }
 
+        /// <summary>Completed level count — drives the GDD 6 "none before level 8" gate.</summary>
+        public int CompletedCount => bestStars.Count;
+
         public int TotalStars
         {
             get
