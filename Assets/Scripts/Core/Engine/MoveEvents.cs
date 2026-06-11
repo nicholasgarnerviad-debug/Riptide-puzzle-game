@@ -53,6 +53,10 @@ namespace Riptide.Core
         public IReadOnlyList<int> RowsCleared { get; }
 
         public IReadOnlyList<GridPos> PetrifiedCells { get; }
+
+        /// <summary>Cells deleted by a Bubble Pop booster (GDD 5.3); empty otherwise.</summary>
+        public IReadOnlyList<GridPos> RemovedCells { get; }
+
         public IReadOnlyList<CreatureEvent> RescuedCreatures { get; }
         public IReadOnlyList<CreatureEvent> LostCreatures { get; }
         public IReadOnlyList<CreatureEvent> SpawnedCreatures { get; }
@@ -76,6 +80,7 @@ namespace Riptide.Core
             IReadOnlyList<GridPos> placedCells,
             IReadOnlyList<int> rowsCleared,
             IReadOnlyList<GridPos> petrifiedCells,
+            IReadOnlyList<GridPos> removedCells,
             IReadOnlyList<CreatureEvent> rescuedCreatures,
             IReadOnlyList<CreatureEvent> lostCreatures,
             IReadOnlyList<CreatureEvent> spawnedCreatures,
@@ -89,6 +94,7 @@ namespace Riptide.Core
             PlacedCells = placedCells ?? throw new ArgumentNullException(nameof(placedCells));
             RowsCleared = rowsCleared ?? throw new ArgumentNullException(nameof(rowsCleared));
             PetrifiedCells = petrifiedCells ?? throw new ArgumentNullException(nameof(petrifiedCells));
+            RemovedCells = removedCells ?? throw new ArgumentNullException(nameof(removedCells));
             RescuedCreatures = rescuedCreatures ?? throw new ArgumentNullException(nameof(rescuedCreatures));
             LostCreatures = lostCreatures ?? throw new ArgumentNullException(nameof(lostCreatures));
             SpawnedCreatures = spawnedCreatures ?? throw new ArgumentNullException(nameof(spawnedCreatures));

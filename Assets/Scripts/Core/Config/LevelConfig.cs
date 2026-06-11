@@ -59,6 +59,9 @@ namespace Riptide.Core
         /// <summary>GDD 3.2 endless escalation; null for static (Voyage) levels.</summary>
         public EscalationConfig? Escalation { get; }
 
+        /// <summary>GDD 5.3: Daily Riptide allows zero boosters (locked); everything else allows them.</summary>
+        public bool BoostersAllowed { get; }
+
         public LevelConfig(
             int startWaterLevel,
             int minWaterLevel,
@@ -70,7 +73,8 @@ namespace Riptide.Core
             ScoringConfig scoring,
             GoalSet goals,
             IReadOnlyList<PresetCell>? preset = null,
-            EscalationConfig? escalation = null)
+            EscalationConfig? escalation = null,
+            bool boostersAllowed = true)
         {
             if (startWaterLevel < 0 || startWaterLevel >= BoardSpec.DrownWaterLevel)
             {
@@ -121,6 +125,7 @@ namespace Riptide.Core
             Goals = goals ?? throw new ArgumentNullException(nameof(goals));
             Preset = ValidatePreset(preset ?? Array.Empty<PresetCell>(), startWaterLevel);
             Escalation = escalation;
+            BoostersAllowed = boostersAllowed;
 
             if (escalation != null && escalation.IntervalFloor > tideInterval)
             {

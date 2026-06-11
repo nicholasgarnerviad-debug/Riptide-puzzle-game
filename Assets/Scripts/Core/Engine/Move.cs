@@ -33,6 +33,31 @@ namespace Riptide.Core
         public override string ToString() => $"Place[slot {TraySlot} @ {Target}]";
     }
 
+    /// <summary>GDD 5.3 Drain Pump: waterLevel −2, floored at minWaterLevel. Recorded like any move.</summary>
+    public sealed class DrainPumpMove : Move
+    {
+        public override string ToString() => "Booster[DrainPump]";
+    }
+
+    /// <summary>GDD 5.3 Bubble Pop: removes one Block or Coral cell (creatures are never targets).</summary>
+    public sealed class BubblePopMove : Move
+    {
+        public GridPos Target { get; }
+
+        public BubblePopMove(GridPos target)
+        {
+            Target = target;
+        }
+
+        public override string ToString() => $"Booster[BubblePop @ {Target}]";
+    }
+
+    /// <summary>GDD 5.3 New Tide: rerolls the whole tray via the deterministic deal path.</summary>
+    public sealed class NewTideMove : Move
+    {
+        public override string ToString() => "Booster[NewTide]";
+    }
+
     /// <summary>Thrown when a move is illegal in the given state. Replays must never see this.</summary>
     public sealed class InvalidMoveException : InvalidOperationException
     {

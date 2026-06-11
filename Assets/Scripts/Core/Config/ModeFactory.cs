@@ -57,7 +57,8 @@ namespace Riptide.Core
                     d.IntervalFloor,
                     economy.Endless.WeightEscalationEveryPlacements,
                     d.BigWeightBonusPerStep,
-                    d.MaxEscalationSteps));
+                    d.MaxEscalationSteps),
+                boostersAllowed: false); // GDD 5.3: zero boosters in the daily (locked)
         }
     }
 }

@@ -86,8 +86,92 @@ namespace Riptide.Core
             return move switch
             {
                 PlaceMove place => ApplyPlace(state, place),
+                DrainPumpMove => ApplyDrainPump(state),
+                BubblePopMove pop => ApplyBubblePop(state, pop),
+                NewTideMove => ApplyNewTide(state),
                 _ => throw new InvalidMoveException($"Unsupported move type {move.GetType().Name}."),
             };
+        }
+
+        private static void RequireBoosters(GameState s)
+        {
+            if (!s.Config.BoostersAllowed)
+            {
+                // GDD 5.3: Daily Riptide allows zero boosters — purity of comparison (locked).
+                throw new InvalidMoveException("Boosters are disabled in this mode (GDD 5.3).");
+            }
+        }
+
+        /// <summary>GDD 5.3 Drain Pump: waterLevel −2, floored. No tide tick, no combo change.</summary>
+        private static MoveResult ApplyDrainPump(GameState s)
+        {
+            RequireBoosters(s);
+            int water = Math.Max(s.WaterLevel - 2, s.Config.MinWaterLevel);
+            int drained = s.WaterLevel - water;
+            return BuildResult(s.Config, s.CopyCells(), s.CopyTray(), water, s.TideCounter, s.Score,
+                s.ComboChain, s.RescueStreak, s.MoveCount, s.TraysDealt, s.Rng, s.Goals, s.Status,
+                s.WaterLevel, NoPos, new int[0], NoPos, NoPos, NoCreatures, NoCreatures, NoCreatures,
+                drained, false, NoTray, 0, 0, 0, 0, 0, 0);
+        }
+
+        /// <summary>GDD 5.3 Bubble Pop: deletes one Block or Coral cell anywhere (never a creature).</summary>
+        private static MoveResult ApplyBubblePop(GameState s, BubblePopMove move)
+        {
+            RequireBoosters(s);
+            Cell target = s.CellAt(move.Target.Col, move.Target.Row);
+            if (target.Kind != CellKind.Block && target.Kind != CellKind.Coral)
+            {
+                throw new InvalidMoveException($"Bubble Pop needs a block or coral cell at {move.Target}, found {target.Kind}.");
+            }
+
+            Cell[] cells = s.CopyCells();
+            cells[move.Target.Index] = Cell.Empty;
+            return BuildResult(s.Config, cells, s.CopyTray(), s.WaterLevel, s.TideCounter, s.Score,
+                s.ComboChain, s.RescueStreak, s.MoveCount, s.TraysDealt, s.Rng, s.Goals, s.Status,
+                s.WaterLevel, NoPos, new int[0], NoPos, new[] { move.Target }, NoCreatures, NoCreatures, NoCreatures,
+                0, false, NoTray, 0, 0, 0, 0, 0, 0);
+        }
+
+        /// <summary>
+        /// GDD 5.3 New Tide: a full fresh tray through the guarantee at current
+        /// escalation weights. Counts as a dealt tray (spawn cadence applies);
+        /// the new tray can exhaust the guarantee — stuck is checked.
+        /// </summary>
+        private static MoveResult ApplyNewTide(GameState s)
+        {
+            RequireBoosters(s);
+            Cell[] cells = s.CopyCells();
+            var tray = new TrayPiece?[BoardSpec.TraySize];
+            DeterministicRng rng = s.Rng;
+            int traysDealt = s.TraysDealt;
+
+            int[] weights = EscalationRules.EffectiveWeights(s.Config, s.MoveCount, out int totalWeight);
+            TrayDeal deal = Dealer.DealTrayWithGuaranteeRaw(rng, s.Config, cells, s.WaterLevel, weights, totalWeight);
+            rng = deal.Rng;
+            for (int i = 0; i < BoardSpec.TraySize; i++)
+            {
+                tray[i] = deal.Pieces[i];
+            }
+
+            traysDealt += 1;
+            CreatureEvent? spawned = null;
+            if (ShouldSpawn(s.Config, traysDealt))
+            {
+                rng = TrySpawnCreature(cells, s.WaterLevel, s.Config, rng, out spawned);
+            }
+
+            GameStatus status = PlacementValidator.AnyTrayPlacementExistsRaw(cells, s.WaterLevel, tray)
+                ? GameStatus.InProgress
+                : GameStatus.LostStuck;
+
+            IReadOnlyList<CreatureEvent> spawnedCreatures = spawned.HasValue
+                ? new[] { spawned.Value }
+                : NoCreatures;
+
+            return BuildResult(s.Config, cells, tray, s.WaterLevel, s.TideCounter, s.Score,
+                s.ComboChain, s.RescueStreak, s.MoveCount, traysDealt, rng, s.Goals, status,
+                s.WaterLevel, NoPos, new int[0], NoPos, NoPos, NoCreatures, NoCreatures, spawnedCreatures,
+                0, false, deal.Pieces, 0, 0, 0, 0, 0, 0);
         }
 
         private static MoveResult ApplyPlace(GameState s, PlaceMove move)
@@ -203,7 +287,7 @@ namespace Riptide.Core
             {
                 return BuildResult(cfg, cells, tray, water, s.TideCounter, score, comboChain, rescueStreak,
                     moveCount, traysDealt, rng, goals, GameStatus.Won, waterBefore,
-                    placed, clearedRows, NoPos, rescuedCreatures, NoCreatures, NoCreatures,
+                    placed, clearedRows, NoPos, NoPos, rescuedCreatures, NoCreatures, NoCreatures,
                     drainAmount, false, NoTray,
                     placementPoints, clearPoints, rescuePoints, 0, 0, comboHalves);
             }
@@ -267,7 +351,7 @@ namespace Riptide.Core
                 // Step-3 outcome precedes the step-4 drown check (DECISIONS.md).
                 return BuildResult(cfg, cells, tray, water, tideCounter, score, comboChain, rescueStreak,
                     moveCount, traysDealt, rng, goals, GameStatus.LostCreature, waterBefore,
-                    placed, clearedRows, petrified, rescuedCreatures, lostCreatures, NoCreatures,
+                    placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                     drainAmount, tideRose, NoTray,
                     placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves);
             }
@@ -278,7 +362,7 @@ namespace Riptide.Core
                 // No survival credit on the drowning rise.
                 return BuildResult(cfg, cells, tray, water, tideCounter, score, comboChain, rescueStreak,
                     moveCount, traysDealt, rng, goals, GameStatus.LostDrowned, waterBefore,
-                    placed, clearedRows, petrified, rescuedCreatures, lostCreatures, NoCreatures,
+                    placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                     drainAmount, tideRose, NoTray,
                     placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves);
             }
@@ -300,7 +384,7 @@ namespace Riptide.Core
                 {
                     return BuildResult(cfg, cells, tray, water, tideCounter, score, comboChain, rescueStreak,
                         moveCount, traysDealt, rng, goals, GameStatus.Won, waterBefore,
-                        placed, clearedRows, petrified, rescuedCreatures, lostCreatures, NoCreatures,
+                        placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                         drainAmount, true, NoTray,
                         placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves);
                 }
@@ -341,7 +425,7 @@ namespace Riptide.Core
 
             return BuildResult(cfg, cells, tray, water, tideCounter, score, comboChain, rescueStreak,
                 moveCount, traysDealt, rng, goals, status, waterBefore,
-                placed, clearedRows, petrified, rescuedCreatures, lostCreatures, spawnedCreatures,
+                placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, spawnedCreatures,
                 drainAmount, tideRose, dealtPieces,
                 placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves);
         }
@@ -412,6 +496,7 @@ namespace Riptide.Core
             IReadOnlyList<GridPos> placed,
             IReadOnlyList<int> clearedRows,
             IReadOnlyList<GridPos> petrified,
+            IReadOnlyList<GridPos> removed,
             IReadOnlyList<CreatureEvent> rescued,
             IReadOnlyList<CreatureEvent> lost,
             IReadOnlyList<CreatureEvent> spawnedCreatures,
@@ -431,7 +516,7 @@ namespace Riptide.Core
             var scoring = new ScoreBreakdown(placementPoints, clearPoints, rescuePoints, tideSurvivalPoints,
                 penaltyPoints, comboHalves);
 
-            var events = new MoveEvents(placed, clearedRows, petrified, rescued, lost, spawnedCreatures,
+            var events = new MoveEvents(placed, clearedRows, petrified, removed, rescued, lost, spawnedCreatures,
                 drainAmount, tideRose, water - waterBefore, dealtPieces, scoring, status);
 
             return new MoveResult(next, events);
