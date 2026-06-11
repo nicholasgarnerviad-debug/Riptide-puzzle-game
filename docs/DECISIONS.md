@@ -97,3 +97,15 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-11 · Phase 5 PlayerPrefs meta (voyage/streak/best/daily-lock) imports into the save file on first run, then PlayerPrefs is abandoned for meta · keeps testers' progress across the upgrade.
 - 2026-06-11 · creatures.json gains 3 `flavor` lines per species (24 written); decorations.json ships 20 items costed 200–2000 per §5.2 · content data validated by loaders + ContentCheck.
 - 2026-06-11 · rewarded coin-chest CAP logic (3/day) ships now in the save (claims+day), the ad behind it is Phase 7 · cap rules are pure and testable today; the button stays stubbed.
+
+## Phase 7
+
+- 2026-06-11 · **VISUAL GATE 3: OPEN, deferred by Nick** ("begin phase 7") · gates 1–3 all outstanding; gate 4 (consent/test-ads/sandbox purchase) cannot itself be deferred — it requires Nick's accounts and device.
+- 2026-06-11 · ads/analytics/IAP are built against seam interfaces with fakes; real adapters (`GoogleMobileAdsAdapter`, `FirebaseAnalyticsAdapter`, `UnityIapAdapter`) are written behind `RIPTIDE_ADMOB`/`RIPTIDE_FIREBASE`/`RIPTIDE_IAP` defines · the SDKs are not installed and need Nick's app IDs/credentials; the contract's acceptance is explicitly fakes-based, and the adapters compile+verify when the SDKs land (gate 4 prerequisite).
+- 2026-06-11 · "none before level 8" (§6) = interstitials unlock once 8 voyage levels are completed · §6 names a level without defining the predicate; completion count is robust to replays.
+- 2026-06-11 · interstitial cap numbers live in economy.json `ads` (minLevelCompletions 8, minGapSeconds 150, maxPerDay 6) · §6 values under rule 7; cap STATE (last-shown time, daily count) lives in the save.
+- 2026-06-11 · save schema bumps to v2 (adds interstitial cap state); v1 files migrate with defaults — the committed v1 fixture now exercises the 6D migration harness for real · adding required fields to v1 would have orphaned every existing save.
+- 2026-06-11 · rewarded payouts go through a `RewardedGate` latch: one payout per show, duplicate/late SDK reward callbacks ignored · the Star Ladder audit regression (§6/§7B "each pays exactly once").
+- 2026-06-11 · every ad-SDK callback is marshaled through a main-thread dispatcher before touching game state · the Star Ladder threading audit fix (§6); regression-tested by firing fake callbacks from worker threads.
+- 2026-06-11 · free-via-ad boosters (§5.3: Drain Pump and New Tide, one each per game) are per-run flags in GameFlow, not save state · "per game" scope dies with the run.
+- 2026-06-11 · the §8.5 event list is encoded as verbatim constants with a pinning test; the 7D "debug screen" is the dev-build overlay's event tail (last 20, toggle E) · a dev surface, not a player screen.

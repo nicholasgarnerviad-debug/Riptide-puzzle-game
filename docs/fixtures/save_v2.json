@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "coins": 1234,
+  "voyage": "z1-l1:3;z1-l2:2",
+  "streak": [5, 9, 1, 20617, 2945],
+  "endlessBest": 4200,
+  "dailyAttemptDay": 20617,
+  "dailyRetryUsed": true,
+  "speciesRescues": [12, 3, 0, 7, 1, 0, 2, 1],
+  "decorations": ["rock_small", "anchor"],
+  "chestDay": 20617,
+  "chestClaims": 2,
+  "removeAds": false,
+  "lastInterstitialAt": 1780000000,
+  "interstitialDay": 20617,
+  "interstitialsToday": 3
+}
