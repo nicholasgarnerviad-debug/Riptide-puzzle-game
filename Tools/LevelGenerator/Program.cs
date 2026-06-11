@@ -241,8 +241,33 @@ namespace Riptide.Tools.LevelGenerator
             int goalRoll;
             if (zone == 1 && index <= 5)
             {
+                // GDD 9 authored tutorial arc (DECISIONS.md P8):
+                // L1 place+clear · L2 tide meter · L3 first rescue · L4 drown threat
+                // (free Drain Pump demo) · L5 full rules live.
                 goalRoll = 0;
-                c.ClearRows = new[] { 1, 1, 2, 2, 3 }[index - 1];
+                switch (index)
+                {
+                    case 1:
+                        c.ClearRows = 1;
+                        c.TideInterval = 9;
+                        break;
+                    case 2:
+                        c.ClearRows = 2;
+                        break;
+                    case 3:
+                        c.RescueAll = 1;
+                        c.Preset.Add((4, 4, "creature", 0));
+                        break;
+                    case 4:
+                        c.ClearRows = 3;
+                        c.StartWater = 2;
+                        c.TideInterval = 5;
+                        break;
+                    default:
+                        c.ClearRows = 3;
+                        c.TideInterval = 7;
+                        break;
+                }
             }
             else
             {
@@ -275,7 +300,7 @@ namespace Riptide.Tools.LevelGenerator
             // Presets: creatures for rescue goals, coral from zone 3, scattered blocks from zone 2.
             var occupied = new HashSet<int>();
             int water = c.StartWater;
-            if (c.RescueAll.HasValue)
+            if (c.RescueAll.HasValue && c.Preset.Count == 0)
             {
                 for (int i = 0; i < c.RescueAll.Value; i++)
                 {

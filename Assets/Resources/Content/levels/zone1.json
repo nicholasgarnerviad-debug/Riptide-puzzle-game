@@ -4,7 +4,7 @@
     "zone": 1,
     "startWaterLevel": 1,
     "minWaterLevel": 1,
-    "tideInterval": 8,
+    "tideInterval": 9,
     "weightBand": 1,
     "parMoves": 7,
     "goals": { "clearRows": 1 },
@@ -17,8 +17,8 @@
     "minWaterLevel": 1,
     "tideInterval": 8,
     "weightBand": 1,
-    "parMoves": 7,
-    "goals": { "clearRows": 1 },
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
     "preset": []
   },
   {
@@ -28,19 +28,21 @@
     "minWaterLevel": 1,
     "tideInterval": 8,
     "weightBand": 1,
-    "parMoves": 11,
-    "goals": { "clearRows": 2 },
-    "preset": []
+    "parMoves": 19,
+    "goals": { "rescueAll": 1 },
+    "preset": [
+      { "col": 4, "row": 4, "cell": "creature", "id": 0 }
+    ]
   },
   {
     "id": "z1-l4",
     "zone": 1,
-    "startWaterLevel": 1,
-    "minWaterLevel": 1,
-    "tideInterval": 8,
+    "startWaterLevel": 2,
+    "minWaterLevel": 2,
+    "tideInterval": 5,
     "weightBand": 1,
-    "parMoves": 11,
-    "goals": { "clearRows": 2 },
+    "parMoves": 16,
+    "goals": { "clearRows": 3 },
     "preset": []
   },
   {
@@ -48,7 +50,7 @@
     "zone": 1,
     "startWaterLevel": 1,
     "minWaterLevel": 1,
-    "tideInterval": 8,
+    "tideInterval": 7,
     "weightBand": 1,
     "parMoves": 16,
     "goals": { "clearRows": 3 },
