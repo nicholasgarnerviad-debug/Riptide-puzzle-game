@@ -1,0 +1,86 @@
+{
+  "colors": {
+    "bg.abyss":        { "hex": "0A0E14" },
+    "bg.deep":         { "hex": "0E141D" },
+    "bg.surface":      { "hex": "131B27" },
+    "bg.raised":       { "hex": "1A2433" },
+    "stroke.subtle":   { "hex": "243140" },
+    "stroke.bright":   { "hex": "3A4D63" },
+    "accent.primary":  { "hex": "3EE6E0" },
+    "accent.deep":     { "hex": "1B6F8A" },
+    "glow.primary":    { "hex": "3EE6E0", "alpha": 0.35 },
+    "water.calm.top":  { "hex": "2FA8C4", "alpha": 0.55 },
+    "water.calm.btm":  { "hex": "15536B", "alpha": 0.70 },
+    "water.danger.top": { "hex": "C4452F", "alpha": 0.55 },
+    "water.danger.btm": { "hex": "6B1815", "alpha": 0.70 },
+    "water.foamLine":  { "hex": "BFE8FF", "alpha": 0.90 },
+    "positive":        { "hex": "2BB59A" },
+    "warning":         { "hex": "FFB341" },
+    "danger":          { "hex": "FF6B81" },
+    "coin":            { "hex": "FFD27A" },
+    "block.cyan":      { "hex": "3EE6E0" },
+    "block.teal":      { "hex": "2BB59A" },
+    "block.coralPink": { "hex": "FF6B81" },
+    "block.amber":     { "hex": "FFB341" },
+    "block.violet":    { "hex": "8C7BFF" },
+    "block.ice":       { "hex": "BFE8FF" },
+    "block.dead":      { "hex": "5A5F66" },
+    "text.primary":    { "hex": "EAF2F7" },
+    "text.secondary":  { "hex": "9FB1C1" },
+    "text.muted":      { "hex": "5E7081" },
+    "text.onAccent":   { "hex": "06222B" },
+    "scrim":           { "hex": "05080C", "alpha": 0.72 },
+    "board.frameBg":   { "hex": "0D1320" }
+  },
+  "type": {
+    "display": { "size": 76, "line": 84, "weight": "Bold",     "tracking": 0,    "tabular": false, "allCaps": false },
+    "title":   { "size": 48, "line": 56, "weight": "Bold",     "tracking": 0,    "tabular": false, "allCaps": false },
+    "heading": { "size": 36, "line": 44, "weight": "SemiBold", "tracking": 0,    "tabular": false, "allCaps": false },
+    "body":    { "size": 30, "line": 40, "weight": "Medium",   "tracking": 0,    "tabular": false, "allCaps": false },
+    "caption": { "size": 24, "line": 32, "weight": "Medium",   "tracking": 0,    "tabular": false, "allCaps": false },
+    "micro":   { "size": 20, "line": 26, "weight": "SemiBold", "tracking": 0.08, "tabular": false, "allCaps": true },
+    "score":   { "size": 44, "line": 48, "weight": "Bold",     "tracking": 0,    "tabular": true,  "allCaps": false }
+  },
+  "spacing": { "scale": [4, 8, 12, 16, 24, 32, 48, 64], "gutter": 48, "cardPadding": 32 },
+  "radius": { "r.s": 12, "r.m": 20, "r.l": 32, "block": 8 },
+  "motion": {
+    "durationsMs": {
+      "t.instant": 90,
+      "t.fast": 180,
+      "t.base": 260,
+      "t.screen": 340,
+      "t.rise": 350,
+      "t.drain": 450,
+      "t.drainMulti": 550,
+      "t.countUp": 180
+    },
+    "easings": {
+      "easeOutQuart":  [[0.0, 0.0, 0.0, 3.6], [1.0, 1.0, 0.05, 0.0]],
+      "easeInCubic":   [[0.0, 0.0, 0.0, 0.05], [1.0, 1.0, 3.0, 0.0]],
+      "easeOutCubic":  [[0.0, 0.0, 0.0, 3.0], [1.0, 1.0, 0.05, 0.0]],
+      "easeInOutSine": [[0.0, 0.0, 0.0, 0.0], [0.5, 0.5, 1.57, 1.57], [1.0, 1.0, 0.0, 0.0]],
+      "linear":        [[0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]]
+    },
+    "screenTransition": { "driftPx": 24, "overlapMs": 60, "staggerMs": 40, "maxStagger": 6 },
+    "reducedMotionScale": 0.5
+  },
+  "juice": {
+    "place":   { "sfx": "Place",         "haptic": "light",  "anim": "none" },
+    "clear":   { "sfx": "Clear",         "haptic": "medium", "anim": "cellPopStagger30" },
+    "deepClear": { "sfx": "ComboShine",  "haptic": "medium", "anim": "edgeGlowPulse" },
+    "drain":   { "sfx": "Drain",         "haptic": "none",   "anim": "drainRecede" },
+    "rise":    { "sfx": "Rise",          "haptic": "heavy",  "anim": "riseSurge" },
+    "rescue":  { "sfx": "Rescue",        "haptic": "light",  "anim": "swimOff" },
+    "lost":    { "sfx": "CreatureLost",  "haptic": "none",   "anim": "fadeLost" },
+    "drown":   { "sfx": "Drown",         "haptic": "none",   "anim": "musicMuffle400" },
+    "star":    { "sfx": "StarAward",     "haptic": "light",  "anim": "starFill" },
+    "streak":  { "sfx": "Streak",        "haptic": "light",  "anim": "flamePulse" }
+  },
+  "accessibility": {
+    "minTouchTargetRefPx": 120,
+    "minBodyContrast": 4.5,
+    "minLargeContrast": 3.0,
+    "minOnAccentContrast": 7.0,
+    "minBlockLuminanceStepRatio": 1.15
+  }
+}

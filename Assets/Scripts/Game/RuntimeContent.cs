@@ -38,6 +38,9 @@ namespace Riptide.Game
         public static System.Collections.Generic.IReadOnlyList<Decoration> LoadDecorations() =>
             DecorationLoader.Load(LoadText("Content/decorations"), "decorations.json");
 
+        public static UiTheme LoadTheme() =>
+            UiThemeLoader.Load(LoadText("Content/ui_theme"), "ui_theme.json");
+
         private static string LoadText(string path)
         {
             TextAsset? asset = Resources.Load<TextAsset>(path);

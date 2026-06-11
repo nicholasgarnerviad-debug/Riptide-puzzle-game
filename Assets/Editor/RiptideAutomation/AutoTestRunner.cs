@@ -31,6 +31,8 @@ namespace Riptide.EditorAutomation
             EditorApplication.update += PollTrigger;
         }
 
+        private const string RefreshTriggerPath = "Temp/riptide_refresh.txt";
+
         private static void PollTrigger()
         {
             if (EditorApplication.timeSinceStartup < nextPollTime || EditorApplication.isPlaying)
@@ -39,6 +41,16 @@ namespace Riptide.EditorAutomation
             }
 
             nextPollTime = EditorApplication.timeSinceStartup + 2.0;
+
+            // Focus-free asset refresh: external tooling drops this file instead of
+            // needing window focus + Ctrl+R (Auto Refresh is disabled on this machine).
+            if (File.Exists(RefreshTriggerPath))
+            {
+                File.Delete(RefreshTriggerPath);
+                AssetDatabase.Refresh();
+                return;
+            }
+
             if (!File.Exists(TriggerPath))
             {
                 return;
