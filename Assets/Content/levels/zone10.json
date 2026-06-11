@@ -1,0 +1,369 @@
+[
+  {
+    "id": "z10-l1",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 11,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 7, "row": 7, "cell": "coral" },
+      { "col": 1, "row": 8, "cell": "block", "id": 5 },
+      { "col": 1, "row": 6, "cell": "block", "id": 3 },
+      { "col": 6, "row": 4, "cell": "block", "id": 1 },
+      { "col": 2, "row": 7, "cell": "block", "id": 0 }
+    ]
+  },
+  {
+    "id": "z10-l2",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 13,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 2, "row": 5, "cell": "coral" },
+      { "col": 4, "row": 3, "cell": "coral" },
+      { "col": 1, "row": 6, "cell": "coral" }
+    ]
+  },
+  {
+    "id": "z10-l3",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 13,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 2, "row": 5, "cell": "coral" },
+      { "col": 7, "row": 5, "cell": "coral" },
+      { "col": 7, "row": 7, "cell": "coral" }
+    ]
+  },
+  {
+    "id": "z10-l4",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 11,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 7, "row": 6, "cell": "coral" },
+      { "col": 2, "row": 6, "cell": "coral" },
+      { "col": 5, "row": 5, "cell": "coral" },
+      { "col": 5, "row": 8, "cell": "block", "id": 3 },
+      { "col": 5, "row": 7, "cell": "block", "id": 0 },
+      { "col": 2, "row": 8, "cell": "block", "id": 2 },
+      { "col": 8, "row": 4, "cell": "block", "id": 2 }
+    ]
+  },
+  {
+    "id": "z10-l5",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 7,
+    "goals": { "clearRows": 2 },
+    "preset": [
+      { "col": 1, "row": 6, "cell": "coral" },
+      { "col": 7, "row": 8, "cell": "block", "id": 5 },
+      { "col": 1, "row": 9, "cell": "block", "id": 2 },
+      { "col": 2, "row": 7, "cell": "block", "id": 4 },
+      { "col": 1, "row": 8, "cell": "block", "id": 4 }
+    ]
+  },
+  {
+    "id": "z10-l6",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 12,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 2, "row": 4, "cell": "coral" },
+      { "col": 4, "row": 6, "cell": "coral" },
+      { "col": 1, "row": 5, "cell": "coral" },
+      { "col": 4, "row": 4, "cell": "coral" },
+      { "col": 1, "row": 3, "cell": "block", "id": 3 },
+      { "col": 0, "row": 9, "cell": "block", "id": 2 },
+      { "col": 5, "row": 5, "cell": "block", "id": 5 },
+      { "col": 6, "row": 9, "cell": "block", "id": 5 },
+      { "col": 5, "row": 7, "cell": "block", "id": 3 },
+      { "col": 7, "row": 3, "cell": "block", "id": 3 },
+      { "col": 7, "row": 9, "cell": "block", "id": 2 }
+    ]
+  },
+  {
+    "id": "z10-l7",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 8,
+    "goals": { "clearRows": 2 },
+    "preset": [
+      { "col": 7, "row": 6, "cell": "coral" },
+      { "col": 7, "row": 4, "cell": "coral" },
+      { "col": 0, "row": 3, "cell": "block", "id": 0 },
+      { "col": 0, "row": 4, "cell": "block", "id": 4 },
+      { "col": 0, "row": 9, "cell": "block", "id": 0 },
+      { "col": 6, "row": 8, "cell": "block", "id": 4 },
+      { "col": 0, "row": 7, "cell": "block", "id": 2 },
+      { "col": 7, "row": 8, "cell": "block", "id": 3 }
+    ]
+  },
+  {
+    "id": "z10-l8",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 12,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 2, "row": 7, "cell": "coral" },
+      { "col": 3, "row": 4, "cell": "coral" },
+      { "col": 2, "row": 6, "cell": "block", "id": 0 },
+      { "col": 4, "row": 5, "cell": "block", "id": 4 },
+      { "col": 6, "row": 5, "cell": "block", "id": 5 }
+    ]
+  },
+  {
+    "id": "z10-l9",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 12,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 5, "row": 7, "cell": "coral" },
+      { "col": 8, "row": 7, "cell": "coral" },
+      { "col": 3, "row": 7, "cell": "block", "id": 2 },
+      { "col": 2, "row": 6, "cell": "block", "id": 3 },
+      { "col": 0, "row": 9, "cell": "block", "id": 4 }
+    ]
+  },
+  {
+    "id": "z10-l10",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 2,
+    "goals": { "rescueAll": 1 },
+    "preset": [
+      { "col": 0, "row": 4, "cell": "creature", "id": 5 },
+      { "col": 8, "row": 7, "cell": "coral" },
+      { "col": 1, "row": 7, "cell": "coral" },
+      { "col": 6, "row": 5, "cell": "block", "id": 1 },
+      { "col": 1, "row": 3, "cell": "block", "id": 1 },
+      { "col": 3, "row": 4, "cell": "block", "id": 2 }
+    ]
+  },
+  {
+    "id": "z10-l11",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 11,
+    "goals": { "rescueAll": 1, "clearRows": 3 },
+    "preset": [
+      { "col": 8, "row": 7, "cell": "creature", "id": 2 },
+      { "col": 6, "row": 5, "cell": "coral" },
+      { "col": 4, "row": 6, "cell": "coral" },
+      { "col": 7, "row": 3, "cell": "coral" },
+      { "col": 4, "row": 5, "cell": "block", "id": 1 },
+      { "col": 4, "row": 7, "cell": "block", "id": 0 },
+      { "col": 2, "row": 3, "cell": "block", "id": 4 },
+      { "col": 7, "row": 7, "cell": "block", "id": 4 },
+      { "col": 6, "row": 4, "cell": "block", "id": 4 },
+      { "col": 2, "row": 4, "cell": "block", "id": 2 }
+    ]
+  },
+  {
+    "id": "z10-l12",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 13,
+    "goals": { "rescueAll": 1, "clearRows": 3 },
+    "preset": [
+      { "col": 3, "row": 4, "cell": "creature", "id": 1 },
+      { "col": 7, "row": 6, "cell": "coral" },
+      { "col": 7, "row": 7, "cell": "coral" }
+    ]
+  },
+  {
+    "id": "z10-l13",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 11,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 6, "row": 4, "cell": "coral" },
+      { "col": 3, "row": 5, "cell": "coral" },
+      { "col": 5, "row": 9, "cell": "block", "id": 5 },
+      { "col": 5, "row": 3, "cell": "block", "id": 2 },
+      { "col": 8, "row": 8, "cell": "block", "id": 1 },
+      { "col": 5, "row": 7, "cell": "block", "id": 2 }
+    ]
+  },
+  {
+    "id": "z10-l14",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 13,
+    "goals": { "rescueAll": 1, "clearRows": 3 },
+    "preset": [
+      { "col": 1, "row": 5, "cell": "creature", "id": 6 },
+      { "col": 5, "row": 9, "cell": "block", "id": 1 },
+      { "col": 1, "row": 4, "cell": "block", "id": 0 },
+      { "col": 2, "row": 8, "cell": "block", "id": 1 },
+      { "col": 8, "row": 4, "cell": "block", "id": 0 },
+      { "col": 6, "row": 4, "cell": "block", "id": 1 },
+      { "col": 6, "row": 5, "cell": "block", "id": 1 }
+    ]
+  },
+  {
+    "id": "z10-l15",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 7,
+    "goals": { "rescueAll": 1 },
+    "preset": [
+      { "col": 6, "row": 7, "cell": "creature", "id": 6 },
+      { "col": 1, "row": 8, "cell": "coral" },
+      { "col": 5, "row": 3, "cell": "block", "id": 2 },
+      { "col": 8, "row": 8, "cell": "block", "id": 2 },
+      { "col": 3, "row": 4, "cell": "block", "id": 5 },
+      { "col": 0, "row": 3, "cell": "block", "id": 0 },
+      { "col": 1, "row": 7, "cell": "block", "id": 3 }
+    ]
+  },
+  {
+    "id": "z10-l16",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 8,
+    "goals": { "clearRows": 2 },
+    "preset": [
+      { "col": 7, "row": 6, "cell": "coral" },
+      { "col": 3, "row": 5, "cell": "coral" },
+      { "col": 4, "row": 8, "cell": "coral" },
+      { "col": 5, "row": 8, "cell": "coral" },
+      { "col": 0, "row": 9, "cell": "block", "id": 4 },
+      { "col": 0, "row": 3, "cell": "block", "id": 4 },
+      { "col": 1, "row": 7, "cell": "block", "id": 4 },
+      { "col": 4, "row": 9, "cell": "block", "id": 0 },
+      { "col": 3, "row": 6, "cell": "block", "id": 0 },
+      { "col": 6, "row": 6, "cell": "block", "id": 2 }
+    ]
+  },
+  {
+    "id": "z10-l17",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 9,
+    "goals": { "clearRows": 2 },
+    "preset": [
+      { "col": 6, "row": 4, "cell": "coral" },
+      { "col": 6, "row": 3, "cell": "coral" },
+      { "col": 5, "row": 5, "cell": "coral" },
+      { "col": 4, "row": 7, "cell": "coral" },
+      { "col": 4, "row": 6, "cell": "block", "id": 3 }
+    ]
+  },
+  {
+    "id": "z10-l18",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 10,
+    "goals": { "clearRows": 2 },
+    "preset": [
+      { "col": 7, "row": 7, "cell": "coral" },
+      { "col": 5, "row": 5, "cell": "coral" },
+      { "col": 5, "row": 4, "cell": "block", "id": 5 },
+      { "col": 2, "row": 3, "cell": "block", "id": 5 },
+      { "col": 5, "row": 6, "cell": "block", "id": 5 }
+    ]
+  },
+  {
+    "id": "z10-l19",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 13,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 7, "row": 6, "cell": "coral" },
+      { "col": 8, "row": 6, "cell": "coral" },
+      { "col": 3, "row": 3, "cell": "coral" },
+      { "col": 2, "row": 3, "cell": "coral" },
+      { "col": 1, "row": 7, "cell": "block", "id": 0 },
+      { "col": 4, "row": 4, "cell": "block", "id": 0 },
+      { "col": 1, "row": 6, "cell": "block", "id": 0 },
+      { "col": 0, "row": 8, "cell": "block", "id": 4 },
+      { "col": 8, "row": 3, "cell": "block", "id": 5 }
+    ]
+  },
+  {
+    "id": "z10-l20",
+    "zone": 10,
+    "startWaterLevel": 3,
+    "minWaterLevel": 3,
+    "tideInterval": 5,
+    "weightBand": 10,
+    "parMoves": 11,
+    "goals": { "score": 290 },
+    "preset": [
+      { "col": 0, "row": 7, "cell": "block", "id": 0 },
+      { "col": 3, "row": 9, "cell": "block", "id": 4 },
+      { "col": 2, "row": 5, "cell": "block", "id": 5 },
+      { "col": 3, "row": 6, "cell": "block", "id": 0 },
+      { "col": 3, "row": 4, "cell": "block", "id": 0 },
+      { "col": 1, "row": 6, "cell": "block", "id": 5 },
+      { "col": 5, "row": 6, "cell": "block", "id": 2 }
+    ]
+  }
+]

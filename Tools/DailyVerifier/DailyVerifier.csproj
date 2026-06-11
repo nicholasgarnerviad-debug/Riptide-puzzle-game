@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GDD 8.3 / master prompt 3D: verifies every daily seed in a date range is
+       bot-completable before content lock. DateTime is allowed here (Tools). -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Riptide.DailyVerifier</AssemblyName>
+    <RootNamespace>Riptide.Tools.DailyVerifier</RootNamespace>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Assets\Scripts\Core\**\*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+</Project>

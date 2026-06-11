@@ -6,8 +6,8 @@
     "minWaterLevel": 1,
     "tideInterval": 8,
     "weightBand": 1,
-    "parMoves": 10,
-    "goals": { "clearRows": 2 },
+    "parMoves": 7,
+    "goals": { "clearRows": 1 },
     "preset": []
   },
   {
@@ -17,12 +17,206 @@
     "minWaterLevel": 1,
     "tideInterval": 8,
     "weightBand": 1,
-    "parMoves": 14,
-    "goals": { "rescueAll": 1 },
-    "preset": [
-      { "col": 4, "row": 2, "cell": "creature", "id": 0 },
-      { "col": 3, "row": 2, "cell": "block", "id": 1 },
-      { "col": 0, "row": 1, "cell": "coral" }
-    ]
+    "parMoves": 7,
+    "goals": { "clearRows": 1 },
+    "preset": []
+  },
+  {
+    "id": "z1-l3",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l4",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l5",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 16,
+    "goals": { "clearRows": 3 },
+    "preset": []
+  },
+  {
+    "id": "z1-l6",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l7",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l8",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l9",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l10",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l11",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l12",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l13",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l14",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l15",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l16",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l17",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l18",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l19",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l20",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 11,
+    "goals": { "clearRows": 2 },
+    "preset": []
   }
 ]
