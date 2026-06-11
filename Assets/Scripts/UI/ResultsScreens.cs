@@ -15,6 +15,7 @@ namespace Riptide.UI
         private Text coins = null!;
         private Button next = null!;
         private Button retry = null!;
+        private Button doubleCoins = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -35,9 +36,9 @@ namespace Riptide.UI
             screen.coins = UiKit.Label(root, "coins", "", 48, Palette.Blocks[3]);
             UiKit.Place(screen.coins.rectTransform, new Vector2(0.5f, 0.49f), new Vector2(700f, 90f), Vector2.zero);
 
-            Button doubleCoins = UiKit.TextButton(root, "double", flow.Strings.Get("results.doubleCoins"), 36, () => { });
-            doubleCoins.interactable = false;
-            UiKit.Place((RectTransform)doubleCoins.transform, new Vector2(0.5f, 0.39f), new Vector2(560f, 90f), Vector2.zero);
+            screen.doubleCoins = UiKit.TextButton(root, "double", flow.Strings.Get("results.doubleCoins"), 36,
+                screen.OnDoubleCoins);
+            UiKit.Place((RectTransform)screen.doubleCoins.transform, new Vector2(0.5f, 0.39f), new Vector2(560f, 90f), Vector2.zero);
 
             screen.next = UiKit.TextButton(root, "next", flow.Strings.Get("results.next"), 46,
                 screen.OnNext, UiKit.ButtonAccent);
@@ -91,6 +92,14 @@ namespace Riptide.UI
         private void OnMap() =>
             flow.GoTo(flow.LastOutcome!.Mode == GameMode.Endless ? FlowScreen.Home : FlowScreen.ZoneMap);
 
+        private void OnDoubleCoins()
+        {
+            if (flow.TryDoubleCoinsViaAd())
+            {
+                Refresh();
+            }
+        }
+
         public void Refresh()
         {
             RunOutcome? outcome = flow.LastOutcome;
@@ -113,6 +122,9 @@ namespace Riptide.UI
                 retry.gameObject.SetActive(false);
                 return;
             }
+
+            doubleCoins.gameObject.SetActive(outcome.Won && outcome.CoinsAwarded > 0 && !outcome.DoubledClaimed);
+            doubleCoins.interactable = flow.Ads != null && flow.Ads.RewardedAvailable && !outcome.DoubledClaimed;
 
             retry.gameObject.SetActive(true);
             next.GetComponentInChildren<Text>().text = flow.Strings.Get("results.next");
@@ -219,8 +231,8 @@ namespace Riptide.UI
 
         private void OnRetry()
         {
-            // GDD 3.3 retry hook — the rewarded ad arrives in Phase 7; the stub grants it.
-            flow.StartDaily(isRetry: true);
+            // GDD 3.3: the retry rides a rewarded ad (fake pays instantly in editor).
+            flow.TryDailyRetryViaAd();
         }
 
         private void OnRetryWithCoins()

@@ -12,17 +12,21 @@ namespace Riptide.UI
     public sealed class DebugOverlay : MonoBehaviour
     {
         private GameStore store = null!;
+        private AnalyticsService? analytics;
         private ulong seed;
         private bool visible = true;
+        private bool eventsVisible;
         private float fpsSmoothed;
 
-        public static DebugOverlay Create(Transform parent, GameStore store, ulong seed)
+        public static DebugOverlay Create(Transform parent, GameStore store, ulong seed,
+            AnalyticsService? analytics = null)
         {
             var go = new GameObject("DebugOverlay");
             go.transform.SetParent(parent, false);
             var overlay = go.AddComponent<DebugOverlay>();
             overlay.store = store;
             overlay.seed = seed;
+            overlay.analytics = analytics;
             return overlay;
         }
 
@@ -33,6 +37,12 @@ namespace Riptide.UI
             if (Keyboard.current != null && Keyboard.current.dKey.wasPressedThisFrame)
             {
                 visible = !visible;
+            }
+
+            // Contract 7D: the last-20-events debug surface (toggle E).
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                eventsVisible = !eventsVisible;
             }
         }
 
@@ -51,6 +61,17 @@ namespace Riptide.UI
                 $"moves {state.MoveCount}  score {state.Score}\n" +
                 $"status {state.Status}  fps {fpsSmoothed:F0}";
             GUI.Label(new Rect(8, 8, 360, 110), text);
+
+            if (eventsVisible && analytics != null)
+            {
+                var sb = new System.Text.StringBuilder("-- last events (E) --\n");
+                foreach (string entry in analytics.LastEvents)
+                {
+                    sb.AppendLine(entry);
+                }
+
+                GUI.Label(new Rect(8, 130, 700, 460), sb.ToString());
+            }
         }
     }
 }

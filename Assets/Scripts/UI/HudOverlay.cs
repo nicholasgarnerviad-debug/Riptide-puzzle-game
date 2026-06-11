@@ -21,6 +21,8 @@ namespace Riptide.UI
         private Button drainButton = null!;
         private Button popButton = null!;
         private Button rerollButton = null!;
+        private Button freeDrain = null!;
+        private Button freeReroll = null!;
         private bool popArmed;
         private bool pointerWasDown;
 
@@ -51,6 +53,14 @@ namespace Riptide.UI
             UiKit.Place((RectTransform)hud.popButton.transform, new Vector2(0.86f, 0.150f), new Vector2(250f, 80f), Vector2.zero);
             hud.rerollButton = UiKit.TextButton(root, "reroll", "", 28, () => hud.UseSimpleBooster(BoosterKind.NewTide));
             UiKit.Place((RectTransform)hud.rerollButton.transform, new Vector2(0.86f, 0.095f), new Vector2(250f, 80f), Vector2.zero);
+
+            // GDD 5.3: one free Drain Pump and one free New Tide per game via rewarded ad.
+            hud.freeDrain = UiKit.TextButton(root, "freeDrain", "▶ ad", 24,
+                () => { flow.TryFreeBoosterViaAd(BoosterKind.DrainPump); hud.RefreshFromState(); });
+            UiKit.Place((RectTransform)hud.freeDrain.transform, new Vector2(0.965f, 0.205f), new Vector2(90f, 80f), Vector2.zero);
+            hud.freeReroll = UiKit.TextButton(root, "freeReroll", "▶ ad", 24,
+                () => { flow.TryFreeBoosterViaAd(BoosterKind.NewTide); hud.RefreshFromState(); });
+            UiKit.Place((RectTransform)hud.freeReroll.transform, new Vector2(0.965f, 0.095f), new Vector2(90f, 80f), Vector2.zero);
 
             hud.popHint = UiKit.Label(root, "popHint", flow.Strings.Get("booster.popHint"), 32, Palette.MeterDanger);
             UiKit.Place(hud.popHint.rectTransform, new Vector2(0.5f, 0.91f), new Vector2(800f, 60f), Vector2.zero);
@@ -169,6 +179,9 @@ namespace Riptide.UI
                 popButton.interactable = flow.CanUseBooster(BoosterKind.BubblePop);
                 rerollButton.interactable = flow.CanUseBooster(BoosterKind.NewTide);
             }
+
+            freeDrain.gameObject.SetActive(boosters && flow.FreeBoosterAvailable(BoosterKind.DrainPump));
+            freeReroll.gameObject.SetActive(boosters && flow.FreeBoosterAvailable(BoosterKind.NewTide));
 
             var sb = new StringBuilder();
             GoalSet goalSet = state.Config.Goals;

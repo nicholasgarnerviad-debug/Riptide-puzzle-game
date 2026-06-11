@@ -46,6 +46,11 @@ namespace Riptide.UI
                 () => flow.GoTo(FlowScreen.Settings));
             UiKit.Place((RectTransform)settings.transform, new Vector2(0.5f, 0.10f), new Vector2(400f, 90f), Vector2.zero);
 
+            // GDD 6: rewarded coin chest, capped 3/day by the save.
+            Button chest = UiKit.TextButton(root, "chest", flow.Strings.Get("home.chest"), 32,
+                () => { flow.TryClaimChestViaAd(); screen.Refresh(); });
+            UiKit.Place((RectTransform)chest.transform, new Vector2(0.85f, 0.10f), new Vector2(260f, 90f), Vector2.zero);
+
             screen.Refresh();
             return root;
         }
@@ -178,12 +183,12 @@ namespace Riptide.UI
             UiKit.Place((RectTransform)haptics.transform, new Vector2(0.5f, 0.60f), new Vector2(640f, 110f), Vector2.zero);
             screen.hapticsLabel = haptics.GetComponentInChildren<Text>();
 
-            Button consent = UiKit.TextButton(root, "consent", flow.Strings.Get("settings.consent"), 38, () => { });
-            consent.interactable = false;
+            Button consent = UiKit.TextButton(root, "consent", flow.Strings.Get("settings.consent"), 38,
+                () => flow.Consent?.Reopen());
             UiKit.Place((RectTransform)consent.transform, new Vector2(0.5f, 0.48f), new Vector2(640f, 100f), Vector2.zero);
 
-            Button restore = UiKit.TextButton(root, "restore", flow.Strings.Get("settings.restore"), 38, () => { });
-            restore.interactable = false;
+            Button restore = UiKit.TextButton(root, "restore", flow.Strings.Get("settings.restore"), 38,
+                () => flow.Iap?.Restore());
             UiKit.Place((RectTransform)restore.transform, new Vector2(0.5f, 0.37f), new Vector2(640f, 100f), Vector2.zero);
 
             Button privacy = UiKit.TextButton(root, "privacy", flow.Strings.Get("settings.privacy"), 38,
@@ -376,7 +381,7 @@ namespace Riptide.UI
 
         private void OnBuy(Decoration deco)
         {
-            if (flow.Meta.TryBuyDecoration(deco))
+            if (flow.TryBuyDecoration(deco))
             {
                 Refresh();
             }

@@ -43,6 +43,36 @@ namespace Riptide.UI
             meta.Load();
 
             var flow = new GameFlow(economy, roster, strings, meta);
+
+            // GDD 7: monetization services — fakes until the SDK defines are on (DECISIONS.md).
+            MainThreadDispatcher.Ensure();
+            var analytics = new AnalyticsService();
+#if RIPTIDE_FIREBASE
+            analytics.AddSink(new FirebaseAnalyticsSink());
+#endif
+#if RIPTIDE_ADMOB
+            IConsentProvider consentProvider = new UmpConsentProvider();
+            // Google's published TEST ad units; swap for prod ids at release (GDD 6).
+            IAdSdk adSdk = new GoogleMobileAdsAdapter(
+                "ca-app-pub-3940256099942544/1033173712",
+                "ca-app-pub-3940256099942544/5224354917");
+#else
+            IConsentProvider consentProvider = new FakeConsentProvider();
+            IAdSdk adSdk = new FakeAdSdk();
+#endif
+            var consent = new ConsentService(consentProvider);
+            var ads = new AdService(adSdk, consent, meta, economy.Ads, analytics);
+#if RIPTIDE_IAP
+            IIapSdk iapSdk = new UnityIapAdapter();
+#else
+            IIapSdk iapSdk = new FakeIapSdk();
+#endif
+            var iap = new IapService(iapSdk, meta, analytics);
+            flow.AttachServices(analytics, consent, ads, iap);
+
+            // GDD 7A: consent resolves BEFORE any ad init (AdService listens).
+            consent.Request();
+
             ScreenManager screens = ScreenManager.Create(root.transform, flow, instantAnimations);
             return (flow, screens);
         }
