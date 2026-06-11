@@ -29,6 +29,12 @@ namespace Riptide.Game
             return ModeFactory.Daily(economy, LoadCreatures().Count);
         }
 
+        public static StringTable LoadStrings() =>
+            StringsLoader.Load(LoadText("Content/strings"), "strings.json");
+
+        public static System.Collections.Generic.IReadOnlyList<LevelDef> LoadZone(int zone, EconomyConfig economy) =>
+            LevelDefLoader.LoadZone(LoadText($"Content/levels/zone{zone}"), $"zone{zone}.json", economy);
+
         private static string LoadText(string path)
         {
             TextAsset? asset = Resources.Load<TextAsset>(path);
