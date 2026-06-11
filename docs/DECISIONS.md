@@ -83,3 +83,17 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-11 · daily attempt-lock and streak persist via PlayerPrefs JSON in Phase 5; the versioned save file (Phase 6) absorbs them · contract 5D needs working streaks one phase before the save system exists.
 - 2026-06-11 · screens are code-built uGUI (legacy Text, no TMP) following the Phase 4 no-authored-assets rule · TMP would drag in asset dependencies; legacy Text ships in com.unity.ugui.
 - 2026-06-11 · string assertions over emoji must be ordinal · caught live: Unity's Mono runs culture-sensitive IndexOf in NUnit's Does.Contain and treats emoji as ignorable — a "not contains 🐙" check passed on CoreCLR and failed on Mono; ordinal IndexOf is exact on both.
+- 2026-06-11 · **VISUAL GATE 2: OPEN, deferred by Nick** ("go" without checklist) · gates 1+2 now both ride on gate 3; the playthrough debt is accumulating and is called out in the phase report.
+
+## Phase 6
+
+- 2026-06-11 · `GameState.MoveCount` counts PLACEMENTS only; booster moves never increment it · stars/par (§3.1) and weight escalation (§3.2 "every 25 placements") are placement-semantics, and the Phase 2 golden hashes stay valid without a rule-5 STOP; the replay move list itself carries total length.
+- 2026-06-11 · booster moves never advance the tide counter and never touch the combo chain · §2.2 ticks "placing a piece"; boosters are the pressure valve (§13), and punishing combo or tide for using one defeats the purpose.
+- 2026-06-11 · Bubble Pop may target any Block or Coral cell, including submerged coral; never a creature or empty cell · §5.3 says "any 1 block or coral cell"; freeing drowned rows is exactly the §13 death-spiral valve.
+- 2026-06-11 · New Tide deals a full fresh tray of 3 (not just unplaced slots) through the §2.4 guarantee at current escalation weights · "reroll entire tray" read player-positively; the deal can exhaust → legitimate stuck, checked.
+- 2026-06-11 · coins live OUTSIDE GameState — the sim validates booster legality (config `BoostersAllowed`), the Game layer checks/spends the wallet before dispatch · replays of recorded move lists must reproduce without a wallet (§5.3 "recorded in the move list, so replays stay deterministic").
+- 2026-06-11 · booster prices live in economy.json `boosters` block (drainPump 150, bubblePop 100, newTide 120 per §5.3) · rule 7.
+- 2026-06-11 · save file v1: single JSON at persistentDataPath, atomic temp-file swap, any parse/shape error → fresh save + pending analytics flag, never a crash · contract 6D; the serializer/parser pair is pure Core (dotnet-testable), IO is a thin Game wrapper.
+- 2026-06-11 · Phase 5 PlayerPrefs meta (voyage/streak/best/daily-lock) imports into the save file on first run, then PlayerPrefs is abandoned for meta · keeps testers' progress across the upgrade.
+- 2026-06-11 · creatures.json gains 3 `flavor` lines per species (24 written); decorations.json ships 20 items costed 200–2000 per §5.2 · content data validated by loaders + ContentCheck.
+- 2026-06-11 · rewarded coin-chest CAP logic (3/day) ships now in the save (claims+day), the ad behind it is Phase 7 · cap rules are pure and testable today; the button stays stubbed.
