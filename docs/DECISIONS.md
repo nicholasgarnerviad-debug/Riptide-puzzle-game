@@ -109,3 +109,14 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-11 · every ad-SDK callback is marshaled through a main-thread dispatcher before touching game state · the Star Ladder threading audit fix (§6); regression-tested by firing fake callbacks from worker threads.
 - 2026-06-11 · free-via-ad boosters (§5.3: Drain Pump and New Tide, one each per game) are per-run flags in GameFlow, not save state · "per game" scope dies with the run.
 - 2026-06-11 · the §8.5 event list is encoded as verbatim constants with a pinning test; the 7D "debug screen" is the dev-build overlay's event tail (last 20, toggle E) · a dev surface, not a player screen.
+
+## Phase 8
+
+- 2026-06-11 · **VISUAL GATE 4: OPEN** — SDKs not yet installed by Nick; the fakes path is what "go" continued from · gates 1–4 ride on gate 5, which is the ship gate and cannot be deferred.
+- 2026-06-11 · all 12 SFX + 2 music loops are procedurally synthesized in code (sine/noise envelopes) — no third-party audio · zero licensing burden, fits the no-authored-assets pattern; `Assets/Audio/CREDITS.md` documents provenance; swap for licensed audio is a data change later.
+- 2026-06-11 · haptics v1 = `Handheld.Vibrate()` uniformly for light/medium/heavy on Android · intensity tiers need a native plugin (out of v1 scope); hooks are tiered in code so the upgrade is a one-class swap.
+- 2026-06-11 · tutorial levels: the generator special-cases z1 L1–5 to the GDD 9 authored arc (rows-1 intro, rows-2, first rescue w/ preset creature, drown-threat level with a free tutorial Drain Pump, full-rules level) · the generated zone-1 recipe was contractually easy but pedagogically empty; pars still bot-computed.
+- 2026-06-11 · the tutorial's free Drain Pump is a flow grant (no ad, no coins, analytics source "tutorial") consumed on use · GDD 9: "first real drown threat + free Drain Pump demo".
+- 2026-06-11 · monkey test = 50 full runs through the real app stack (flow, screens, views rendering, store dispatch, random boosters) with instant animations; Unity's test runner fails on any exception/error log · "drives the real UI" interpreted as the full live stack; synthetic pointer-event injection would test the OS input path, not the game.
+- 2026-06-11 · Android build: IL2CPP + ARM64, minSdk 24, **targetSdk = Auto (highest installed)** — Play's current target-API floor must be confirmed by Nick at upload ("verify, don't assume", and I cannot browse) · bundle id placeholder `com.riptide.game` and 0.1.0/code 1; the AAB is debug-signed — Play upload signing is Nick's keystore step.
+- 2026-06-11 · app icon = generated wave-glyph PNG written into Assets and assigned via the build script (the "icon hook"); replaced by branded art whenever it exists · same provenance rule as audio.
