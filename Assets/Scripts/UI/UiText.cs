@@ -23,7 +23,10 @@ namespace Riptide.UI
                     return cachedFont;
                 }
 
-                TMP_FontAsset? fromSettings = TMP_Settings.defaultFontAsset;
+                // TMP_Settings.defaultFontAsset dereferences instance without a null
+                // check; on a project without the TMP essentials asset it throws.
+                TMP_FontAsset? fromSettings =
+                    TMP_Settings.instance != null ? TMP_Settings.defaultFontAsset : null;
                 if (fromSettings != null)
                 {
                     cachedFont = fromSettings;

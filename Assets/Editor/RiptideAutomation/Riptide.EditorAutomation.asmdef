@@ -5,6 +5,7 @@
         "UnityEditor.TestRunner",
         "UnityEngine.TestRunner",
         "Riptide.UI",
+        "Riptide.Core",
         "UnityEngine.UI"
     ],
     "includePlatforms": [
