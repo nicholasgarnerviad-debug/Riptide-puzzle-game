@@ -1,0 +1,17 @@
+{
+    "name": "Riptide.UI",
+    "rootNamespace": "Riptide.UI",
+    "references": [
+        "Riptide.Game",
+        "Riptide.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
