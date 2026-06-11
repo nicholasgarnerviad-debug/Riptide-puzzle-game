@@ -6,7 +6,8 @@
         "UnityEditor.TestRunner",
         "Riptide.Core",
         "Riptide.Game",
-        "Riptide.UI"
+        "Riptide.UI",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
