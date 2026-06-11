@@ -105,3 +105,11 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# --- Riptide additions ---
+# dotnet console tools (test shim, generators): keep sources, drop build output.
+# The Tools csproj files are hand-written infrastructure, not Unity-generated --
+# re-include them past the global *.csproj ignore above.
+[Tt]ools/**/[Bb]in/
+[Tt]ools/**/[Oo]bj/
+!Tools/**/*.csproj
