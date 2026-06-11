@@ -41,6 +41,17 @@ namespace Riptide.Core
         /// <summary>Cosmetic palette size for dealt block colors (GDD 7.1 ships 6).</summary>
         public int DealColorCount { get; }
 
+        /// <summary>
+        /// GDD 2.4/3.1: weighted-bag weights, one per PieceId in catalog order.
+        /// Zero removes a piece from the bag. Balance data — injected, never defaulted.
+        /// </summary>
+        public IReadOnlyList<int> PieceWeights => pieceWeights;
+
+        private readonly int[] pieceWeights;
+
+        internal int[] PieceWeightsView => pieceWeights;
+        internal int TotalPieceWeight { get; }
+
         public ScoringConfig Scoring { get; }
         public GoalSet Goals { get; }
         public IReadOnlyList<PresetCell> Preset { get; }
@@ -52,6 +63,7 @@ namespace Riptide.Core
             int creatureSpawnIntervalTrays,
             int creatureSpeciesCount,
             int dealColorCount,
+            IReadOnlyList<int> pieceWeights,
             ScoringConfig scoring,
             GoalSet goals,
             IReadOnlyList<PresetCell>? preset = null)
@@ -70,7 +82,31 @@ namespace Riptide.Core
             if (creatureSpawnIntervalTrays < 0) throw new ArgumentOutOfRangeException(nameof(creatureSpawnIntervalTrays));
             if (creatureSpeciesCount < 1) throw new ArgumentOutOfRangeException(nameof(creatureSpeciesCount));
             if (dealColorCount < 1) throw new ArgumentOutOfRangeException(nameof(dealColorCount));
+            if (pieceWeights == null) throw new ArgumentNullException(nameof(pieceWeights));
+            if (pieceWeights.Count != PieceCatalog.PieceCount)
+            {
+                throw new ArgumentException($"Need {PieceCatalog.PieceCount} piece weights, got {pieceWeights.Count}.", nameof(pieceWeights));
+            }
 
+            this.pieceWeights = new int[PieceCatalog.PieceCount];
+            int totalWeight = 0;
+            for (int i = 0; i < pieceWeights.Count; i++)
+            {
+                if (pieceWeights[i] < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(pieceWeights), $"Weight for {(PieceId)i} is negative.");
+                }
+
+                this.pieceWeights[i] = pieceWeights[i];
+                totalWeight += pieceWeights[i];
+            }
+
+            if (totalWeight < 1)
+            {
+                throw new ArgumentException("Piece weights must sum to at least 1.", nameof(pieceWeights));
+            }
+
+            TotalPieceWeight = totalWeight;
             StartWaterLevel = startWaterLevel;
             MinWaterLevel = minWaterLevel;
             TideInterval = tideInterval;

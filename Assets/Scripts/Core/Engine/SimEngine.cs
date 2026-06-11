@@ -49,7 +49,9 @@ namespace Riptide.Core
             }
 
             DeterministicRng rng = DeterministicRng.FromSeed(seed);
-            TrayDeal deal = Dealer.DealTray(rng, config);
+
+            // GDD 2.4: the guarantee applies at every deal time, including tray #1.
+            TrayDeal deal = Dealer.DealTrayWithGuaranteeRaw(rng, config, cells, config.StartWaterLevel);
             rng = deal.Rng;
             var tray = new TrayPiece?[BoardSpec.TraySize];
             for (int i = 0; i < BoardSpec.TraySize; i++)
@@ -306,7 +308,8 @@ namespace Riptide.Core
             CreatureEvent? spawned = null;
             if (tray[0] == null && tray[1] == null && tray[2] == null)
             {
-                TrayDeal deal = Dealer.DealTray(rng, cfg);
+                // GDD 2.4: refills carry the guarantee with deterministic redraws.
+                TrayDeal deal = Dealer.DealTrayWithGuaranteeRaw(rng, cfg, cells, water);
                 rng = deal.Rng;
                 for (int i = 0; i < BoardSpec.TraySize; i++)
                 {

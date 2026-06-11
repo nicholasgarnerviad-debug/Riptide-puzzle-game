@@ -23,6 +23,18 @@ namespace Riptide.Core.Tests
             tideSurvivalStep: 5,
             awardTideSurvival: awardTideSurvival);
 
+        /// <summary>Uniform weights: bit-identical RNG stream to the Phase 1 NextInt(20) deal.</summary>
+        public static int[] UniformWeights()
+        {
+            var weights = new int[PieceCatalog.PieceCount];
+            for (int i = 0; i < weights.Length; i++)
+            {
+                weights[i] = 1;
+            }
+
+            return weights;
+        }
+
         public static LevelConfig Config(
             int startWater = 1,
             int? minWater = null,
@@ -32,7 +44,8 @@ namespace Riptide.Core.Tests
             int colorCount = 6,
             GoalSet? goals = null,
             bool awardTideSurvival = false,
-            IReadOnlyList<PresetCell>? preset = null)
+            IReadOnlyList<PresetCell>? preset = null,
+            IReadOnlyList<int>? pieceWeights = null)
         {
             return new LevelConfig(
                 startWater,
@@ -41,6 +54,7 @@ namespace Riptide.Core.Tests
                 spawnEveryTrays,
                 speciesCount,
                 colorCount,
+                pieceWeights ?? UniformWeights(),
                 GddScoring(awardTideSurvival),
                 goals ?? GoalSet.None,
                 preset);
