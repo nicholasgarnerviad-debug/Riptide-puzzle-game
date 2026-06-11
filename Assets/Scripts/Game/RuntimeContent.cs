@@ -35,6 +35,9 @@ namespace Riptide.Game
         public static System.Collections.Generic.IReadOnlyList<LevelDef> LoadZone(int zone, EconomyConfig economy) =>
             LevelDefLoader.LoadZone(LoadText($"Content/levels/zone{zone}"), $"zone{zone}.json", economy);
 
+        public static System.Collections.Generic.IReadOnlyList<Decoration> LoadDecorations() =>
+            DecorationLoader.Load(LoadText("Content/decorations"), "decorations.json");
+
         private static string LoadText(string path)
         {
             TextAsset? asset = Resources.Load<TextAsset>(path);

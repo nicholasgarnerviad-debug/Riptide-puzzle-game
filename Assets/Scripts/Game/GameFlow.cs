@@ -24,6 +24,13 @@ namespace Riptide.Game
         Daily,
     }
 
+    public enum BoosterKind
+    {
+        DrainPump,
+        BubblePop,
+        NewTide,
+    }
+
     /// <summary>Everything the results screens need, computed once when a run ends.</summary>
     public sealed class RunOutcome
     {
@@ -78,6 +85,76 @@ namespace Riptide.Game
             Roster = roster;
             Strings = strings;
             Meta = meta;
+        }
+
+        private IReadOnlyList<Decoration>? decorations;
+
+        public IReadOnlyList<Decoration> Decorations =>
+            decorations ??= RuntimeContent.LoadDecorations();
+
+        public int BoosterCost(BoosterKind kind) => kind switch
+        {
+            BoosterKind.DrainPump => Economy.Boosters.DrainPump,
+            BoosterKind.BubblePop => Economy.Boosters.BubblePop,
+            _ => Economy.Boosters.NewTide,
+        };
+
+        public bool CanUseBooster(BoosterKind kind) =>
+            Store != null
+            && !Store.State.Status.IsTerminal()
+            && Store.State.Config.BoostersAllowed
+            && Meta.CanAfford(BoosterCost(kind));
+
+        /// <summary>
+        /// GDD 5.3 buy-and-use: the coin spend happens only after the sim accepts
+        /// the move (an invalid Bubble Pop target costs nothing).
+        /// </summary>
+        public bool TryUseBooster(BoosterKind kind, GridPos? target = null)
+        {
+            if (!CanUseBooster(kind))
+            {
+                return false;
+            }
+
+            if (kind == BoosterKind.BubblePop && !target.HasValue)
+            {
+                return false;
+            }
+
+            Move move = kind switch
+            {
+                BoosterKind.DrainPump => new DrainPumpMove(),
+                BoosterKind.BubblePop => new BubblePopMove(target ?? default),
+                _ => new NewTideMove(),
+            };
+
+            try
+            {
+                if (!Store!.TryDispatch(move))
+                {
+                    return false;
+                }
+            }
+            catch (InvalidMoveException)
+            {
+                return false;
+            }
+
+            Meta.TrySpendCoins(BoosterCost(kind));
+            Meta.SaveNow();
+            return true;
+        }
+
+        /// <summary>GDD 5.2: the daily retry can be paid with coins instead of the (stub) ad.</summary>
+        public bool StartDailyRetryWithCoins()
+        {
+            if (!Meta.DailyRetryAvailable() || !Meta.TrySpendCoins(Economy.Coins.DailyRetryCost))
+            {
+                return false;
+            }
+
+            Meta.SaveNow();
+            return StartDaily(isRetry: true);
         }
 
         public IReadOnlyList<LevelDef> ZoneLevels(int zone)
@@ -170,6 +247,12 @@ namespace Riptide.Game
 
         private void OnMoveApplied(Move move, MoveResult result)
         {
+            // GDD 5.1: lifetime rescue counters feed the Tidepool, every mode.
+            if (result.Events.RescuedCreatures.Count > 0)
+            {
+                Meta.RecordRescues(result.Events.RescuedCreatures, Roster.Count);
+            }
+
             if (Mode == GameMode.Daily)
             {
                 foreach (CreatureEvent rescue in result.Events.RescuedCreatures)
@@ -218,6 +301,12 @@ namespace Riptide.Game
                     break;
             }
 
+            if (outcome.CoinsAwarded > 0)
+            {
+                Meta.EarnCoins(outcome.CoinsAwarded);
+            }
+
+            Meta.SaveNow();
             LastOutcome = outcome;
         }
 

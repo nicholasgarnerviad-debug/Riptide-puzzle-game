@@ -1,21 +1,17 @@
 using System;
 using Riptide.Core;
-using UnityEngine;
 
 namespace Riptide.Game
 {
     /// <summary>
-    /// Phase 5 persistence shim over PlayerPrefs (DECISIONS.md: absorbed by the
-    /// versioned save file in Phase 6). Also the app's single source of "today" —
-    /// injectable so flow tests can travel in time.
+    /// All meta state behind one API, backed by the versioned save file (Phase 6;
+    /// the Phase 5 PlayerPrefs shim is imported once by SaveStore). Also the
+    /// single source of "today" — injectable so flow tests can travel in time.
     /// </summary>
     public sealed class MetaServices
     {
-        private const string VoyageKey = "riptide.voyage";
-        private const string StreakKey = "riptide.streak";
-        private const string EndlessBestKey = "riptide.endless.best";
-        private const string DailyAttemptDayKey = "riptide.daily.attemptDay";
-        private const string DailyRetryUsedKey = "riptide.daily.retryUsed";
+        private readonly SaveStore store;
+        private CoinWallet wallet;
 
         /// <summary>Tests override this; production uses the device clock.</summary>
         public Func<long> TodayEpochDay = () =>
@@ -25,100 +21,150 @@ namespace Riptide.Game
         };
 
         public VoyageProgress Voyage { get; private set; } = new VoyageProgress();
-        public StreakState Streak { get; private set; } = StreakState.Empty;
 
-        public long EndlessBest
+        public MetaServices(SaveStore? saveStore = null)
         {
-            get => long.TryParse(PlayerPrefs.GetString(EndlessBestKey, "0"), out long best) ? best : 0;
-            private set => PlayerPrefs.SetString(EndlessBestKey, value.ToString());
+            store = saveStore ?? new SaveStore();
+            wallet = new CoinWallet(0);
         }
+
+        public SaveData Save => store.Data;
+
+        public bool RecoveredFromCorruption => store.RecoveredFromCorruption;
+
+        public long Coins => wallet.Balance;
+
+        public StreakState Streak => store.Data.Streak;
+
+        public long EndlessBest => store.Data.EndlessBest;
 
         public void Load()
         {
-            Voyage = VoyageProgress.Deserialize(PlayerPrefs.GetString(VoyageKey, ""));
-            Streak = DeserializeStreak(PlayerPrefs.GetString(StreakKey, ""));
+            store.Load();
+            Voyage = VoyageProgress.Deserialize(store.Data.VoyageProgress);
+            wallet = new CoinWallet(Math.Max(0, store.Data.Coins));
         }
+
+        public void SaveNow()
+        {
+            store.Data.VoyageProgress = Voyage.Serialize();
+            store.Data.Coins = Coins;
+            store.Save();
+        }
+
+        // ---------------- coins (GDD 5.2) ----------------
+
+        public void EarnCoins(int amount)
+        {
+            if (amount > 0)
+            {
+                wallet.Earn(amount);
+            }
+        }
+
+        public bool CanAfford(int cost) => wallet.CanAfford(cost);
+
+        public bool TrySpendCoins(int cost) => wallet.TrySpend(cost);
+
+        // ---------------- voyage ----------------
 
         public void RecordLevelResult(string levelId, int stars)
         {
             Voyage.Record(levelId, stars);
-            PlayerPrefs.SetString(VoyageKey, Voyage.Serialize());
-            PlayerPrefs.Save();
+            SaveNow();
         }
 
-        /// <summary>Returns true (and the new state) when the endless score beats the best.</summary>
+        // ---------------- endless ----------------
+
         public bool RecordEndlessScore(long score)
         {
-            if (score <= EndlessBest)
+            if (score <= store.Data.EndlessBest)
             {
                 return false;
             }
 
-            EndlessBest = score;
-            PlayerPrefs.Save();
+            store.Data.EndlessBest = score;
+            SaveNow();
             return true;
         }
 
-        public bool CanAttemptDailyToday()
-        {
-            long today = TodayEpochDay();
-            return GetDailyAttemptDay() != today;
-        }
+        // ---------------- daily (GDD 3.3) ----------------
 
-        public bool DailyRetryAvailable()
-        {
-            long today = TodayEpochDay();
-            return GetDailyAttemptDay() == today && PlayerPrefs.GetInt(DailyRetryUsedKey, 0) == 0;
-        }
+        public bool CanAttemptDailyToday() => store.Data.DailyAttemptDay != TodayEpochDay();
+
+        public bool DailyRetryAvailable() =>
+            store.Data.DailyAttemptDay == TodayEpochDay() && !store.Data.DailyRetryUsed;
 
         public void RecordDailyAttempt()
         {
-            PlayerPrefs.SetString(DailyAttemptDayKey, TodayEpochDay().ToString());
-            PlayerPrefs.SetInt(DailyRetryUsedKey, 0);
-            PlayerPrefs.Save();
+            store.Data.DailyAttemptDay = TodayEpochDay();
+            store.Data.DailyRetryUsed = false;
+            SaveNow();
         }
 
         public void ConsumeDailyRetry()
         {
-            PlayerPrefs.SetInt(DailyRetryUsedKey, 1);
-            PlayerPrefs.Save();
+            store.Data.DailyRetryUsed = true;
+            SaveNow();
         }
 
-        /// <summary>Completing the daily advances the streak; returns the milestone award (0 = none).</summary>
         public int RecordDailyCompletion(CoinsConfig coins)
         {
-            Streak = StreakLogic.CompleteDaily(Streak, TodayEpochDay());
-            PlayerPrefs.SetString(StreakKey, SerializeStreak(Streak));
-            PlayerPrefs.Save();
-            return CoinRules.StreakMilestoneAward(coins, Streak.Current);
+            store.Data.Streak = StreakLogic.CompleteDaily(store.Data.Streak, TodayEpochDay());
+            SaveNow();
+            return CoinRules.StreakMilestoneAward(coins, store.Data.Streak.Current);
         }
 
-        private static long GetDailyAttemptDayStatic(string raw) => long.TryParse(raw, out long day) ? day : -1;
+        public bool CanBuyStreakFreeze() => StreakLogic.CanAcquireFreeze(store.Data.Streak, TodayEpochDay());
 
-        private long GetDailyAttemptDay() => GetDailyAttemptDayStatic(PlayerPrefs.GetString(DailyAttemptDayKey, ""));
-
-        private static string SerializeStreak(StreakState s) =>
-            $"{s.Current}|{s.Best}|{s.FreezesHeld}|{s.LastCompletedEpochDay}|{s.LastFreezePurchaseWeek}";
-
-        private static StreakState DeserializeStreak(string raw)
+        public bool TryBuyStreakFreeze(int cost)
         {
-            if (string.IsNullOrEmpty(raw))
+            if (!CanBuyStreakFreeze() || !wallet.TrySpend(cost))
             {
-                return StreakState.Empty;
+                return false;
             }
 
-            string[] parts = raw.Split('|');
-            if (parts.Length != 5
-                || !int.TryParse(parts[0], out int current)
-                || !int.TryParse(parts[1], out int best)
-                || !int.TryParse(parts[2], out int freezes)
-                || !long.TryParse(parts[3], out long lastDay)
-                || !int.TryParse(parts[4], out int lastWeek))
+            store.Data.Streak = StreakLogic.AcquireFreeze(store.Data.Streak, TodayEpochDay());
+            SaveNow();
+            return true;
+        }
+
+        // ---------------- tidepool (GDD 5.1) ----------------
+
+        public void RecordRescues(System.Collections.Generic.IReadOnlyList<CreatureEvent> rescued, int speciesCount)
+        {
+            foreach (CreatureEvent rescue in rescued)
             {
-                return StreakState.Empty;
+                store.Data.RecordRescue(rescue.CreatureId, speciesCount);
+            }
+        }
+
+        public bool OwnsDecoration(string id) => store.Data.DecorationsOwned.Contains(id);
+
+        public bool TryBuyDecoration(Decoration decoration)
+        {
+            if (OwnsDecoration(decoration.Id) || !wallet.TrySpend(decoration.Cost))
+            {
+                return false;
             }
 
-            return new StreakState(current, best, freezes, lastDay, lastWeek);
+            store.Data.DecorationsOwned.Add(decoration.Id);
+            SaveNow();
+            return true;
+        }
+
+        // ---------------- rewarded chest cap (GDD 5.2; the ad arrives in Phase 7) ----------------
+
+        public bool TryClaimChest(CoinsConfig coins)
+        {
+            if (!store.Data.TryClaimChest(TodayEpochDay(), coins.RewardedChestCapPerDay))
+            {
+                return false;
+            }
+
+            wallet.Earn(coins.RewardedChest);
+            SaveNow();
+            return true;
         }
     }
 }

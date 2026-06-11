@@ -34,6 +34,10 @@ namespace Riptide.Tools.ContentCheck
                 ValidateStrings(File.ReadAllText(stringsPath));
                 Console.WriteLine("OK strings.json");
 
+                string decorationsPath = Path.Combine(root, "decorations.json");
+                var decorations = DecorationLoader.Load(File.ReadAllText(decorationsPath), "decorations.json");
+                Console.WriteLine($"OK decorations.json ({decorations.Count} items)");
+
                 string levelsDir = Path.Combine(root, "levels");
                 string[] zoneFiles = Directory.Exists(levelsDir)
                     ? Directory.GetFiles(levelsDir, "*.json")
