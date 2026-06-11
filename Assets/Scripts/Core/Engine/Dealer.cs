@@ -76,11 +76,19 @@ namespace Riptide.Core
         internal static TrayDeal DealTrayWithGuaranteeRaw(DeterministicRng rng, LevelConfig config,
             Cell[] cells, int waterLevel)
         {
+            return DealTrayWithGuaranteeRaw(rng, config, cells, waterLevel,
+                config.PieceWeightsView, config.TotalPieceWeight);
+        }
+
+        /// <summary>Effective-weight variant: the engine passes GDD 3.2 escalated weights here.</summary>
+        internal static TrayDeal DealTrayWithGuaranteeRaw(DeterministicRng rng, LevelConfig config,
+            Cell[] cells, int waterLevel, int[] weights, int totalWeight)
+        {
             var pieces = new TrayPiece[BoardSpec.TraySize];
             var placeable = new bool[BoardSpec.TraySize];
             for (int i = 0; i < pieces.Length; i++)
             {
-                rng = DrawOne(rng, config, out pieces[i]);
+                rng = DrawOne(rng, weights, totalWeight, config.DealColorCount, out pieces[i]);
             }
 
             bool anyFits = RefreshPlaceability(cells, waterLevel, pieces, placeable);
@@ -92,7 +100,7 @@ namespace Riptide.Core
                 {
                     if (!placeable[i])
                     {
-                        rng = DrawOne(rng, config, out pieces[i]);
+                        rng = DrawOne(rng, weights, totalWeight, config.DealColorCount, out pieces[i]);
                     }
                 }
 
@@ -114,11 +122,14 @@ namespace Riptide.Core
             return any;
         }
 
-        private static DeterministicRng DrawOne(DeterministicRng rng, LevelConfig config, out TrayPiece piece)
+        private static DeterministicRng DrawOne(DeterministicRng rng, LevelConfig config, out TrayPiece piece) =>
+            DrawOne(rng, config.PieceWeightsView, config.TotalPieceWeight, config.DealColorCount, out piece);
+
+        private static DeterministicRng DrawOne(DeterministicRng rng, int[] weights, int totalWeight,
+            int colorCount, out TrayPiece piece)
         {
-            RngIntDraw pieceDraw = rng.NextInt(config.TotalPieceWeight);
+            RngIntDraw pieceDraw = rng.NextInt(totalWeight);
             rng = pieceDraw.Rng;
-            int[] weights = config.PieceWeightsView;
             int roll = pieceDraw.Value;
             int pieceIndex = 0;
             int accumulated = 0;
@@ -132,7 +143,7 @@ namespace Riptide.Core
                 }
             }
 
-            RngIntDraw colorDraw = rng.NextInt(config.DealColorCount);
+            RngIntDraw colorDraw = rng.NextInt(colorCount);
             rng = colorDraw.Rng;
             piece = new TrayPiece((PieceId)pieceIndex, (byte)colorDraw.Value);
             return rng;

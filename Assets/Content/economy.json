@@ -23,13 +23,40 @@
     "7":  [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 14, 14, 14],
     "8":  [3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 15, 15, 15],
     "9":  [3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 15, 15, 15],
-    "10": [3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 16, 16, 16]
+    "10": [3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 16, 16, 16],
+    "11": [20, 12, 12, 8, 8, 6, 6, 6, 6, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0]
   },
   "endless": {
-    "startTideInterval": 7,
-    "intervalShrinkEveryTides": 4,
-    "intervalFloor": 3,
+    "startWaterLevel": 1,
+    "weightBand": 11,
+    "startTideInterval": 6,
+    "intervalShrinkEveryTides": 2,
+    "intervalFloor": 2,
     "weightEscalationEveryPlacements": 25,
+    "bigWeightBonusPerStep": 1,
+    "maxEscalationSteps": 1,
     "creatureSpawnIntervalTrays": 4
+  },
+  "daily": {
+    "surviveTides": 20,
+    "weightBand": 11,
+    "startWaterLevel": 1,
+    "startTideInterval": 7,
+    "intervalShrinkEveryTides": 2,
+    "intervalFloor": 2,
+    "bigWeightBonusPerStep": 1,
+    "maxEscalationSteps": 1,
+    "creatureSpawnIntervalTrays": 4
+  },
+  "bot": {
+    "greedyHeuristic": {
+      "clears": 100,
+      "rescues": 130,
+      "waterHeadroom": 8,
+      "bumpiness": 2,
+      "creatureDanger": 15,
+      "almostFullRows": 6,
+      "gameOverPenalty": 10000
+    }
   }
 }

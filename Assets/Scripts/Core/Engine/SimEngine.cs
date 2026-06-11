@@ -215,7 +215,10 @@ namespace Riptide.Core
             var lostCreatures = new List<CreatureEvent>();
             int penaltyPoints = 0;
             bool rescueTargetLost = false;
-            if (tideCounter >= cfg.TideInterval)
+
+            // GDD 3.2: the interval may shrink as tides pass (no-op without escalation).
+            int effectiveInterval = EscalationRules.EffectiveTideInterval(cfg, goals.TidesSurvived);
+            if (tideCounter >= effectiveInterval)
             {
                 tideRose = true;
                 tideCounter = 0;
@@ -308,8 +311,9 @@ namespace Riptide.Core
             CreatureEvent? spawned = null;
             if (tray[0] == null && tray[1] == null && tray[2] == null)
             {
-                // GDD 2.4: refills carry the guarantee with deterministic redraws.
-                TrayDeal deal = Dealer.DealTrayWithGuaranteeRaw(rng, cfg, cells, water);
+                // GDD 2.4: refills carry the guarantee. GDD 3.2: weights may have escalated.
+                int[] effectiveWeights = EscalationRules.EffectiveWeights(cfg, moveCount, out int totalWeight);
+                TrayDeal deal = Dealer.DealTrayWithGuaranteeRaw(rng, cfg, cells, water, effectiveWeights, totalWeight);
                 rng = deal.Rng;
                 for (int i = 0; i < BoardSpec.TraySize; i++)
                 {

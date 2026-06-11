@@ -56,6 +56,9 @@ namespace Riptide.Core
         public GoalSet Goals { get; }
         public IReadOnlyList<PresetCell> Preset { get; }
 
+        /// <summary>GDD 3.2 endless escalation; null for static (Voyage) levels.</summary>
+        public EscalationConfig? Escalation { get; }
+
         public LevelConfig(
             int startWaterLevel,
             int minWaterLevel,
@@ -66,7 +69,8 @@ namespace Riptide.Core
             IReadOnlyList<int> pieceWeights,
             ScoringConfig scoring,
             GoalSet goals,
-            IReadOnlyList<PresetCell>? preset = null)
+            IReadOnlyList<PresetCell>? preset = null,
+            EscalationConfig? escalation = null)
         {
             if (startWaterLevel < 0 || startWaterLevel >= BoardSpec.DrownWaterLevel)
             {
@@ -116,6 +120,12 @@ namespace Riptide.Core
             Scoring = scoring ?? throw new ArgumentNullException(nameof(scoring));
             Goals = goals ?? throw new ArgumentNullException(nameof(goals));
             Preset = ValidatePreset(preset ?? Array.Empty<PresetCell>(), startWaterLevel);
+            Escalation = escalation;
+
+            if (escalation != null && escalation.IntervalFloor > tideInterval)
+            {
+                throw new ArgumentException("Escalation interval floor exceeds the starting tide interval.", nameof(escalation));
+            }
         }
 
         private static IReadOnlyList<PresetCell> ValidatePreset(IReadOnlyList<PresetCell> preset, int startWaterLevel)

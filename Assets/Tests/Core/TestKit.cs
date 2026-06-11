@@ -45,7 +45,8 @@ namespace Riptide.Core.Tests
             GoalSet? goals = null,
             bool awardTideSurvival = false,
             IReadOnlyList<PresetCell>? preset = null,
-            IReadOnlyList<int>? pieceWeights = null)
+            IReadOnlyList<int>? pieceWeights = null,
+            EscalationConfig? escalation = null)
         {
             return new LevelConfig(
                 startWater,
@@ -57,7 +58,8 @@ namespace Riptide.Core.Tests
                 pieceWeights ?? UniformWeights(),
                 GddScoring(awardTideSurvival),
                 goals ?? GoalSet.None,
-                preset);
+                preset,
+                escalation);
         }
 
         /// <summary>
@@ -173,5 +175,37 @@ namespace Riptide.Core.Tests
 
         public static MoveResult Place(GameState state, int slot, int col, int row) =>
             SimEngine.ApplyMove(state, new PlaceMove(slot, new GridPos(col, row)));
+
+        /// <summary>Canonical economy fixture, structurally mirroring Assets/Content/economy.json.</summary>
+        public const string CanonicalEconomyJson = @"{
+  ""scoring"": {
+    ""pointsPerCell"": 1, ""rowClearBase"": 80, ""comboStartHalves"": 2, ""comboStepHalves"": 1,
+    ""comboCapHalves"": 5, ""rescuePoints"": 250, ""creatureLossPenalty"": 250,
+    ""tideSurvivalBase"": 30, ""tideSurvivalStep"": 5
+  },
+  ""deal"": { ""colorCount"": 6 },
+  ""pieceWeightBands"": {
+    ""1"": [7,7,7,7,7,7,7,7,7,5,5,5,5,5,5,5,5,0,0,0]
+  },
+  ""endless"": {
+    ""startWaterLevel"": 1, ""weightBand"": 1,
+    ""startTideInterval"": 7, ""intervalShrinkEveryTides"": 4, ""intervalFloor"": 3,
+    ""weightEscalationEveryPlacements"": 25, ""bigWeightBonusPerStep"": 2,
+    ""maxEscalationSteps"": 8, ""creatureSpawnIntervalTrays"": 4
+  },
+  ""daily"": {
+    ""surviveTides"": 20, ""weightBand"": 1, ""startWaterLevel"": 1,
+    ""startTideInterval"": 7, ""intervalShrinkEveryTides"": 3, ""intervalFloor"": 2,
+    ""bigWeightBonusPerStep"": 1, ""maxEscalationSteps"": 1, ""creatureSpawnIntervalTrays"": 4
+  },
+  ""bot"": {
+    ""greedyHeuristic"": {
+      ""clears"": 100, ""rescues"": 130, ""waterHeadroom"": 8, ""bumpiness"": 2,
+      ""creatureDanger"": 15, ""almostFullRows"": 6, ""gameOverPenalty"": 10000
+    }
+  }
+}";
+
+        public static EconomyConfig Economy() => EconomyLoader.Load(CanonicalEconomyJson, "test-economy");
     }
 }

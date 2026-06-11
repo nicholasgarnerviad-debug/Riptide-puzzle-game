@@ -15,30 +15,92 @@ namespace Riptide.Core
         }
     }
 
-    /// <summary>GDD 3.2 endless escalation parameters (consumed by Phase 3 tooling and Phase 5 mode setup).</summary>
+    /// <summary>GDD 3.2 endless mode parameters (mode assembly in ModeFactory).</summary>
     public sealed class EndlessConfig
     {
+        public int StartWaterLevel { get; }
+        public int WeightBand { get; }
         public int StartTideInterval { get; }
         public int IntervalShrinkEveryTides { get; }
         public int IntervalFloor { get; }
         public int WeightEscalationEveryPlacements { get; }
+        public int BigWeightBonusPerStep { get; }
+        public int MaxEscalationSteps { get; }
         public int CreatureSpawnIntervalTrays { get; }
 
-        public EndlessConfig(int startTideInterval, int intervalShrinkEveryTides, int intervalFloor,
-            int weightEscalationEveryPlacements, int creatureSpawnIntervalTrays)
+        public EndlessConfig(int startWaterLevel, int weightBand, int startTideInterval,
+            int intervalShrinkEveryTides, int intervalFloor, int weightEscalationEveryPlacements,
+            int bigWeightBonusPerStep, int maxEscalationSteps, int creatureSpawnIntervalTrays)
         {
+            StartWaterLevel = startWaterLevel;
+            WeightBand = weightBand;
             StartTideInterval = startTideInterval;
             IntervalShrinkEveryTides = intervalShrinkEveryTides;
             IntervalFloor = intervalFloor;
             WeightEscalationEveryPlacements = weightEscalationEveryPlacements;
+            BigWeightBonusPerStep = bigWeightBonusPerStep;
+            MaxEscalationSteps = maxEscalationSteps;
             CreatureSpawnIntervalTrays = creatureSpawnIntervalTrays;
+        }
+    }
+
+    /// <summary>GDD 3.3 daily mode parameters — tuned independently of endless (3C).</summary>
+    public sealed class DailyTuning
+    {
+        public int SurviveTides { get; }
+        public int WeightBand { get; }
+        public int StartWaterLevel { get; }
+        public int StartTideInterval { get; }
+        public int IntervalShrinkEveryTides { get; }
+        public int IntervalFloor { get; }
+        public int BigWeightBonusPerStep { get; }
+        public int MaxEscalationSteps { get; }
+        public int CreatureSpawnIntervalTrays { get; }
+
+        public DailyTuning(int surviveTides, int weightBand, int startWaterLevel, int startTideInterval,
+            int intervalShrinkEveryTides, int intervalFloor, int bigWeightBonusPerStep,
+            int maxEscalationSteps, int creatureSpawnIntervalTrays)
+        {
+            SurviveTides = surviveTides;
+            WeightBand = weightBand;
+            StartWaterLevel = startWaterLevel;
+            StartTideInterval = startTideInterval;
+            IntervalShrinkEveryTides = intervalShrinkEveryTides;
+            IntervalFloor = intervalFloor;
+            BigWeightBonusPerStep = bigWeightBonusPerStep;
+            MaxEscalationSteps = maxEscalationSteps;
+            CreatureSpawnIntervalTrays = creatureSpawnIntervalTrays;
+        }
+    }
+
+    /// <summary>GDD 4 / master prompt 3A: GreedyHeuristic bot weights — balance data, never C# constants.</summary>
+    public sealed class GreedyHeuristicWeights
+    {
+        public int Clears { get; }
+        public int Rescues { get; }
+        public int WaterHeadroom { get; }
+        public int Bumpiness { get; }
+        public int CreatureDanger { get; }
+        public int AlmostFullRows { get; }
+        public int GameOverPenalty { get; }
+
+        public GreedyHeuristicWeights(int clears, int rescues, int waterHeadroom, int bumpiness,
+            int creatureDanger, int almostFullRows, int gameOverPenalty)
+        {
+            Clears = clears;
+            Rescues = rescues;
+            WaterHeadroom = waterHeadroom;
+            Bumpiness = bumpiness;
+            CreatureDanger = creatureDanger;
+            AlmostFullRows = almostFullRows;
+            GameOverPenalty = gameOverPenalty;
         }
     }
 
     /// <summary>
     /// Typed view of economy.json (GDD 8.4: all tunables in JSON, rule 7: no balance
-    /// numbers in C#). Phase 2 scope: scoring, deal palette, piece-weight bands,
-    /// endless params. Coins/boosters join in Phase 6.
+    /// numbers in C#). Phase 3 scope: scoring, deal palette, weight bands, endless,
+    /// daily, bot weights. Coins/boosters join in Phase 6.
     /// </summary>
     public sealed class EconomyConfig
     {
@@ -55,13 +117,17 @@ namespace Riptide.Core
         public int DealColorCount { get; }
         public IReadOnlyDictionary<int, IReadOnlyList<int>> PieceWeightBands { get; }
         public EndlessConfig Endless { get; }
+        public DailyTuning Daily { get; }
+        public GreedyHeuristicWeights GreedyHeuristic { get; }
 
         public EconomyConfig(
             int pointsPerCell, int rowClearBase, int comboStartHalves, int comboStepHalves, int comboCapHalves,
             int rescuePoints, int creatureLossPenalty, int tideSurvivalBase, int tideSurvivalStep,
             int dealColorCount,
             IReadOnlyDictionary<int, IReadOnlyList<int>> pieceWeightBands,
-            EndlessConfig endless)
+            EndlessConfig endless,
+            DailyTuning daily,
+            GreedyHeuristicWeights greedyHeuristic)
         {
             this.pointsPerCell = pointsPerCell;
             this.rowClearBase = rowClearBase;
@@ -75,6 +141,8 @@ namespace Riptide.Core
             DealColorCount = dealColorCount;
             PieceWeightBands = pieceWeightBands ?? throw new ArgumentNullException(nameof(pieceWeightBands));
             Endless = endless ?? throw new ArgumentNullException(nameof(endless));
+            Daily = daily ?? throw new ArgumentNullException(nameof(daily));
+            GreedyHeuristic = greedyHeuristic ?? throw new ArgumentNullException(nameof(greedyHeuristic));
         }
 
         /// <summary>The mode decides survival scoring (GDD 10: Endless/Daily only).</summary>
@@ -96,6 +164,9 @@ namespace Riptide.Core
                 JsonObject deal = root.Require("deal").AsObject();
                 JsonObject bands = root.Require("pieceWeightBands").AsObject();
                 JsonObject endless = root.Require("endless").AsObject();
+                JsonObject daily = root.Require("daily").AsObject();
+                JsonObject bot = root.Require("bot").AsObject();
+                JsonObject heuristic = bot.Require("greedyHeuristic").AsObject();
 
                 var bandTable = new Dictionary<int, IReadOnlyList<int>>();
                 foreach (string key in bands.MemberNames)
@@ -115,11 +186,35 @@ namespace Riptide.Core
                 }
 
                 var endlessConfig = new EndlessConfig(
+                    RequireNonNegative(endless, "startWaterLevel"),
+                    RequireBandRef(endless, "weightBand", bandTable),
                     RequirePositive(endless, "startTideInterval"),
                     RequirePositive(endless, "intervalShrinkEveryTides"),
                     RequirePositive(endless, "intervalFloor"),
                     RequirePositive(endless, "weightEscalationEveryPlacements"),
+                    RequireNonNegative(endless, "bigWeightBonusPerStep"),
+                    RequireNonNegative(endless, "maxEscalationSteps"),
                     RequirePositive(endless, "creatureSpawnIntervalTrays"));
+
+                var dailyTuning = new DailyTuning(
+                    RequirePositive(daily, "surviveTides"),
+                    RequireBandRef(daily, "weightBand", bandTable),
+                    RequireNonNegative(daily, "startWaterLevel"),
+                    RequirePositive(daily, "startTideInterval"),
+                    RequirePositive(daily, "intervalShrinkEveryTides"),
+                    RequirePositive(daily, "intervalFloor"),
+                    RequireNonNegative(daily, "bigWeightBonusPerStep"),
+                    RequireNonNegative(daily, "maxEscalationSteps"),
+                    RequirePositive(daily, "creatureSpawnIntervalTrays"));
+
+                var heuristicWeights = new GreedyHeuristicWeights(
+                    RequireNonNegative(heuristic, "clears"),
+                    RequireNonNegative(heuristic, "rescues"),
+                    RequireNonNegative(heuristic, "waterHeadroom"),
+                    RequireNonNegative(heuristic, "bumpiness"),
+                    RequireNonNegative(heuristic, "creatureDanger"),
+                    RequireNonNegative(heuristic, "almostFullRows"),
+                    RequireNonNegative(heuristic, "gameOverPenalty"));
 
                 return new EconomyConfig(
                     RequireNonNegative(scoring, "pointsPerCell"),
@@ -133,7 +228,9 @@ namespace Riptide.Core
                     RequireNonNegative(scoring, "tideSurvivalStep"),
                     RequirePositive(deal, "colorCount"),
                     bandTable,
-                    endlessConfig);
+                    endlessConfig,
+                    dailyTuning,
+                    heuristicWeights);
             }
             catch (JsonParseException ex)
             {
@@ -172,6 +269,19 @@ namespace Riptide.Core
             }
 
             return weights;
+        }
+
+        private static int RequireBandRef(JsonObject obj, string name, Dictionary<int, IReadOnlyList<int>> bands)
+        {
+            JsonValue node = obj.Require(name);
+            int band = node.AsInt();
+            if (!bands.ContainsKey(band))
+            {
+                throw new JsonParseException($"'{name}' references band {band}, which pieceWeightBands does not define",
+                    node.Line, node.Column);
+            }
+
+            return band;
         }
 
         private static int RequirePositive(JsonObject obj, string name)

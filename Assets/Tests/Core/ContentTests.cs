@@ -11,24 +11,7 @@ namespace Riptide.Core.Tests
     [TestFixture]
     public sealed class ContentTests
     {
-        // Mirrors Assets/Content/economy.json structurally (small band set for tests).
-        private const string EconomyJson = @"{
-  ""scoring"": {
-    ""pointsPerCell"": 1, ""rowClearBase"": 80, ""comboStartHalves"": 2, ""comboStepHalves"": 1,
-    ""comboCapHalves"": 5, ""rescuePoints"": 250, ""creatureLossPenalty"": 250,
-    ""tideSurvivalBase"": 30, ""tideSurvivalStep"": 5
-  },
-  ""deal"": { ""colorCount"": 6 },
-  ""pieceWeightBands"": {
-    ""1"": [7,7,7,7,7,7,7,7,7,5,5,5,5,5,5,5,5,0,0,0]
-  },
-  ""endless"": {
-    ""startTideInterval"": 7, ""intervalShrinkEveryTides"": 4, ""intervalFloor"": 3,
-    ""weightEscalationEveryPlacements"": 25, ""creatureSpawnIntervalTrays"": 4
-  }
-}";
-
-        private static EconomyConfig Economy() => EconomyLoader.Load(EconomyJson, "economy.json");
+        private static EconomyConfig Economy() => TestKit.Economy();
 
         // ---------------- JSON parser ----------------
 
@@ -104,7 +87,7 @@ namespace Riptide.Core.Tests
         [Test]
         public void Economy_RejectsWrongWeightCount_CitingLine()
         {
-            string bad = EconomyJson.Replace("[7,7,7,7,7,7,7,7,7,5,5,5,5,5,5,5,5,0,0,0]", "[1,2,3]");
+            string bad = TestKit.CanonicalEconomyJson.Replace("[7,7,7,7,7,7,7,7,7,5,5,5,5,5,5,5,5,0,0,0]", "[1,2,3]");
 
             var ex = Assert.Throws<ContentException>(() => EconomyLoader.Load(bad, "economy.json"));
 
