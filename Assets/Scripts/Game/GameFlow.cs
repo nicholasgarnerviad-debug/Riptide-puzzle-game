@@ -51,6 +51,9 @@ namespace Riptide.Game
         public int DailyNumber;
         public string ShareCardText = "";
         public int StreakAfter;
+
+        /// <summary>The double-coins rewarded payout fired for this outcome (once only).</summary>
+        public bool DoubledClaimed;
     }
 
     /// <summary>
@@ -69,11 +72,31 @@ namespace Riptide.Game
         public GameMode Mode { get; private set; }
         public GameStore? Store { get; private set; }
         public RunOutcome? LastOutcome { get; private set; }
+        public bool DailyWasRetry => dailyWasRetry;
         public LevelDef? CurrentLevel { get; private set; }
         public ulong CurrentSeed { get; private set; }
 
         public event Action<FlowScreen>? ScreenChanged;
         public event Action? RunStarted;
+
+        public AnalyticsService Analytics { get; private set; } = new AnalyticsService();
+        public AdService? Ads { get; private set; }
+        public IapService? Iap { get; private set; }
+        public ConsentService? Consent { get; private set; }
+
+        private int runMaxWater;
+        private int runRescues;
+        private bool dailyWasRetry;
+        private bool freeDrainUsedThisRun;
+        private bool freeNewTideUsedThisRun;
+
+        public void AttachServices(AnalyticsService analytics, ConsentService consent, AdService ads, IapService iap)
+        {
+            Analytics = analytics;
+            Consent = consent;
+            Ads = ads;
+            Iap = iap;
+        }
 
         private readonly Dictionary<int, IReadOnlyList<LevelDef>> zoneCache = new Dictionary<int, IReadOnlyList<LevelDef>>();
         private readonly List<byte> dailyRescuedSpecies = new List<byte>();
@@ -142,6 +165,99 @@ namespace Riptide.Game
 
             Meta.TrySpendCoins(BoosterCost(kind));
             Meta.SaveNow();
+            Analytics.LogBoosterUsed(kind.ToString(), "coins");
+            return true;
+        }
+
+        /// <summary>GDD 5.3: one free Drain Pump and one free New Tide per game via rewarded ad.</summary>
+        public bool FreeBoosterAvailable(BoosterKind kind) =>
+            Store != null && !Store.State.Status.IsTerminal() && Store.State.Config.BoostersAllowed
+            && Ads != null && Ads.RewardedAvailable
+            && (kind == BoosterKind.DrainPump ? !freeDrainUsedThisRun
+                : kind == BoosterKind.NewTide && !freeNewTideUsedThisRun);
+
+        public bool TryFreeBoosterViaAd(BoosterKind kind)
+        {
+            if (!FreeBoosterAvailable(kind))
+            {
+                return false;
+            }
+
+            RewardedPlacementId placement = kind == BoosterKind.DrainPump
+                ? RewardedPlacementId.FreeDrainPump
+                : RewardedPlacementId.FreeNewTide;
+            return Ads!.ShowRewarded(placement, onPaid: () =>
+            {
+                if (kind == BoosterKind.DrainPump)
+                {
+                    freeDrainUsedThisRun = true;
+                }
+                else
+                {
+                    freeNewTideUsedThisRun = true;
+                }
+
+                Move move = kind == BoosterKind.DrainPump ? new DrainPumpMove() : (Move)new NewTideMove();
+                try
+                {
+                    Store!.TryDispatch(move);
+                    Analytics.LogBoosterUsed(kind.ToString(), "rewarded");
+                }
+                catch (InvalidMoveException)
+                {
+                }
+            });
+        }
+
+        /// <summary>GDD 6 rewarded: double coins on the results screen, once per outcome.</summary>
+        public bool TryDoubleCoinsViaAd()
+        {
+            RunOutcome? outcome = LastOutcome;
+            if (outcome == null || !outcome.Won || outcome.DoubledClaimed || outcome.CoinsAwarded <= 0
+                || Ads == null || !Ads.RewardedAvailable)
+            {
+                return false;
+            }
+
+            return Ads.ShowRewarded(RewardedPlacementId.DoubleCoins, onPaid: () =>
+            {
+                outcome.DoubledClaimed = true;
+                Meta.EarnCoins(outcome.CoinsAwarded);
+                Meta.SaveNow();
+            });
+        }
+
+        /// <summary>GDD 5.2/6 rewarded coin chest, capped 3/day by the save.</summary>
+        public bool TryClaimChestViaAd()
+        {
+            if (Ads == null || !Ads.RewardedAvailable)
+            {
+                return false;
+            }
+
+            return Ads.ShowRewarded(RewardedPlacementId.CoinChest, onPaid: () => Meta.TryClaimChest(Economy.Coins));
+        }
+
+        /// <summary>GDD 3.3 daily retry via rewarded ad (the Phase 5 stub becomes real).</summary>
+        public bool TryDailyRetryViaAd()
+        {
+            if (!Meta.DailyRetryAvailable() || Ads == null || !Ads.RewardedAvailable)
+            {
+                return false;
+            }
+
+            return Ads.ShowRewarded(RewardedPlacementId.DailyRetry, onPaid: () => StartDaily(isRetry: true));
+        }
+
+        /// <summary>Tidepool purchases route here so the GDD 8.5 event fires.</summary>
+        public bool TryBuyDecoration(Decoration decoration)
+        {
+            if (!Meta.TryBuyDecoration(decoration))
+            {
+                return false;
+            }
+
+            Analytics.LogTidepoolPurchase(decoration.Id);
             return true;
         }
 
@@ -215,6 +331,7 @@ namespace Riptide.Game
 
             long today = Meta.TodayEpochDay();
             Mode = GameMode.Daily;
+            dailyWasRetry = isRetry;
             CurrentLevel = null;
             dailyRescuedSpecies.Clear();
             CurrentSeed = SeedForEpochDay(today);
@@ -241,6 +358,16 @@ namespace Riptide.Game
                 Store.Reset(config, CurrentSeed);
             }
 
+            runMaxWater = config.StartWaterLevel;
+            runRescues = 0;
+            freeDrainUsedThisRun = false;
+            freeNewTideUsedThisRun = false;
+
+            if (Mode == GameMode.Voyage && CurrentLevel != null)
+            {
+                Analytics.LogLevelStart(CurrentLevel.Zone, ParseIndex(CurrentLevel.Id));
+            }
+
             GoTo(FlowScreen.Playing);
             RunStarted?.Invoke();
         }
@@ -251,6 +378,12 @@ namespace Riptide.Game
             if (result.Events.RescuedCreatures.Count > 0)
             {
                 Meta.RecordRescues(result.Events.RescuedCreatures, Roster.Count);
+                runRescues += result.Events.RescuedCreatures.Count;
+            }
+
+            if (result.Next.WaterLevel > runMaxWater)
+            {
+                runMaxWater = result.Next.WaterLevel; // GDD 8.5: key balance telemetry
             }
 
             if (Mode == GameMode.Daily)
@@ -308,6 +441,27 @@ namespace Riptide.Game
 
             Meta.SaveNow();
             LastOutcome = outcome;
+
+            string resultName = final.Status switch
+            {
+                GameStatus.Won => "won",
+                GameStatus.LostDrowned => "drown",
+                GameStatus.LostStuck => "stuck",
+                _ => "creature",
+            };
+            switch (Mode)
+            {
+                case GameMode.Voyage:
+                    Analytics.LogLevelEnd(outcome.Zone, outcome.LevelIndex, resultName, outcome.Moves,
+                        outcome.Stars, runMaxWater, runRescues);
+                    break;
+                case GameMode.Endless:
+                    Analytics.LogEndlessEnd(outcome.Moves, outcome.TidesSurvived, outcome.Score, resultName);
+                    break;
+                case GameMode.Daily:
+                    Analytics.LogDailyAttempt(resultName, outcome.Score, dailyWasRetry);
+                    break;
+            }
         }
 
         private void FinishVoyage(RunOutcome outcome)
@@ -366,6 +520,12 @@ namespace Riptide.Game
             }
 
             GoTo(LastOutcome.Mode == GameMode.Daily ? FlowScreen.DailyResults : FlowScreen.Results);
+
+            // GDD 6: interstitials only after Voyage level end or Endless run end — never after a daily.
+            if (LastOutcome.Mode != GameMode.Daily)
+            {
+                Ads?.TryShowInterstitial(afterDaily: false, placement: LastOutcome.Mode.ToString());
+            }
         }
 
         private static int ParseIndex(string levelId)
