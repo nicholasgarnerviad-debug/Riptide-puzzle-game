@@ -64,6 +64,12 @@
   "tidepool.decorations": "Decorations",
   "tidepool.owned": "Owned",
   "tidepool.buy": "{0} 🪙",
+  "tutorial.l1.drag": "Drag a piece from the tray onto the board",
+  "tutorial.l1.clear": "Fill a whole row to clear it",
+  "tutorial.l2.meter": "The ring around your tray counts down to the next tide",
+  "tutorial.l3.rescue": "A creature is trapped! Clear its row to rescue it",
+  "tutorial.l4.pump": "The water is rising fast — your first Drain Pump is free!",
+  "tutorial.l5.go": "You know the tides now. Good luck out there",
   "common.back": "Back",
   "common.close": "Close",
   "common.play": "Play"
