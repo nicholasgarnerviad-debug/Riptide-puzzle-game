@@ -25,6 +25,12 @@ namespace Riptide.PlayMode.Tests
             {
                 PlayerPrefs.DeleteKey(key);
             }
+
+            string savePath = System.IO.Path.Combine(Application.persistentDataPath, "riptide_save.json");
+            if (System.IO.File.Exists(savePath))
+            {
+                System.IO.File.Delete(savePath);
+            }
         }
 
         private static IEnumerator PlayToTerminal(GameFlow flow)
@@ -109,6 +115,42 @@ namespace Riptide.PlayMode.Tests
 
             yield return PlayToTerminal(flow);
             Assert.That(flow.StartDaily(isRetry: true), Is.False, "no second retry");
+
+            WipeMeta();
+            Object.Destroy(screens.transform.parent != null ? screens.transform.parent.gameObject : screens.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Economy_BoostersSpendCoins_DailyRefusesThem_AndTheSavePersists()
+        {
+            WipeMeta();
+            (GameFlow flow, ScreenManager screens) = GameBootstrap.CreateApp(instantAnimations: true);
+            long fakeToday = CivilDate.ToEpochDays(2026, 6, 13);
+            flow.Meta.TodayEpochDay = () => fakeToday;
+            yield return null;
+
+            flow.Meta.EarnCoins(500);
+            flow.StartEndless();
+            yield return null;
+
+            Assert.That(flow.CanUseBooster(BoosterKind.DrainPump), Is.True, "endless allows boosters");
+            Assert.That(flow.TryUseBooster(BoosterKind.DrainPump), Is.True);
+            Assert.That(flow.Meta.Coins, Is.EqualTo(350), "GDD 5.3: Drain Pump costs 150");
+            Assert.That(flow.Store!.State.MoveCount, Is.EqualTo(0), "boosters are not placements");
+
+            Assert.That(flow.TryUseBooster(BoosterKind.NewTide), Is.True);
+            Assert.That(flow.Meta.Coins, Is.EqualTo(230), "New Tide costs 120");
+
+            flow.Meta.SaveNow();
+            var reloaded = new Riptide.Game.SaveStore();
+            reloaded.Load();
+            Assert.That(reloaded.Data.Coins, Is.EqualTo(230), "coin persistence through the save file (contract 6D)");
+
+            flow.StartDaily();
+            yield return null;
+            Assert.That(flow.CanUseBooster(BoosterKind.DrainPump), Is.False, "GDD 5.3: daily refuses boosters");
+            Assert.That(flow.TryUseBooster(BoosterKind.DrainPump), Is.False);
+            Assert.That(flow.Meta.Coins, Is.EqualTo(230), "no spend on refusal");
 
             WipeMeta();
             Object.Destroy(screens.transform.parent != null ? screens.transform.parent.gameObject : screens.gameObject);

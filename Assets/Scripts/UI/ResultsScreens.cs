@@ -153,6 +153,8 @@ namespace Riptide.UI
         private Text streak = null!;
         private Text toast = null!;
         private Button retry = null!;
+        private Button retryCoins = null!;
+        private Button freeze = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -182,12 +184,22 @@ namespace Riptide.UI
             screen.toast = UiKit.Label(root, "toast", "", 34, Palette.MeterFilled);
             UiKit.Place(screen.toast.rectTransform, new Vector2(0.5f, 0.195f), new Vector2(700f, 60f), Vector2.zero);
 
-            screen.retry = UiKit.TextButton(root, "retry", flow.Strings.Get("daily.retry"), 40, screen.OnRetry);
-            UiKit.Place((RectTransform)screen.retry.transform, new Vector2(0.5f, 0.12f), new Vector2(560f, 95f), Vector2.zero);
+            screen.retry = UiKit.TextButton(root, "retry", flow.Strings.Get("daily.retry"), 36, screen.OnRetry);
+            UiKit.Place((RectTransform)screen.retry.transform, new Vector2(0.28f, 0.12f), new Vector2(480f, 95f), Vector2.zero);
+
+            screen.retryCoins = UiKit.TextButton(root, "retryCoins",
+                string.Format(flow.Strings.Get("daily.retryCoins"), flow.Economy.Coins.DailyRetryCost), 36,
+                screen.OnRetryWithCoins);
+            UiKit.Place((RectTransform)screen.retryCoins.transform, new Vector2(0.72f, 0.12f), new Vector2(480f, 95f), Vector2.zero);
+
+            screen.freeze = UiKit.TextButton(root, "freeze",
+                string.Format(flow.Strings.Get("daily.buyFreeze"), flow.Economy.Coins.StreakFreezeCost), 32,
+                screen.OnBuyFreeze);
+            UiKit.Place((RectTransform)screen.freeze.transform, new Vector2(0.28f, 0.04f), new Vector2(480f, 85f), Vector2.zero);
 
             Button home = UiKit.TextButton(root, "home", flow.Strings.Get("common.back"), 40,
                 () => flow.GoTo(FlowScreen.Home));
-            UiKit.Place((RectTransform)home.transform, new Vector2(0.5f, 0.04f), new Vector2(400f, 85f), Vector2.zero);
+            UiKit.Place((RectTransform)home.transform, new Vector2(0.72f, 0.04f), new Vector2(400f, 85f), Vector2.zero);
 
             screen.Refresh();
             return root;
@@ -211,6 +223,20 @@ namespace Riptide.UI
             flow.StartDaily(isRetry: true);
         }
 
+        private void OnRetryWithCoins()
+        {
+            // GDD 5.2: the 100-coin alternative to the rewarded retry.
+            flow.StartDailyRetryWithCoins();
+        }
+
+        private void OnBuyFreeze()
+        {
+            if (flow.Meta.TryBuyStreakFreeze(flow.Economy.Coins.StreakFreezeCost))
+            {
+                Refresh();
+            }
+        }
+
         public void Refresh()
         {
             RunOutcome? outcome = flow.LastOutcome;
@@ -225,7 +251,25 @@ namespace Riptide.UI
             streak.text = string.Format(flow.Strings.Get("daily.streak"),
                 flow.Meta.Streak.Current, flow.Meta.Streak.Best);
             toast.text = "";
-            retry.gameObject.SetActive(flow.Meta.DailyRetryAvailable());
+            bool retryAvailable = flow.Meta.DailyRetryAvailable();
+            retry.gameObject.SetActive(retryAvailable);
+            retryCoins.gameObject.SetActive(retryAvailable);
+            retryCoins.interactable = flow.Meta.CanAfford(flow.Economy.Coins.DailyRetryCost);
+
+            if (flow.Meta.Streak.FreezesHeld > 0)
+            {
+                freeze.gameObject.SetActive(true);
+                freeze.GetComponentInChildren<Text>().text = flow.Strings.Get("daily.freezeOwned");
+                freeze.interactable = false;
+            }
+            else
+            {
+                bool canBuy = flow.Meta.CanBuyStreakFreeze();
+                freeze.gameObject.SetActive(canBuy);
+                freeze.GetComponentInChildren<Text>().text =
+                    string.Format(flow.Strings.Get("daily.buyFreeze"), flow.Economy.Coins.StreakFreezeCost);
+                freeze.interactable = flow.Meta.CanAfford(flow.Economy.Coins.StreakFreezeCost);
+            }
         }
     }
 }

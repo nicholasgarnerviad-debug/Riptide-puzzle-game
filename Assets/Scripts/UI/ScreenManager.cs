@@ -133,7 +133,7 @@ namespace Riptide.UI
                 FlowScreen.DailyResults => DailyResultsScreen.Build(canvasRoot, flow),
                 FlowScreen.Settings => SettingsScreen.Build(canvasRoot, flow),
                 FlowScreen.Shop => ShopSheet.Build(canvasRoot, flow),
-                FlowScreen.Tidepool => TidepoolStubScreen.Build(canvasRoot, flow),
+                FlowScreen.Tidepool => TidepoolScreen.Build(canvasRoot, flow),
                 _ => UiKit.Panel(canvasRoot, "unknown", UiKit.PanelColor),
             };
             screens[screen] = root;
