@@ -1,0 +1,12 @@
+{
+  "species": [
+    { "id": 0, "name": "Crab" },
+    { "id": 1, "name": "Starfish" },
+    { "id": 2, "name": "Seahorse" },
+    { "id": 3, "name": "Octopus" },
+    { "id": 4, "name": "Turtle" },
+    { "id": 5, "name": "Pufferfish" },
+    { "id": 6, "name": "Jellyfish" },
+    { "id": 7, "name": "Axolotl", "rare": true }
+  ]
+}

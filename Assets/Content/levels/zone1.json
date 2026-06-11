@@ -1,0 +1,28 @@
+[
+  {
+    "id": "z1-l1",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 10,
+    "goals": { "clearRows": 2 },
+    "preset": []
+  },
+  {
+    "id": "z1-l2",
+    "zone": 1,
+    "startWaterLevel": 1,
+    "minWaterLevel": 1,
+    "tideInterval": 8,
+    "weightBand": 1,
+    "parMoves": 14,
+    "goals": { "rescueAll": 1 },
+    "preset": [
+      { "col": 4, "row": 2, "cell": "creature", "id": 0 },
+      { "col": 3, "row": 2, "cell": "block", "id": 1 },
+      { "col": 0, "row": 1, "cell": "coral" }
+    ]
+  }
+]

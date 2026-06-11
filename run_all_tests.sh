@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "== [1/2] Core purity guard =="
+echo "== [1/3] Core purity guard =="
 # Banned in pure-sim sources (master prompt rule 4 / GDD 8.3).
 # DateTime.UtcNow is banned beyond the literal contract -- docs/DECISIONS.md 2026-06-11.
 PATTERN='UnityEngine|UnityEditor|System\.Random|DateTime\.(Utc)?Now'
@@ -22,7 +22,10 @@ if [ "$violations" -ne 0 ]; then
 fi
 echo "purity guard OK: no banned references in Core or Core.Tests sources"
 
-echo "== [2/2] dotnet test (Tools/CoreTests shim) =="
+echo "== [2/3] dotnet test (Tools/CoreTests shim) =="
 dotnet test Tools/CoreTests/CoreTests.csproj --nologo -v minimal
+
+echo "== [3/3] content fixtures (Tools/ContentCheck) =="
+dotnet run --project Tools/ContentCheck -c Release -v q
 
 echo "RESULT: ALL GATES GREEN"
