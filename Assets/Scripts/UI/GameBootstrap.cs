@@ -29,6 +29,24 @@ namespace Riptide.UI
             return bootstrap;
         }
 
+        /// <summary>The full app (GDD 9): content, meta, flow, screens. Starts at Home.</summary>
+        public static (GameFlow flow, ScreenManager screens) CreateApp(bool instantAnimations = false)
+        {
+            var root = new GameObject("RiptideApp");
+            var bootstrap = root.AddComponent<GameBootstrap>();
+            bootstrap.SetUpCamera();
+
+            EconomyConfig economy = RuntimeContent.LoadEconomy();
+            CreatureRoster roster = RuntimeContent.LoadCreatures();
+            StringTable strings = RuntimeContent.LoadStrings();
+            var meta = new MetaServices();
+            meta.Load();
+
+            var flow = new GameFlow(economy, roster, strings, meta);
+            ScreenManager screens = ScreenManager.Create(root.transform, flow, instantAnimations);
+            return (flow, screens);
+        }
+
         private void Configure(LevelConfig config, ulong seed, bool instantAnimations)
         {
             SetUpCamera();
@@ -50,7 +68,7 @@ namespace Riptide.UI
             Driver.RenderAll(Store.State);
         }
 
-        private void SetUpCamera()
+        internal void SetUpCamera()
         {
             Camera cam = Camera.main != null ? Camera.main : FindFirstCamera();
             if (cam == null)
@@ -88,9 +106,7 @@ namespace Riptide.UI
 
             try
             {
-                LevelConfig config = RuntimeContent.EndlessConfig();
-                ulong seed = (ulong)(uint)Environment.TickCount;
-                CreateGame(config, seed, instantAnimations: false);
+                CreateApp(instantAnimations: false);
             }
             catch (Exception ex)
             {
