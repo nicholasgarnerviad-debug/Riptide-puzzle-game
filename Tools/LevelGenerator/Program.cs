@@ -31,7 +31,7 @@ namespace Riptide.Tools.LevelGenerator
 
         public static int Main(string[] args)
         {
-            string contentRoot = args.Length > 0 ? args[0] : Path.Combine("Assets", "Content");
+            string contentRoot = args.Length > 0 ? args[0] : Path.Combine("Assets", "Resources", "Content");
             EconomyConfig economy = EconomyLoader.Load(File.ReadAllText(Path.Combine(contentRoot, "economy.json")), "economy.json");
             CreatureRoster roster = CreatureLoader.Load(File.ReadAllText(Path.Combine(contentRoot, "creatures.json")), "creatures.json");
 

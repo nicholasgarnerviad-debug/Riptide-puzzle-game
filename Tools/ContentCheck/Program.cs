@@ -13,7 +13,7 @@ namespace Riptide.Tools.ContentCheck
     {
         public static int Main(string[] args)
         {
-            string root = args.Length > 0 ? args[0] : Path.Combine("Assets", "Content");
+            string root = args.Length > 0 ? args[0] : Path.Combine("Assets", "Resources", "Content");
             if (!Directory.Exists(root))
             {
                 Console.Error.WriteLine($"ContentCheck: content root '{root}' not found (run from the repo root).");

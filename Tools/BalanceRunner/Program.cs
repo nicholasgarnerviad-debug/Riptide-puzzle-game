@@ -9,7 +9,7 @@ namespace Riptide.Tools.BalanceRunner
 {
     /// <summary>
     /// Usage: dotnet run --project Tools/BalanceRunner -c Release --
-    ///        --mode endless|daily --games 10000 --policy gh|gc|rl [--out path.csv] [--content Assets/Content]
+    ///        --mode endless|daily --games 10000 --policy gh|gc|rl [--out path.csv] [--content Assets/Resources/Content]
     /// Plays N seeded games headlessly and writes a raw per-game CSV plus a
     /// summary block on stdout (master prompt 3B).
     /// </summary>
@@ -33,7 +33,7 @@ namespace Riptide.Tools.BalanceRunner
             string mode = Arg(args, "--mode") ?? "endless";
             int games = int.Parse(Arg(args, "--games") ?? "10000", CultureInfo.InvariantCulture);
             string policyName = Arg(args, "--policy") ?? "gh";
-            string contentRoot = Arg(args, "--content") ?? Path.Combine("Assets", "Content");
+            string contentRoot = Arg(args, "--content") ?? Path.Combine("Assets", "Resources", "Content");
             string outPath = Arg(args, "--out") ?? Path.Combine("docs", "balance", $"{mode}_{policyName}_{games}.csv");
 
             EconomyConfig economy = EconomyLoader.Load(File.ReadAllText(Path.Combine(contentRoot, "economy.json")), "economy.json");

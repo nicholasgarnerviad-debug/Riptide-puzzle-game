@@ -11,7 +11,7 @@ namespace Riptide.Tools.DailyVerifier
     /// Verifies N consecutive daily seeds are completable: GreedyHeuristic first,
     /// then GreedyClear, then 20 RandomLegal attempts (GDD 8.3: "at least one
     /// policy"). Usage: dotnet run --project Tools/DailyVerifier -c Release --
-    ///                  [--start yyyy-MM-dd] [--days 365] [--content Assets/Content]
+    ///                  [--start yyyy-MM-dd] [--days 365] [--content Assets/Resources/Content]
     /// </summary>
     public static class Program
     {
@@ -19,7 +19,7 @@ namespace Riptide.Tools.DailyVerifier
         {
             string startText = Arg(args, "--start") ?? "2026-06-11";
             int days = int.Parse(Arg(args, "--days") ?? "365", CultureInfo.InvariantCulture);
-            string contentRoot = Arg(args, "--content") ?? Path.Combine("Assets", "Content");
+            string contentRoot = Arg(args, "--content") ?? Path.Combine("Assets", "Resources", "Content");
 
             EconomyConfig economy = EconomyLoader.Load(File.ReadAllText(Path.Combine(contentRoot, "economy.json")), "economy.json");
             CreatureRoster roster = CreatureLoader.Load(File.ReadAllText(Path.Combine(contentRoot, "creatures.json")), "creatures.json");
