@@ -101,11 +101,13 @@ namespace Riptide.Core.Tests
         [Test]
         public void Creatures_RosterOfEight_Loads()
         {
-            const string json = @"{ ""species"": [
-                { ""id"": 0, ""name"": ""Crab"", ""emoji"": ""🦀"" }, { ""id"": 1, ""name"": ""Starfish"", ""emoji"": ""⭐"" },
-                { ""id"": 2, ""name"": ""Seahorse"", ""emoji"": ""🐠"" }, { ""id"": 3, ""name"": ""Octopus"", ""emoji"": ""🐙"" },
-                { ""id"": 4, ""name"": ""Turtle"", ""emoji"": ""🐢"" }, { ""id"": 5, ""name"": ""Pufferfish"", ""emoji"": ""🐡"" },
-                { ""id"": 6, ""name"": ""Jellyfish"", ""emoji"": ""🪼"" }, { ""id"": 7, ""name"": ""Axolotl"", ""emoji"": ""🦎"", ""rare"": true } ] }";
+            const string flavor = @"""flavor"": [""a"", ""b"", ""c""]";
+            string json = @"{ ""species"": [
+                { ""id"": 0, ""name"": ""Crab"", ""emoji"": ""🦀"", FL }, { ""id"": 1, ""name"": ""Starfish"", ""emoji"": ""⭐"", FL },
+                { ""id"": 2, ""name"": ""Seahorse"", ""emoji"": ""🐠"", FL }, { ""id"": 3, ""name"": ""Octopus"", ""emoji"": ""🐙"", FL },
+                { ""id"": 4, ""name"": ""Turtle"", ""emoji"": ""🐢"", FL }, { ""id"": 5, ""name"": ""Pufferfish"", ""emoji"": ""🐡"", FL },
+                { ""id"": 6, ""name"": ""Jellyfish"", ""emoji"": ""🪼"", FL }, { ""id"": 7, ""name"": ""Axolotl"", ""emoji"": ""🦎"", ""rare"": true, FL } ] }"
+                .Replace("FL", flavor);
 
             CreatureRoster roster = CreatureLoader.Load(json, "creatures.json");
 
@@ -113,12 +115,15 @@ namespace Riptide.Core.Tests
             Assert.That(roster.Species[7].Name, Is.EqualTo("Axolotl"));
             Assert.That(roster.Species[7].Rare, Is.True);
             Assert.That(roster.Species[0].Rare, Is.False);
+            Assert.That(roster.Species[0].Flavor.Count, Is.EqualTo(3), "GDD 5.1: three fact lines");
         }
 
         [Test]
         public void Creatures_RejectDuplicateIds()
         {
-            const string json = @"{ ""species"": [ { ""id"": 0, ""name"": ""Crab"", ""emoji"": ""🦀"" }, { ""id"": 0, ""name"": ""Starfish"", ""emoji"": ""⭐"" } ] }";
+            const string json = @"{ ""species"": [
+                { ""id"": 0, ""name"": ""Crab"", ""emoji"": ""🦀"", ""flavor"": [""a"",""b"",""c""] },
+                { ""id"": 0, ""name"": ""Starfish"", ""emoji"": ""⭐"", ""flavor"": [""a"",""b"",""c""] } ] }";
 
             var ex = Assert.Throws<ContentException>(() => CreatureLoader.Load(json, "creatures.json"));
 

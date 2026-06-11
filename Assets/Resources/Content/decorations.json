@@ -1,0 +1,24 @@
+{
+  "items": [
+    { "id": "rock_small", "name": "Smooth Pebble", "cost": 200, "emoji": "🪨" },
+    { "id": "rock_big", "name": "Tide-Worn Boulder", "cost": 350, "emoji": "🗿" },
+    { "id": "kelp_short", "name": "Kelp Sprout", "cost": 200, "emoji": "🌱" },
+    { "id": "kelp_tall", "name": "Kelp Tower", "cost": 400, "emoji": "🌿" },
+    { "id": "shell_spiral", "name": "Spiral Shell", "cost": 250, "emoji": "🐚" },
+    { "id": "coral_pink", "name": "Living Coral", "cost": 500, "emoji": "🪸" },
+    { "id": "anemone", "name": "Anemone Patch", "cost": 450, "emoji": "🌸" },
+    { "id": "driftwood", "name": "Driftwood Arch", "cost": 550, "emoji": "🪵" },
+    { "id": "bottle", "name": "Message Bottle", "cost": 300, "emoji": "🍾" },
+    { "id": "anchor", "name": "Rusted Anchor", "cost": 800, "emoji": "⚓" },
+    { "id": "wheel", "name": "Ship's Wheel", "cost": 750, "emoji": "☸️" },
+    { "id": "lantern", "name": "Glow Lantern", "cost": 650, "emoji": "🏮" },
+    { "id": "chest_small", "name": "Tiny Treasure Chest", "cost": 900, "emoji": "🧰" },
+    { "id": "chest_gold", "name": "Golden Treasure Chest", "cost": 1500, "emoji": "💰" },
+    { "id": "statue_fish", "name": "Fish Statue", "cost": 1000, "emoji": "🐟" },
+    { "id": "pearl", "name": "Giant Pearl", "cost": 1200, "emoji": "🫧" },
+    { "id": "telescope", "name": "Sunken Telescope", "cost": 1100, "emoji": "🔭" },
+    { "id": "crown", "name": "Lost Crown", "cost": 1800, "emoji": "👑" },
+    { "id": "trident", "name": "Ancient Trident", "cost": 2000, "emoji": "🔱" },
+    { "id": "bubbles", "name": "Bubble Fountain", "cost": 600, "emoji": "💭" }
+  ]
+}

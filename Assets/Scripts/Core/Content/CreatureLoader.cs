@@ -13,12 +13,16 @@ namespace Riptide.Core
         /// <summary>Share-card emoji (GDD 3.3); content data so the goldens stay data-pinned.</summary>
         public string Emoji { get; }
 
-        public CreatureSpecies(int id, string name, bool rare, string emoji)
+        /// <summary>GDD 5.1: three Tidepool fact lines per species.</summary>
+        public IReadOnlyList<string> Flavor { get; }
+
+        public CreatureSpecies(int id, string name, bool rare, string emoji, IReadOnlyList<string> flavor)
         {
             Id = id;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Rare = rare;
             Emoji = emoji ?? throw new ArgumentNullException(nameof(emoji));
+            Flavor = flavor ?? throw new ArgumentNullException(nameof(flavor));
         }
     }
 
@@ -79,8 +83,28 @@ namespace Riptide.Core
                         throw new JsonParseException("Species emoji must not be empty", emojiNode.Line, emojiNode.Column);
                     }
 
+                    JsonValue flavorNode = obj.Require("flavor");
+                    JsonArray flavorArray = flavorNode.AsArray();
+                    if (flavorArray.Count != 3)
+                    {
+                        throw new JsonParseException($"Species '{name}' needs exactly 3 flavor lines (GDD 5.1), got {flavorArray.Count}",
+                            flavorNode.Line, flavorNode.Column);
+                    }
+
+                    var flavor = new List<string>(3);
+                    foreach (JsonValue line in flavorArray.Items)
+                    {
+                        string text = line.AsString();
+                        if (text.Length == 0)
+                        {
+                            throw new JsonParseException("Flavor lines must not be empty", line.Line, line.Column);
+                        }
+
+                        flavor.Add(text);
+                    }
+
                     bool rare = obj.Optional("rare")?.AsBool() ?? false;
-                    species.Add(new CreatureSpecies(id, name, rare, emoji));
+                    species.Add(new CreatureSpecies(id, name, rare, emoji, flavor));
                 }
 
                 species.Sort((a, b) => a.Id.CompareTo(b.Id));

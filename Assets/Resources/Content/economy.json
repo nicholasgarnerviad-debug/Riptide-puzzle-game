@@ -65,6 +65,11 @@
     "dailyRetryCost": 100,
     "streakFreezeCost": 300
   },
+  "boosters": {
+    "drainPump": 150,
+    "bubblePop": 100,
+    "newTide": 120
+  },
   "bot": {
     "greedyHeuristic": {
       "clears": 100,

@@ -80,6 +80,21 @@ namespace Riptide.Core
         public int DailyNumber(long epochDay) => (int)(epochDay - EpochDay) + 1;
     }
 
+    /// <summary>GDD 5.3 booster coin prices.</summary>
+    public sealed class BoosterPrices
+    {
+        public int DrainPump { get; }
+        public int BubblePop { get; }
+        public int NewTide { get; }
+
+        public BoosterPrices(int drainPump, int bubblePop, int newTide)
+        {
+            DrainPump = drainPump;
+            BubblePop = bubblePop;
+            NewTide = newTide;
+        }
+    }
+
     /// <summary>GDD 5.2 coin sources/sinks (Phase 5 scope: award math; wallet in Phase 6).</summary>
     public sealed class CoinsConfig
     {
@@ -158,6 +173,7 @@ namespace Riptide.Core
         public DailyTuning Daily { get; }
         public GreedyHeuristicWeights GreedyHeuristic { get; }
         public CoinsConfig Coins { get; }
+        public BoosterPrices Boosters { get; }
 
         public EconomyConfig(
             int pointsPerCell, int rowClearBase, int comboStartHalves, int comboStepHalves, int comboCapHalves,
@@ -167,7 +183,8 @@ namespace Riptide.Core
             EndlessConfig endless,
             DailyTuning daily,
             GreedyHeuristicWeights greedyHeuristic,
-            CoinsConfig coins)
+            CoinsConfig coins,
+            BoosterPrices boosters)
         {
             this.pointsPerCell = pointsPerCell;
             this.rowClearBase = rowClearBase;
@@ -184,6 +201,7 @@ namespace Riptide.Core
             Daily = daily ?? throw new ArgumentNullException(nameof(daily));
             GreedyHeuristic = greedyHeuristic ?? throw new ArgumentNullException(nameof(greedyHeuristic));
             Coins = coins ?? throw new ArgumentNullException(nameof(coins));
+            Boosters = boosters ?? throw new ArgumentNullException(nameof(boosters));
         }
 
         /// <summary>The mode decides survival scoring (GDD 10: Endless/Daily only).</summary>
@@ -266,6 +284,12 @@ namespace Riptide.Core
                     milestones.Add((RequirePositive(obj, "days"), RequirePositive(obj, "award")));
                 }
 
+                JsonObject boosters = root.Require("boosters").AsObject();
+                var boosterPrices = new BoosterPrices(
+                    RequirePositive(boosters, "drainPump"),
+                    RequirePositive(boosters, "bubblePop"),
+                    RequirePositive(boosters, "newTide"));
+
                 var coinsConfig = new CoinsConfig(
                     RequirePositive(coins, "levelCompleteBase"),
                     RequireNonNegative(coins, "levelCompletePerBand"),
@@ -302,7 +326,8 @@ namespace Riptide.Core
                     endlessConfig,
                     dailyTuning,
                     heuristicWeights,
-                    coinsConfig);
+                    coinsConfig,
+                    boosterPrices);
             }
             catch (JsonParseException ex)
             {

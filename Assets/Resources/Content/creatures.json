@@ -1,12 +1,68 @@
 {
   "species": [
-    { "id": 0, "name": "Crab", "emoji": "🦀" },
-    { "id": 1, "name": "Starfish", "emoji": "⭐" },
-    { "id": 2, "name": "Seahorse", "emoji": "🐠" },
-    { "id": 3, "name": "Octopus", "emoji": "🐙" },
-    { "id": 4, "name": "Turtle", "emoji": "🐢" },
-    { "id": 5, "name": "Pufferfish", "emoji": "🐡" },
-    { "id": 6, "name": "Jellyfish", "emoji": "🪼" },
-    { "id": 7, "name": "Axolotl", "emoji": "🦎", "rare": true }
+    {
+      "id": 0, "name": "Crab", "emoji": "🦀",
+      "flavor": [
+        "Walks sideways out of principle.",
+        "Collects shiny pebbles it will never use.",
+        "Pinches first, apologizes never."
+      ]
+    },
+    {
+      "id": 1, "name": "Starfish", "emoji": "⭐",
+      "flavor": [
+        "Can regrow an arm. Shows off about it.",
+        "Hasn't moved in three tides. On purpose, probably.",
+        "Dreams of being a constellation."
+      ]
+    },
+    {
+      "id": 2, "name": "Seahorse", "emoji": "🐠",
+      "flavor": [
+        "Holds onto kelp during rough tides. And your finger.",
+        "The dads carry the babies here.",
+        "Gallops at a majestic two metres per hour."
+      ]
+    },
+    {
+      "id": 3, "name": "Octopus", "emoji": "🐙",
+      "flavor": [
+        "Has three hearts and shares none of them.",
+        "Already figured out the tide pattern. Won't tell.",
+        "Once unscrewed a jar from the inside. Allegedly."
+      ]
+    },
+    {
+      "id": 4, "name": "Turtle", "emoji": "🐢",
+      "flavor": [
+        "Has seen ten thousand tides. Unimpressed by yours.",
+        "Carries its house so it never worries about the water.",
+        "Slow is smooth, smooth is fast."
+      ]
+    },
+    {
+      "id": 5, "name": "Pufferfish", "emoji": "🐡",
+      "flavor": [
+        "Inflates when startled. Is always startled.",
+        "Mostly spikes, partly grudge.",
+        "Practices deep breathing. Too well."
+      ]
+    },
+    {
+      "id": 6, "name": "Jellyfish", "emoji": "🪼",
+      "flavor": [
+        "No brain, no heart, no worries.",
+        "Glows softly when the water rises. Coincidence?",
+        "Older than the tides themselves."
+      ]
+    },
+    {
+      "id": 7, "name": "Axolotl", "emoji": "🦎", "rare": true,
+      "flavor": [
+        "Smiles through everything. Everything.",
+        "A rare visitor from quieter waters.",
+        "Refuses to grow up. Respect."
+      ]
+    }
   ]
 }
