@@ -57,9 +57,12 @@ namespace Riptide.Core
         public int MaxEscalationSteps { get; }
         public int CreatureSpawnIntervalTrays { get; }
 
+        /// <summary>Daily #1 epoch day (DECISIONS.md: share cards count from here).</summary>
+        public long EpochDay { get; }
+
         public DailyTuning(int surviveTides, int weightBand, int startWaterLevel, int startTideInterval,
             int intervalShrinkEveryTides, int intervalFloor, int bigWeightBonusPerStep,
-            int maxEscalationSteps, int creatureSpawnIntervalTrays)
+            int maxEscalationSteps, int creatureSpawnIntervalTrays, long epochDay)
         {
             SurviveTides = surviveTides;
             WeightBand = weightBand;
@@ -70,6 +73,41 @@ namespace Riptide.Core
             BigWeightBonusPerStep = bigWeightBonusPerStep;
             MaxEscalationSteps = maxEscalationSteps;
             CreatureSpawnIntervalTrays = creatureSpawnIntervalTrays;
+            EpochDay = epochDay;
+        }
+
+        /// <summary>Daily number for a date: epoch date = #1.</summary>
+        public int DailyNumber(long epochDay) => (int)(epochDay - EpochDay) + 1;
+    }
+
+    /// <summary>GDD 5.2 coin sources/sinks (Phase 5 scope: award math; wallet in Phase 6).</summary>
+    public sealed class CoinsConfig
+    {
+        public int LevelCompleteBase { get; }
+        public int LevelCompletePerBand { get; }
+        public int LevelCompletePerStar { get; }
+        public int DailyComplete { get; }
+        public IReadOnlyList<(int days, int award)> StreakMilestones { get; }
+        public int EndlessPersonalBest { get; }
+        public int RewardedChest { get; }
+        public int RewardedChestCapPerDay { get; }
+        public int DailyRetryCost { get; }
+        public int StreakFreezeCost { get; }
+
+        public CoinsConfig(int levelCompleteBase, int levelCompletePerBand, int levelCompletePerStar,
+            int dailyComplete, IReadOnlyList<(int, int)> streakMilestones, int endlessPersonalBest,
+            int rewardedChest, int rewardedChestCapPerDay, int dailyRetryCost, int streakFreezeCost)
+        {
+            LevelCompleteBase = levelCompleteBase;
+            LevelCompletePerBand = levelCompletePerBand;
+            LevelCompletePerStar = levelCompletePerStar;
+            DailyComplete = dailyComplete;
+            StreakMilestones = streakMilestones;
+            EndlessPersonalBest = endlessPersonalBest;
+            RewardedChest = rewardedChest;
+            RewardedChestCapPerDay = rewardedChestCapPerDay;
+            DailyRetryCost = dailyRetryCost;
+            StreakFreezeCost = streakFreezeCost;
         }
     }
 
@@ -119,6 +157,7 @@ namespace Riptide.Core
         public EndlessConfig Endless { get; }
         public DailyTuning Daily { get; }
         public GreedyHeuristicWeights GreedyHeuristic { get; }
+        public CoinsConfig Coins { get; }
 
         public EconomyConfig(
             int pointsPerCell, int rowClearBase, int comboStartHalves, int comboStepHalves, int comboCapHalves,
@@ -127,7 +166,8 @@ namespace Riptide.Core
             IReadOnlyDictionary<int, IReadOnlyList<int>> pieceWeightBands,
             EndlessConfig endless,
             DailyTuning daily,
-            GreedyHeuristicWeights greedyHeuristic)
+            GreedyHeuristicWeights greedyHeuristic,
+            CoinsConfig coins)
         {
             this.pointsPerCell = pointsPerCell;
             this.rowClearBase = rowClearBase;
@@ -143,6 +183,7 @@ namespace Riptide.Core
             Endless = endless ?? throw new ArgumentNullException(nameof(endless));
             Daily = daily ?? throw new ArgumentNullException(nameof(daily));
             GreedyHeuristic = greedyHeuristic ?? throw new ArgumentNullException(nameof(greedyHeuristic));
+            Coins = coins ?? throw new ArgumentNullException(nameof(coins));
         }
 
         /// <summary>The mode decides survival scoring (GDD 10: Endless/Daily only).</summary>
@@ -196,6 +237,14 @@ namespace Riptide.Core
                     RequireNonNegative(endless, "maxEscalationSteps"),
                     RequirePositive(endless, "creatureSpawnIntervalTrays"));
 
+                JsonValue epochNode = daily.Require("epochDate");
+                string epochText = epochNode.AsString();
+                if (!CivilDate.TryParseIsoDate(epochText, out int epochYear, out int epochMonth, out int epochDayOfMonth))
+                {
+                    throw new JsonParseException($"'epochDate' must be yyyy-MM-dd, got '{epochText}'",
+                        epochNode.Line, epochNode.Column);
+                }
+
                 var dailyTuning = new DailyTuning(
                     RequirePositive(daily, "surviveTides"),
                     RequireBandRef(daily, "weightBand", bandTable),
@@ -205,7 +254,29 @@ namespace Riptide.Core
                     RequirePositive(daily, "intervalFloor"),
                     RequireNonNegative(daily, "bigWeightBonusPerStep"),
                     RequireNonNegative(daily, "maxEscalationSteps"),
-                    RequirePositive(daily, "creatureSpawnIntervalTrays"));
+                    RequirePositive(daily, "creatureSpawnIntervalTrays"),
+                    CivilDate.ToEpochDays(epochYear, epochMonth, epochDayOfMonth));
+
+                JsonObject coins = root.Require("coins").AsObject();
+                JsonArray milestonesArray = coins.Require("streakMilestones").AsArray();
+                var milestones = new List<(int, int)>(milestonesArray.Count);
+                foreach (JsonValue item in milestonesArray.Items)
+                {
+                    JsonObject obj = item.AsObject();
+                    milestones.Add((RequirePositive(obj, "days"), RequirePositive(obj, "award")));
+                }
+
+                var coinsConfig = new CoinsConfig(
+                    RequirePositive(coins, "levelCompleteBase"),
+                    RequireNonNegative(coins, "levelCompletePerBand"),
+                    RequireNonNegative(coins, "levelCompletePerStar"),
+                    RequirePositive(coins, "dailyComplete"),
+                    milestones,
+                    RequireNonNegative(coins, "endlessPersonalBest"),
+                    RequireNonNegative(coins, "rewardedChest"),
+                    RequireNonNegative(coins, "rewardedChestCapPerDay"),
+                    RequirePositive(coins, "dailyRetryCost"),
+                    RequirePositive(coins, "streakFreezeCost"));
 
                 var heuristicWeights = new GreedyHeuristicWeights(
                     RequireNonNegative(heuristic, "clears"),
@@ -230,7 +301,8 @@ namespace Riptide.Core
                     bandTable,
                     endlessConfig,
                     dailyTuning,
-                    heuristicWeights);
+                    heuristicWeights,
+                    coinsConfig);
             }
             catch (JsonParseException ex)
             {

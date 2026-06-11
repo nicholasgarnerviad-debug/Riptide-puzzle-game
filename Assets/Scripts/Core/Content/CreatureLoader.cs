@@ -10,11 +10,15 @@ namespace Riptide.Core
         public string Name { get; }
         public bool Rare { get; }
 
-        public CreatureSpecies(int id, string name, bool rare)
+        /// <summary>Share-card emoji (GDD 3.3); content data so the goldens stay data-pinned.</summary>
+        public string Emoji { get; }
+
+        public CreatureSpecies(int id, string name, bool rare, string emoji)
         {
             Id = id;
             Name = name ?? throw new ArgumentNullException(nameof(name));
             Rare = rare;
+            Emoji = emoji ?? throw new ArgumentNullException(nameof(emoji));
         }
     }
 
@@ -68,8 +72,15 @@ namespace Riptide.Core
                         throw new JsonParseException("Species name must not be empty", nameNode.Line, nameNode.Column);
                     }
 
+                    JsonValue emojiNode = obj.Require("emoji");
+                    string emoji = emojiNode.AsString();
+                    if (emoji.Length == 0)
+                    {
+                        throw new JsonParseException("Species emoji must not be empty", emojiNode.Line, emojiNode.Column);
+                    }
+
                     bool rare = obj.Optional("rare")?.AsBool() ?? false;
-                    species.Add(new CreatureSpecies(id, name, rare));
+                    species.Add(new CreatureSpecies(id, name, rare, emoji));
                 }
 
                 species.Sort((a, b) => a.Id.CompareTo(b.Id));

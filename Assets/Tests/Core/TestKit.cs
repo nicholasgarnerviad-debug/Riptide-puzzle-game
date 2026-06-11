@@ -196,7 +196,17 @@ namespace Riptide.Core.Tests
   ""daily"": {
     ""surviveTides"": 20, ""weightBand"": 1, ""startWaterLevel"": 1,
     ""startTideInterval"": 7, ""intervalShrinkEveryTides"": 3, ""intervalFloor"": 2,
-    ""bigWeightBonusPerStep"": 1, ""maxEscalationSteps"": 1, ""creatureSpawnIntervalTrays"": 4
+    ""bigWeightBonusPerStep"": 1, ""maxEscalationSteps"": 1, ""creatureSpawnIntervalTrays"": 4,
+    ""epochDate"": ""2026-06-11""
+  },
+  ""coins"": {
+    ""levelCompleteBase"": 20, ""levelCompletePerBand"": 3, ""levelCompletePerStar"": 5,
+    ""dailyComplete"": 75,
+    ""streakMilestones"": [
+      { ""days"": 7, ""award"": 200 }, { ""days"": 30, ""award"": 750 }, { ""days"": 100, ""award"": 2000 }
+    ],
+    ""endlessPersonalBest"": 50, ""rewardedChest"": 50, ""rewardedChestCapPerDay"": 3,
+    ""dailyRetryCost"": 100, ""streakFreezeCost"": 300
   },
   ""bot"": {
     ""greedyHeuristic"": {

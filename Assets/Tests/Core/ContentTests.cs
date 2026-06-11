@@ -102,10 +102,10 @@ namespace Riptide.Core.Tests
         public void Creatures_RosterOfEight_Loads()
         {
             const string json = @"{ ""species"": [
-                { ""id"": 0, ""name"": ""Crab"" }, { ""id"": 1, ""name"": ""Starfish"" },
-                { ""id"": 2, ""name"": ""Seahorse"" }, { ""id"": 3, ""name"": ""Octopus"" },
-                { ""id"": 4, ""name"": ""Turtle"" }, { ""id"": 5, ""name"": ""Pufferfish"" },
-                { ""id"": 6, ""name"": ""Jellyfish"" }, { ""id"": 7, ""name"": ""Axolotl"", ""rare"": true } ] }";
+                { ""id"": 0, ""name"": ""Crab"", ""emoji"": ""🦀"" }, { ""id"": 1, ""name"": ""Starfish"", ""emoji"": ""⭐"" },
+                { ""id"": 2, ""name"": ""Seahorse"", ""emoji"": ""🐠"" }, { ""id"": 3, ""name"": ""Octopus"", ""emoji"": ""🐙"" },
+                { ""id"": 4, ""name"": ""Turtle"", ""emoji"": ""🐢"" }, { ""id"": 5, ""name"": ""Pufferfish"", ""emoji"": ""🐡"" },
+                { ""id"": 6, ""name"": ""Jellyfish"", ""emoji"": ""🪼"" }, { ""id"": 7, ""name"": ""Axolotl"", ""emoji"": ""🦎"", ""rare"": true } ] }";
 
             CreatureRoster roster = CreatureLoader.Load(json, "creatures.json");
 
@@ -118,7 +118,7 @@ namespace Riptide.Core.Tests
         [Test]
         public void Creatures_RejectDuplicateIds()
         {
-            const string json = @"{ ""species"": [ { ""id"": 0, ""name"": ""Crab"" }, { ""id"": 0, ""name"": ""Starfish"" } ] }";
+            const string json = @"{ ""species"": [ { ""id"": 0, ""name"": ""Crab"", ""emoji"": ""🦀"" }, { ""id"": 0, ""name"": ""Starfish"", ""emoji"": ""⭐"" } ] }";
 
             var ex = Assert.Throws<ContentException>(() => CreatureLoader.Load(json, "creatures.json"));
 
