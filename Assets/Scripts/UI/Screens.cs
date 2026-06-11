@@ -1,4 +1,4 @@
-using Riptide.Core;
+﻿using Riptide.Core;
 using Riptide.Game;
 using UnityEngine;
 using UnityEngine.UI;
@@ -277,7 +277,7 @@ namespace Riptide.UI
             Text title = UiKit.Label(root, "title", flow.Strings.Get("tidepool.title"), 64, UiKit.TextColor);
             UiKit.Place(title.rectTransform, new Vector2(0.5f, 0.945f), new Vector2(700f, 90f), Vector2.zero);
 
-            screen.coins = UiKit.Label(root, "coins", "", 40, Palette.Blocks[3]);
+            screen.coins = UiKit.Label(root, "coins", "", 40, ThemeRuntime.Color("coin"));
             UiKit.Place(screen.coins.rectTransform, new Vector2(0.5f, 0.895f), new Vector2(500f, 60f), Vector2.zero);
 
             // The diorama: species swim in a horizontal scroll band.

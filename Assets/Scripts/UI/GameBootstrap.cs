@@ -18,7 +18,8 @@ namespace Riptide.UI
         public BoardView Board { get; private set; } = null!;
         public WaterView Water { get; private set; } = null!;
         public TrayView Tray { get; private set; } = null!;
-        public TideMeterView Meter { get; private set; } = null!;
+        public TideMeterRing Meter { get; private set; } = null!;
+        public BoardChromeView Chrome { get; private set; } = null!;
         public AnimationDriver Driver { get; private set; } = null!;
 
         public static GameBootstrap CreateGame(LevelConfig config, ulong seed, bool instantAnimations)
@@ -85,9 +86,11 @@ namespace Riptide.UI
             Board = BoardView.Create(transform);
             Water = WaterView.Create(transform, config.StartWaterLevel);
             Tray = TrayView.Create(transform);
-            Meter = TideMeterView.Create(transform);
-            Driver = AnimationDriver.Create(transform, Store, Board, Water, Tray, Meter);
+            Meter = TideMeterRing.Create(transform);
+            Chrome = BoardChromeView.Create(transform);
+            Driver = AnimationDriver.Create(transform, Store, Board, Water, Tray, Meter, Chrome);
             Driver.InstantMode = instantAnimations;
+            JuiceDirector.Create(transform, Driver);
 
             Camera cam = Camera.main != null ? Camera.main : FindFirstCamera();
             InputController.Create(transform, Store, Tray, Driver, cam, InputTuning.CreateDefault());

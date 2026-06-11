@@ -5,20 +5,42 @@ using UnityEngine;
 namespace Riptide.UI
 {
     /// <summary>
-    /// GDD 7.1 water: two translucent caustic layers drifting at different rates,
-    /// a foam line at the waterline, rise surge (350ms ease-in) and the hero drain
-    /// recede (450ms ease-out + sparkles). Danger pulse at water >= 7 (GDD 2.2/7.3).
+    /// Spec §5.1 water: a translucent body under two sine-displaced surface layers
+    /// (12px/9s back, 8px/6s front at half phase) with a foam line riding the front,
+    /// caustic noise over the submerged area (12%, 16s scroll), rise surge with 6px
+    /// overshoot, the over-delivered drain (droplets, per-row sparkle, foam flare,
+    /// multi-row edge pulse) and an 800ms calm→danger gradient crossfade.
+    /// Geometry constants cite §5.1; colors/durations come from ui_theme tokens.
     /// </summary>
     public sealed class WaterView : MonoBehaviour
     {
-        private SpriteRenderer layerDeep = null!;
-        private SpriteRenderer layerShallow = null!;
-        private SpriteRenderer foam = null!;
+        private const int SurfaceColumns = 18;
+        private const float BackAmpRefPx = 12f;   // §5.1
+        private const float BackPeriod = 9f;      // §5.1
+        private const float FrontAmpRefPx = 8f;   // §5.1
+        private const float FrontPeriod = 6f;     // §5.1
+        private const float CausticAlpha = 0.12f; // §5.1
+        private const float CausticPeriod = 16f;  // §5.1
+        private const float OvershootRefPx = 6f;  // §5.1 rise overshoot
+        private const int MaxDroplets = 16;       // §5.1 drain droplets
+
+        private SpriteRenderer body = null!;
+        private SpriteRenderer caustic = null!;
+        private readonly SpriteRenderer[] backCols = new SpriteRenderer[SurfaceColumns];
+        private readonly SpriteRenderer[] frontCols = new SpriteRenderer[SurfaceColumns];
+        private readonly SpriteRenderer[] foamCols = new SpriteRenderer[SurfaceColumns];
+
         private float currentLevel;
         private float driftTime;
+        private bool danger;
+        private float dangerBlend;
+        private float foamBoost;
 
         /// <summary>The level the view is showing right now (animated float; tests read this).</summary>
         public float CurrentLevel => currentLevel;
+
+        /// <summary>Tests: 1 = fully in the danger gradient, 0 = calm.</summary>
+        public float DangerBlend => dangerBlend;
 
         public static WaterView Create(Transform parent, float startLevel)
         {
@@ -31,30 +53,39 @@ namespace Riptide.UI
 
         private void Build(float startLevel)
         {
-            layerDeep = BuildLayer("deep", Palette.WaterDeep, 51);
-            layerShallow = BuildLayer("shallow", Palette.WaterShallow, 52);
+            var bodyGo = new GameObject("body");
+            bodyGo.transform.SetParent(transform, false);
+            body = bodyGo.AddComponent<SpriteRenderer>();
+            body.sprite = SpriteFactory.Solid();
+            body.sortingOrder = 51;
 
-            var foamGo = new GameObject("foam");
-            foamGo.transform.SetParent(transform, false);
-            foam = foamGo.AddComponent<SpriteRenderer>();
-            foam.sprite = SpriteFactory.Solid();
-            foam.color = Palette.FoamLine;
-            foam.sortingOrder = 53;
-            foamGo.transform.localScale = new Vector3(BoardSpec.Width + 4f, 0.06f, 1f);
+            var causticGo = new GameObject("caustic");
+            causticGo.transform.SetParent(transform, false);
+            caustic = causticGo.AddComponent<SpriteRenderer>();
+            caustic.sprite = SpriteFactory.Caustic();
+            caustic.drawMode = SpriteDrawMode.Tiled;
+            caustic.sortingOrder = 52;
+
+            float colWidth = (BoardSpec.Width + 1f) / SurfaceColumns;
+            for (int i = 0; i < SurfaceColumns; i++)
+            {
+                backCols[i] = BuildColumn($"back_{i}", colWidth, 0.34f, 53);
+                frontCols[i] = BuildColumn($"front_{i}", colWidth, 0.26f, 54);
+                foamCols[i] = BuildColumn($"foam_{i}", colWidth * 0.92f, 0.055f, 55);
+            }
 
             SetLevelInstant(startLevel);
+            ApplyColors();
         }
 
-        private SpriteRenderer BuildLayer(string name, Color tint, int order)
+        private SpriteRenderer BuildColumn(string name, float width, float height, int order)
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
+            go.transform.localScale = new Vector3(width, height, 1f);
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = SpriteFactory.Caustic();
-            sr.color = tint;
+            sr.sprite = SpriteFactory.Solid();
             sr.sortingOrder = order;
-            sr.drawMode = SpriteDrawMode.Tiled;
-            sr.size = new Vector2(BoardSpec.Width + 6f, BoardSpec.MaxWaterLevel + 2f);
             return sr;
         }
 
@@ -64,54 +95,125 @@ namespace Riptide.UI
             ApplyLevel();
         }
 
+        /// <summary>Driver-wired (§6.1 state-driven): danger gradient target from state.</summary>
+        public void SetDanger(bool inDanger)
+        {
+            danger = inDanger;
+        }
+
         private void ApplyLevel()
         {
-            float waterlineY = BoardLayout.WaterlineY(currentLevel);
-            layerDeep.transform.position = new Vector3(0f, waterlineY, 0f);
-            layerShallow.transform.position = new Vector3(0.3f, waterlineY, 0f);
-            foam.transform.position = new Vector3(0f, waterlineY, 0f);
+            float bottom = BoardLayout.BoardBottomY;
+            float waterline = BoardLayout.WaterlineY(currentLevel);
+            float depth = Mathf.Max(0f, waterline - bottom);
             bool visible = currentLevel > 0.01f;
-            layerDeep.enabled = visible;
-            layerShallow.enabled = visible;
-            foam.enabled = visible;
+
+            body.enabled = visible;
+            caustic.enabled = visible;
+            if (visible)
+            {
+                body.transform.position = new Vector3(0f, bottom + depth * 0.5f, 0f);
+                body.transform.localScale = new Vector3(BoardSpec.Width + 1f, depth, 1f);
+                caustic.size = new Vector2(BoardSpec.Width + 1f, depth);
+                float scroll = Mathf.Repeat(driftTime / CausticPeriod, 1f);
+                caustic.transform.position = new Vector3(scroll - 0.5f, waterline, 0f);
+            }
+
+            float colWidth = (BoardSpec.Width + 1f) / SurfaceColumns;
+            float backAmp = ThemeRuntime.WorldFromRefPx(BackAmpRefPx);
+            float frontAmp = ThemeRuntime.WorldFromRefPx(FrontAmpRefPx);
+            for (int i = 0; i < SurfaceColumns; i++)
+            {
+                float x = -(BoardSpec.Width + 1f) * 0.5f + colWidth * (i + 0.5f);
+                float phase = i * 0.7f;
+                float backY = waterline + backAmp * Mathf.Sin(driftTime * (2f * Mathf.PI / BackPeriod) + phase);
+                float frontY = waterline + frontAmp * Mathf.Sin(driftTime * (2f * Mathf.PI / FrontPeriod) + phase + Mathf.PI);
+                backCols[i].transform.position = new Vector3(x, backY, 0f);
+                frontCols[i].transform.position = new Vector3(x, frontY, 0f);
+                foamCols[i].transform.position = new Vector3(x, frontY + 0.03f, 0f);
+                backCols[i].enabled = visible;
+                frontCols[i].enabled = visible;
+                foamCols[i].enabled = visible;
+            }
+        }
+
+        private void ApplyColors()
+        {
+            Color calmTop = ThemeRuntime.Color("water.calm.top");
+            Color calmBtm = ThemeRuntime.Color("water.calm.btm");
+            Color dangerTop = ThemeRuntime.Color("water.danger.top");
+            Color dangerBtm = ThemeRuntime.Color("water.danger.btm");
+            Color top = Color.Lerp(calmTop, dangerTop, dangerBlend);
+            Color btm = Color.Lerp(calmBtm, dangerBtm, dangerBlend);
+
+            body.color = btm;
+            caustic.color = new Color(1f, 1f, 1f, CausticAlpha);
+            Color foam = ThemeRuntime.Color("water.foamLine");
+            foam = Color.Lerp(foam, ThemeRuntime.Color("danger"), dangerBlend * 0.6f);
+            foam.a = Mathf.Clamp01(foam.a * (1f + foamBoost));
+
+            foreach (SpriteRenderer sr in backCols)
+            {
+                sr.color = new Color(top.r, top.g, top.b, top.a * 0.8f);
+            }
+
+            foreach (SpriteRenderer sr in frontCols)
+            {
+                sr.color = top;
+            }
+
+            foreach (SpriteRenderer sr in foamCols)
+            {
+                sr.color = foam;
+            }
         }
 
         private void Update()
         {
             driftTime += Time.deltaTime;
-            float driftA = Mathf.Sin(driftTime * 0.31f) * 0.45f;
-            float driftB = Mathf.Sin(driftTime * 0.21f + 2.1f) * 0.7f;
-            Vector3 deepPos = layerDeep.transform.position;
-            layerDeep.transform.position = new Vector3(driftA, deepPos.y, 0f);
-            Vector3 shallowPos = layerShallow.transform.position;
-            layerShallow.transform.position = new Vector3(0.3f + driftB, shallowPos.y, 0f);
 
-            // GDD 2.2/7.3: escalating danger read at water 7+ — the foam pulses red.
-            if (currentLevel >= 7f)
+            // §5.1 danger crossfade over t.dangerFade; foam pulses while in danger.
+            float fadeSeconds = Mathf.Max(0.01f, ThemeRuntime.Seconds("t.dangerFade"));
+            dangerBlend = Mathf.MoveTowards(dangerBlend, danger ? 1f : 0f, Time.deltaTime / fadeSeconds);
+            if (danger)
             {
-                float pulse = 0.5f + 0.5f * Mathf.Sin(driftTime * 6f);
-                foam.color = Color.Lerp(Palette.FoamLine, Palette.DangerPulse, pulse);
+                foamBoost = Mathf.Max(foamBoost, 0.25f + 0.25f * Mathf.Sin(driftTime * 4f));
             }
-            else
-            {
-                foam.color = Palette.FoamLine;
-            }
+
+            foamBoost = Mathf.MoveTowards(foamBoost, 0f, Time.deltaTime * 1.5f);
+            ApplyLevel();
+            ApplyColors();
         }
 
-        /// <summary>GDD 7.1: rise surge, 350ms ease-in.</summary>
+        /// <summary>§5.1 rise: t.rise surge up one row, 6px overshoot, settle; foam brightens.</summary>
         public IEnumerator AnimateRise(float toLevel)
         {
-            yield return AnimateTo(toLevel, 0.35f, easeIn: true);
+            foamBoost = 0.5f;
+            float overshoot = ThemeRuntime.WorldFromRefPx(OvershootRefPx) / BoardLayout.CellSize;
+            yield return AnimateTo(toLevel, ThemeRuntime.Seconds("t.rise"), easeIn: true, overshoot);
         }
 
-        /// <summary>GDD 7.1: the hero drain — 450ms recede + sparkle burst.</summary>
-        public IEnumerator AnimateDrain(float toLevel)
+        /// <summary>§5.1 drain: recede + droplets + per-row sparkle; multi-row stretches and edge-pulses.</summary>
+        public IEnumerator AnimateDrain(float toLevel, int rowsDrained)
         {
-            SpawnSparkles();
-            yield return AnimateTo(toLevel, 0.45f, easeIn: false);
+            bool multi = rowsDrained > 1;
+            float seconds = ThemeRuntime.Seconds(multi ? "t.drainMulti" : "t.drain");
+            SpawnDroplets(Mathf.Min(MaxDroplets, 6 + rowsDrained * 5));
+            for (int row = 0; row < rowsDrained; row++)
+            {
+                SpawnRowSparkles(currentLevel - row - 0.5f);
+            }
+
+            foamBoost = 0.6f;
+            if (multi)
+            {
+                StartCoroutine(EdgePulse());
+            }
+
+            yield return AnimateTo(toLevel, seconds, easeIn: false, 0f);
         }
 
-        private IEnumerator AnimateTo(float toLevel, float duration, bool easeIn)
+        private IEnumerator AnimateTo(float toLevel, float duration, bool easeIn, float overshoot)
         {
             float from = currentLevel;
             float t = 0f;
@@ -120,7 +222,8 @@ namespace Riptide.UI
                 t += Time.deltaTime;
                 float u = Mathf.Clamp01(t / duration);
                 float eased = easeIn ? u * u : 1f - (1f - u) * (1f - u);
-                currentLevel = Mathf.Lerp(from, toLevel, eased);
+                currentLevel = Mathf.Lerp(from, toLevel, eased)
+                    + overshoot * Mathf.Sin(Mathf.PI * Mathf.Clamp01(u));
                 ApplyLevel();
                 yield return null;
             }
@@ -129,34 +232,34 @@ namespace Riptide.UI
             ApplyLevel();
         }
 
-        private void SpawnSparkles()
+        private void SpawnDroplets(int count)
         {
             float waterlineY = BoardLayout.WaterlineY(currentLevel);
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < count; i++)
             {
-                var go = new GameObject("sparkle");
+                var go = new GameObject("droplet");
                 go.transform.SetParent(transform, false);
+                float x = Random.Range(-BoardSpec.Width * 0.5f, BoardSpec.Width * 0.5f);
+                go.transform.position = new Vector3(x, waterlineY + Random.Range(0f, 0.2f), 0f);
+                go.transform.localScale = Vector3.one * Random.Range(0.12f, 0.24f);
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = SpriteFactory.Dot();
-                sr.color = Palette.FoamLine;
+                sr.color = ThemeRuntime.Color("water.foamLine");
                 sr.sortingOrder = 60;
-                float x = (i - 3.5f) * 1.15f + Random.Range(-0.3f, 0.3f);
-                go.transform.position = new Vector3(x, waterlineY + Random.Range(-0.1f, 0.25f), 0f);
-                go.transform.localScale = Vector3.one * Random.Range(0.25f, 0.5f);
-                StartCoroutine(SparkleLife(go, sr));
+                StartCoroutine(DropletLife(go, sr, Random.Range(0.35f, 0.55f)));
             }
         }
 
-        private IEnumerator SparkleLife(GameObject go, SpriteRenderer sr)
+        private IEnumerator DropletLife(GameObject go, SpriteRenderer sr, float life)
         {
             float t = 0f;
-            const float life = 0.5f;
             Vector3 start = go.transform.position;
+            float vx = Random.Range(-0.4f, 0.4f);
             while (t < life)
             {
                 t += Time.deltaTime;
                 float u = t / life;
-                go.transform.position = start + new Vector3(0f, u * 0.6f, 0f);
+                go.transform.position = start + new Vector3(vx * u, -2.2f * u * u, 0f);
                 Color c = sr.color;
                 c.a = 1f - u;
                 sr.color = c;
@@ -164,6 +267,61 @@ namespace Riptide.UI
             }
 
             Destroy(go);
+        }
+
+        private void SpawnRowSparkles(float atLevel)
+        {
+            float y = BoardLayout.WaterlineY(Mathf.Max(0f, atLevel));
+            for (int i = 0; i < 6; i++)
+            {
+                var go = new GameObject("sparkle");
+                go.transform.SetParent(transform, false);
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = SpriteFactory.Dot();
+                sr.color = ThemeRuntime.Color("water.foamLine");
+                sr.sortingOrder = 60;
+                go.transform.position = new Vector3((i - 2.5f) * 1.5f + Random.Range(-0.4f, 0.4f),
+                    y + Random.Range(-0.1f, 0.25f), 0f);
+                go.transform.localScale = Vector3.one * Random.Range(0.2f, 0.42f);
+                StartCoroutine(DropletLife(go, sr, 0.5f));
+            }
+        }
+
+        /// <summary>§5.1 multi-row drain: brief cyan pulse along the screen edges.</summary>
+        private IEnumerator EdgePulse()
+        {
+            Color tint = ThemeRuntime.Color("accent.primary");
+            var strips = new SpriteRenderer[2];
+            for (int i = 0; i < 2; i++)
+            {
+                var go = new GameObject($"edgePulse_{i}");
+                go.transform.SetParent(transform, false);
+                float x = (i == 0 ? -1f : 1f) * (BoardSpec.Width * 0.5f + 0.9f);
+                go.transform.position = new Vector3(x, (BoardLayout.BoardBottomY + BoardLayout.BoardTopY) * 0.5f, 0f);
+                go.transform.localScale = new Vector3(0.5f, BoardSpec.Height + 3f, 1f);
+                strips[i] = go.AddComponent<SpriteRenderer>();
+                strips[i].sprite = SpriteFactory.Solid();
+                strips[i].sortingOrder = 95;
+            }
+
+            float t = 0f;
+            float life = ThemeRuntime.Seconds("t.drainMulti");
+            while (t < life)
+            {
+                t += Time.deltaTime;
+                float pulse = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / life));
+                foreach (SpriteRenderer sr in strips)
+                {
+                    sr.color = new Color(tint.r, tint.g, tint.b, 0.22f * pulse);
+                }
+
+                yield return null;
+            }
+
+            foreach (SpriteRenderer sr in strips)
+            {
+                Destroy(sr.gameObject);
+            }
         }
     }
 }

@@ -78,14 +78,16 @@ namespace Riptide.UI
             BoardView board = BoardView.Create(boardRig.transform);
             WaterView water = WaterView.Create(boardRig.transform, store.State.WaterLevel);
             TrayView tray = TrayView.Create(boardRig.transform);
-            TideMeterView meter = TideMeterView.Create(boardRig.transform);
-            driver = AnimationDriver.Create(boardRig.transform, store, board, water, tray, meter);
+            TideMeterRing meter = TideMeterRing.Create(boardRig.transform);
+            BoardChromeView chrome = BoardChromeView.Create(boardRig.transform);
+            driver = AnimationDriver.Create(boardRig.transform, store, board, water, tray, meter, chrome);
             driver.InstantMode = instantAnimations;
+            JuiceDirector.Create(boardRig.transform, driver);
 
             Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             InputController.Create(boardRig.transform, store, tray, driver, cam, InputTuning.CreateDefault());
             hud = HudOverlay.Create(canvas.GetComponent<RectTransform>(), flow);
-            AudioDirector.Create(boardRig.transform, flow);
+            AudioDirector.Create(boardRig.transform, flow, driver);
             TutorialDirector.Create(canvas.GetComponent<RectTransform>(), flow);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DebugOverlay.Create(boardRig.transform, store, flow.CurrentSeed, flow.Analytics);

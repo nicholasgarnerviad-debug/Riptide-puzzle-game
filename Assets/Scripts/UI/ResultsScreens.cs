@@ -1,4 +1,4 @@
-using Riptide.Core;
+﻿using Riptide.Core;
 using Riptide.Game;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,7 +33,7 @@ namespace Riptide.UI
             screen.detail = UiKit.Label(root, "detail", "", 40, UiKit.TextDim);
             UiKit.Place(screen.detail.rectTransform, new Vector2(0.5f, 0.575f), new Vector2(800f, 80f), Vector2.zero);
 
-            screen.coins = UiKit.Label(root, "coins", "", 48, Palette.Blocks[3]);
+            screen.coins = UiKit.Label(root, "coins", "", 48, ThemeRuntime.Color("coin"));
             UiKit.Place(screen.coins.rectTransform, new Vector2(0.5f, 0.49f), new Vector2(700f, 90f), Vector2.zero);
 
             screen.doubleCoins = UiKit.TextButton(root, "double", flow.Strings.Get("results.doubleCoins"), 36,

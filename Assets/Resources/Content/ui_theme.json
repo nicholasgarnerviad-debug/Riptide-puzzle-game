@@ -30,7 +30,11 @@
     "text.muted":      { "hex": "5E7081" },
     "text.onAccent":   { "hex": "06222B" },
     "scrim":           { "hex": "05080C", "alpha": 0.72 },
-    "board.frameBg":   { "hex": "0D1320" }
+    "board.frameBg":   { "hex": "0D1320" },
+    "board.emptyCell": { "hex": "FFFFFF", "alpha": 0.05 },
+    "meter.track":     { "hex": "FFFFFF", "alpha": 0.16 },
+    "ghost.legal":     { "hex": "3EE6E0", "alpha": 0.45 },
+    "ghost.illegal":   { "hex": "FF6B81", "alpha": 0.30 }
   },
   "type": {
     "display": { "size": 76, "line": 84, "weight": "Bold",     "tracking": 0,    "tabular": false, "allCaps": false },
@@ -52,7 +56,10 @@
       "t.rise": 350,
       "t.drain": 450,
       "t.drainMulti": 550,
-      "t.countUp": 180
+      "t.countUp": 180,
+      "t.resolveBudget": 950,
+      "t.dangerFade": 800,
+      "t.shimmerCooldown": 2000
     },
     "easings": {
       "easeOutQuart":  [[0.0, 0.0, 0.0, 4.0], [0.4, 0.8704, 0.864, 0.648], [1.0, 1.0, 0.0, 0.0]],

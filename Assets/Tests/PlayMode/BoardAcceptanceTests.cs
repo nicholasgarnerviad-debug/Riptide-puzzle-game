@@ -76,8 +76,15 @@ namespace Riptide.PlayMode.Tests
                 $"{context}: water level mismatch");
 
             int expectedInterval = EscalationRules.EffectiveTideInterval(state.Config, state.Goals.TidesSurvived);
-            Assert.That(game.Meter.TotalCount, Is.EqualTo(expectedInterval), $"{context}: meter segment count");
-            Assert.That(game.Meter.FilledCount, Is.EqualTo(state.TideCounter), $"{context}: meter fill");
+            Assert.That(game.Meter.TotalCount, Is.EqualTo(expectedInterval), $"{context}: ring segment count");
+            Assert.That(game.Meter.FilledCount, Is.EqualTo(state.TideCounter), $"{context}: ring fill");
+
+            // 4-UI-c chrome renders from the same state (spec §4.3/§6.1).
+            Assert.That(game.Chrome.FloodLineLevel, Is.EqualTo((float)BoardSpec.DrownWaterLevel).Within(0.001f),
+                $"{context}: flood line sits at the drown row");
+            Assert.That(game.Chrome.NotchLevel, Is.EqualTo(state.WaterLevel), $"{context}: depth gauge notch");
+            Assert.That(game.Chrome.DangerShown, Is.EqualTo(DangerRule.IsDanger(state.WaterLevel)),
+                $"{context}: danger presentation");
 
             for (int slot = 0; slot < BoardSpec.TraySize; slot++)
             {

@@ -14,8 +14,62 @@ namespace Riptide.UI
         private static Sprite? solid;
         private static Sprite? dot;
         private static Sprite? caustic;
+        private static Sprite? roundedFill;
+        private static Sprite? roundedStroke;
 
         public const float PixelsPerUnit = 64f;
+
+        /// <summary>9-sliced rounded-rect fill for the board frame (spec §4.3 r.s corners).</summary>
+        public static Sprite RoundedFill()
+        {
+            if (roundedFill == null)
+            {
+                roundedFill = BuildRoundedSliced(64, 12, strokeOnly: false, strokePx: 0);
+            }
+
+            return roundedFill;
+        }
+
+        /// <summary>9-sliced rounded-rect outline for the frame's stroke (spec §4.3 2px stroke).</summary>
+        public static Sprite RoundedStroke()
+        {
+            if (roundedStroke == null)
+            {
+                roundedStroke = BuildRoundedSliced(64, 12, strokeOnly: true, strokePx: 3);
+            }
+
+            return roundedStroke;
+        }
+
+        private static Sprite BuildRoundedSliced(int size, int corner, bool strokeOnly, int strokePx)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float alpha = RoundedAlpha(x, y, size, corner);
+                    if (strokeOnly && alpha > 0f)
+                    {
+                        bool interior = RoundedAlpha(x + strokePx, y, size, corner) >= 1f
+                            && RoundedAlpha(x - strokePx, y, size, corner) >= 1f
+                            && RoundedAlpha(x, y + strokePx, size, corner) >= 1f
+                            && RoundedAlpha(x, y - strokePx, size, corner) >= 1f;
+                        if (interior)
+                        {
+                            alpha = 0f;
+                        }
+                    }
+
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+
+            tex.Apply();
+            int border = corner + strokePx + 2;
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f),
+                PixelsPerUnit, 0, SpriteMeshType.FullRect, new Vector4(border, border, border, border));
+        }
 
         public static Sprite Cell()
         {

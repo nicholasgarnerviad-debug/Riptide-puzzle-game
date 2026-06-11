@@ -42,7 +42,11 @@ namespace Riptide.UI
 
         public static Vector3 TrayCenter => new Vector3(0f, BoardBottomY - 2.0f, 0f);
 
+        /// <summary>Spec §5.2: the TideMeterRing anchors at the tray card's left end.</summary>
+        public static Vector3 TrayRingCenter => TrayCenter + new Vector3(-3.75f, 0f, 0f);
+
+        /// <summary>Slots sit right of the ring (spec §4.3 item 4).</summary>
         public static Vector3 TraySlotCenter(int slot) =>
-            TrayCenter + new Vector3((slot - 1) * 2.6f, 0f, 0f);
+            TrayCenter + new Vector3(slot * 2.25f - 1.7f, 0f, 0f);
     }
 }

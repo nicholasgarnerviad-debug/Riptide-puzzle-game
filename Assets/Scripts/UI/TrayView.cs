@@ -15,7 +15,33 @@ namespace Riptide.UI
         {
             var go = new GameObject("TrayView");
             go.transform.SetParent(parent, false);
-            return go.AddComponent<TrayView>();
+            var view = go.AddComponent<TrayView>();
+            view.BuildCard();
+            return view;
+        }
+
+        /// <summary>Spec §4.3 item 4: the slots sit on a bg.surface card; the ring wraps its left end.</summary>
+        private void BuildCard()
+        {
+            var cardGo = new GameObject("trayCard");
+            cardGo.transform.SetParent(transform, false);
+            cardGo.transform.position = BoardLayout.TrayCenter;
+            var card = cardGo.AddComponent<SpriteRenderer>();
+            card.sprite = SpriteFactory.RoundedFill();
+            card.drawMode = SpriteDrawMode.Sliced;
+            card.size = new Vector2(BoardSpec.Width + 1f, 2.7f);
+            card.color = ThemeRuntime.Color("bg.surface");
+            card.sortingOrder = 25;
+
+            var strokeGo = new GameObject("trayCardStroke");
+            strokeGo.transform.SetParent(transform, false);
+            strokeGo.transform.position = BoardLayout.TrayCenter;
+            var stroke = strokeGo.AddComponent<SpriteRenderer>();
+            stroke.sprite = SpriteFactory.RoundedStroke();
+            stroke.drawMode = SpriteDrawMode.Sliced;
+            stroke.size = new Vector2(BoardSpec.Width + 1f, 2.7f);
+            stroke.color = ThemeRuntime.Color("stroke.subtle");
+            stroke.sortingOrder = 26;
         }
 
         public void Render(GameState state)
@@ -41,6 +67,22 @@ namespace Riptide.UI
             foreach (GameObject go in slotSprites[slot])
             {
                 go.SetActive(visible);
+            }
+        }
+
+        /// <summary>Spec §4.3: while dragging, the slot keeps a dim ghost of the piece.</summary>
+        public void SetSlotGhost(int slot, bool ghosted)
+        {
+            foreach (GameObject go in slotSprites[slot])
+            {
+                go.SetActive(true);
+                var sr = go.GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    Color c = sr.color;
+                    c.a = ghosted ? 0.3f : 1f;
+                    sr.color = c;
+                }
             }
         }
 

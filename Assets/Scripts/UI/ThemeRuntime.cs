@@ -42,6 +42,17 @@ namespace Riptide.UI
 
             return new AnimationCurve(frames);
         }
+
+        /// <summary>Spec §2 reference canvas width the ref-px measurements assume.</summary>
+        public const float ReferenceWidthPx = 1080f;
+
+        /// <summary>
+        /// Spec §4.3: board width = reference width minus the two gutters, spread
+        /// across the 9 columns — this converts the spec's ref-px into world units
+        /// for the world-space game views (1 world unit = 1 cell).
+        /// </summary>
+        public static float WorldFromRefPx(float refPx) =>
+            refPx * BoardSpec.Width / (ReferenceWidthPx - 2f * Theme.Gutter);
     }
 
     /// <summary>

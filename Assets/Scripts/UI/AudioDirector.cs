@@ -5,24 +5,26 @@ using UnityEngine;
 namespace Riptide.UI
 {
     /// <summary>
-    /// GDD 7.2 audio wiring: SFX from MoveEvents (pitch up per combo, piece-size
-    /// pitch on place), calm/tense music loops crossfading at water ≥ 7, drown
-    /// muffle, plus the GDD 7.3 haptic tiers (light place / medium clear / heavy rise).
+    /// GDD 7.2 music wiring: calm/tense loops crossfading at the danger read,
+    /// the warning tone on a rise into danger, and the drown muffle duck.
+    /// Per-event SFX + haptics moved to JuiceDirector (spec §7 juice table).
     /// </summary>
     public sealed class AudioDirector : MonoBehaviour
     {
         private GameFlow flow = null!;
+        private AnimationDriver? driver;
         private AudioSource sfxSource = null!;
         private AudioSource calmSource = null!;
         private AudioSource tenseSource = null!;
         private float duck = 1f;
 
-        public static AudioDirector Create(Transform parent, GameFlow flow)
+        public static AudioDirector Create(Transform parent, GameFlow flow, AnimationDriver? driver)
         {
             var go = new GameObject("AudioDirector");
             go.transform.SetParent(parent, false);
             var director = go.AddComponent<AudioDirector>();
             director.flow = flow;
+            director.driver = driver;
             director.sfxSource = go.AddComponent<AudioSource>();
             director.calmSource = go.AddComponent<AudioSource>();
             director.tenseSource = go.AddComponent<AudioSource>();
@@ -35,9 +37,9 @@ namespace Riptide.UI
             director.calmSource.Play();
             director.tenseSource.Play();
 
-            if (flow.Store != null)
+            if (driver != null)
             {
-                flow.Store.MoveApplied += director.OnMove;
+                driver.BeatStarted += director.OnBeat;
             }
 
             flow.RunStarted += director.OnRunStarted;
@@ -46,9 +48,9 @@ namespace Riptide.UI
 
         private void OnDestroy()
         {
-            if (flow?.Store != null)
+            if (driver != null)
             {
-                flow.Store.MoveApplied -= OnMove;
+                driver.BeatStarted -= OnBeat;
             }
 
             if (flow != null)
@@ -66,61 +68,15 @@ namespace Riptide.UI
             duck = 1f;
         }
 
-        private void OnMove(Move move, MoveResult result)
+        private void OnBeat(string beat, MoveResult result)
         {
-            MoveEvents events = result.Events;
-
-            if (events.PlacedCells.Count > 0)
+            if (beat == "rise" && DangerRule.IsDanger(result.Next.WaterLevel))
             {
-                // GDD 7.2: soft thunk, pitch varies by piece size.
-                Play(SfxId.Place, 1.25f - 0.05f * events.PlacedCells.Count);
-                Haptics.Light();
+                Play(SfxId.DangerWarning, 1f); // GDD 7.2: warning tone at danger
             }
-
-            if (events.RowsCleared.Count > 0)
+            else if (beat == "drown")
             {
-                // GDD 7.2: rising chime, +pitch per combo step.
-                Play(SfxId.Clear, 0.9f + 0.1f * Mathf.Max(0, events.Scoring.ComboHalves - 2));
-                Haptics.Medium();
-                if (events.Scoring.ComboHalves >= 3)
-                {
-                    Play(SfxId.ComboShine, 1f);
-                }
-            }
-
-            if (events.RescuedCreatures.Count > 0)
-            {
-                Play(SfxId.Rescue, 1f + 0.06f * result.Next.RescueStreak);
-            }
-
-            if (events.LostCreatures.Count > 0)
-            {
-                Play(SfxId.CreatureLost, 1f);
-            }
-
-            if (events.DrainAmount > 0)
-            {
-                Play(SfxId.Drain, 1f); // the hero moment (GDD 7.1)
-            }
-
-            if (events.TideRose)
-            {
-                Play(SfxId.Rise, 1f);
-                Haptics.Heavy();
-                if (result.Next.WaterLevel >= 7)
-                {
-                    Play(SfxId.DangerWarning, 1f); // GDD 7.2: warning tone at danger
-                }
-            }
-
-            if (result.Next.Status == GameStatus.LostDrowned)
-            {
-                Play(SfxId.Drown, 1f);
-                duck = 0.2f; // GDD 7.2: submerge muffle on the music
-            }
-            else if (result.Next.Status == GameStatus.Won)
-            {
-                Play(SfxId.StarAward, 1f);
+                duck = 0.2f; // GDD 7.2: submerge muffle on the music (juice "musicMuffle400")
             }
         }
 
@@ -144,9 +100,9 @@ namespace Riptide.UI
                 return;
             }
 
-            // GDD 7.2/7.3: the tense variant crossfades in at water >= 7.
+            // GDD 7.2/7.3: the tense variant crossfades in at the danger read.
             int water = flow.Store != null ? flow.Store.State.WaterLevel : 0;
-            bool danger = water >= 7 && flow.Screen == FlowScreen.Playing;
+            bool danger = DangerRule.IsDanger(water) && flow.Screen == FlowScreen.Playing;
             float target = danger ? 1f : 0f;
             float fade = Time.deltaTime * 1.5f;
             float tense = Mathf.MoveTowards(tenseSource.volume / 0.55f, target, fade);

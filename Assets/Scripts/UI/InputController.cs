@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Riptide.Core;
 using Riptide.Game;
@@ -22,9 +23,14 @@ namespace Riptide.UI
         private int dragSlot = -1;
         private TrayPiece dragPiece;
         private bool dragging;
+        private bool flyingBack;
         private Vector2 pressScreenStart;
+        private float lastShimmerTime = float.NegativeInfinity;
         private readonly List<SpriteRenderer> carrySprites = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> ghostSprites = new List<SpriteRenderer>();
+
+        /// <summary>Spec §4.3: the carried piece scales up 1.08 while lifted.</summary>
+        public const float CarryScale = 1.08f;
 
         public static InputController Create(Transform parent, GameStore store, TrayView tray,
             AnimationDriver driver, Camera cam, InputTuning tuning)
@@ -53,6 +59,11 @@ namespace Riptide.UI
 
             if (!dragging)
             {
+                if (flyingBack)
+                {
+                    return; // the rejected piece is mid-flight; input resumes after.
+                }
+
                 if (pressed && dragSlot < 0)
                 {
                     TryBeginPress(screenPos);
@@ -111,7 +122,8 @@ namespace Riptide.UI
         private void BeginDrag()
         {
             dragging = true;
-            tray.SetSlotVisible(dragSlot, false);
+            // Spec §4.3: the tray slot leaves a ghost, not a hole.
+            tray.SetSlotGhost(dragSlot, true);
             BuildCarryAndGhost();
         }
 
@@ -146,6 +158,94 @@ namespace Riptide.UI
                 ghostSprites[i].transform.position = BoardLayout.CellToWorld(col + mask[i].Dx, row + mask[i].Dy);
                 ghostSprites[i].color = valid ? Palette.GhostValid : Palette.GhostInvalid;
             }
+
+            if (valid)
+            {
+                MaybeShimmerTell(col, row, mask);
+            }
+        }
+
+        /// <summary>
+        /// Spec §4.3 "you see it too": when the ghost would leave a row one cell
+        /// short, the missing cell's column shimmers once — at most once per
+        /// t.shimmerCooldown.
+        /// </summary>
+        private void MaybeShimmerTell(int col, int row, IReadOnlyList<PieceCell> mask)
+        {
+            if (Time.realtimeSinceStartup - lastShimmerTime < ThemeRuntime.Seconds("t.shimmerCooldown"))
+            {
+                return;
+            }
+
+            var ghostRows = new HashSet<int>();
+            foreach (PieceCell c in mask)
+            {
+                ghostRows.Add(row + c.Dy);
+            }
+
+            foreach (int r in ghostRows)
+            {
+                if (r < 0 || r >= BoardSpec.Height)
+                {
+                    continue;
+                }
+
+                int missingCol = -1;
+                int empty = 0;
+                for (int x = 0; x < BoardSpec.Width; x++)
+                {
+                    bool filled = store.State.CellAt(x, r).Kind != CellKind.Empty;
+                    if (!filled)
+                    {
+                        bool ghosted = false;
+                        foreach (PieceCell c in mask)
+                        {
+                            if (col + c.Dx == x && row + c.Dy == r)
+                            {
+                                ghosted = true;
+                                break;
+                            }
+                        }
+
+                        if (!ghosted)
+                        {
+                            empty++;
+                            missingCol = x;
+                        }
+                    }
+                }
+
+                if (empty == 1)
+                {
+                    lastShimmerTime = Time.realtimeSinceStartup;
+                    StartCoroutine(Shimmer(missingCol, r));
+                    return;
+                }
+            }
+        }
+
+        private IEnumerator Shimmer(int col, int row)
+        {
+            var go = new GameObject("shimmer");
+            go.transform.SetParent(transform, false);
+            go.transform.position = BoardLayout.CellToWorld(col, row);
+            go.transform.localScale = Vector3.one * 0.94f;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = SpriteFactory.Cell();
+            Color tint = ThemeRuntime.Color("accent.primary");
+            sr.sortingOrder = 85;
+
+            float t = 0f;
+            float life = ThemeRuntime.Seconds("t.fast");
+            while (t < life)
+            {
+                t += Time.deltaTime;
+                float pulse = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / life));
+                sr.color = new Color(tint.r, tint.g, tint.b, 0.35f * pulse);
+                yield return null;
+            }
+
+            Destroy(go);
         }
 
         private void EndDrag(Vector2 screenPos)
@@ -167,11 +267,59 @@ namespace Riptide.UI
 
             if (!placed)
             {
-                tray.SetSlotVisible(dragSlot, true);
+                // Spec §4.3: release elsewhere → the piece flies back to its slot
+                // over t.base, no penalty.
+                StartCoroutine(FlyBack(dragSlot));
+                return;
             }
 
             TearDownDrag();
         }
+
+        private IEnumerator FlyBack(int slot)
+        {
+            flyingBack = true;
+            dragging = false;
+            Vector3 target = BoardLayout.TraySlotCenter(slot);
+            var starts = new List<Vector3>(carrySprites.Count);
+            Vector3 centroid = Vector3.zero;
+            foreach (SpriteRenderer sr in carrySprites)
+            {
+                starts.Add(sr.transform.position);
+                centroid += sr.transform.position;
+            }
+
+            centroid /= Mathf.Max(1, carrySprites.Count);
+            foreach (SpriteRenderer sr in ghostSprites)
+            {
+                sr.enabled = false;
+            }
+
+            float t = 0f;
+            float life = Mathf.Max(0.01f, ThemeRuntime.Seconds("t.base"));
+            while (t < life)
+            {
+                t += Time.deltaTime;
+                float u = Mathf.Clamp01(t / life);
+                float eased = 1f - (1f - u) * (1f - u);
+                Vector3 delta = Vector3.Lerp(Vector3.zero, target - centroid, eased);
+                float scale = Mathf.Lerp(CarryScale, TrayMiniScale, eased);
+                for (int i = 0; i < carrySprites.Count; i++)
+                {
+                    carrySprites[i].transform.position = starts[i] + delta;
+                    carrySprites[i].transform.localScale = Vector3.one * (0.94f * scale);
+                }
+
+                yield return null;
+            }
+
+            tray.SetSlotGhost(slot, false);
+            flyingBack = false;
+            TearDownDrag();
+        }
+
+        /// <summary>TrayView's mini silhouette scale — the fly-back shrinks into it.</summary>
+        private const float TrayMiniScale = 0.3f;
 
         /// <summary>Mask cells can leave the grid; GridPos refuses out-of-bounds, so clamp for the query.</summary>
         private static GridPos SafePos(int col, int row, IReadOnlyList<PieceCell> mask)
@@ -214,7 +362,8 @@ namespace Riptide.UI
             {
                 var carry = new GameObject("carry");
                 carry.transform.SetParent(transform, false);
-                carry.transform.localScale = Vector3.one * 0.94f;
+                // Spec §4.3: lifted pieces scale to 1.08.
+                carry.transform.localScale = Vector3.one * (0.94f * CarryScale);
                 var carrySr = carry.AddComponent<SpriteRenderer>();
                 carrySr.sprite = SpriteFactory.Cell();
                 carrySr.color = Palette.BlockColor(dragPiece.ColorId);
