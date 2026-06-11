@@ -69,3 +69,17 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-11 · blocks/creatures use generated placeholder sprites (rounded cells, eyed-circle creatures) · the curated art session is Phase 8 scope; visual gate 1 evaluates input feel and water readability per the contract.
 - 2026-06-11 · InputController targets the Input System exclusively · ProjectSettings runs activeInputHandler=1 (new backend only); legacy UnityEngine.Input would throw at runtime.
 - 2026-06-11 · Core.Tests must stay on Core's public surface — the dotnet shim merges Core+Tests into one assembly and hides `internal` boundaries that Unity's separate asmdefs enforce · caught live: the adversarial test compiled in the shim but failed in Unity (CS0117 on an internal); the Unity compile is the boundary truth.
+- 2026-06-11 · **VISUAL GATE 1: OPEN, deferred by Nick** — "go" received without checklist results · proceeding per the owner's explicit instruction; every gate-1 item (input feel, tide meter, water reads, 60fps) is re-covered inside gate 2's full playthrough and must be signed there.
+
+## Phase 5
+
+- 2026-06-11 · star thresholds: 3★ = moves ≤ par, 2★ = moves ≤ ceil(par × 1.4), 1★ = completed · §3.1 says "within par ×1.4"; ceil is the player-generous reading.
+- 2026-06-11 · level coin award = base + perBand×(zone−1) + perStar×(stars−1), all values in economy.json `coins` · §5.2 specifies "20–60 by band/stars" without a formula; chosen values span 20 (z1 1★) to 57 (z10 3★).
+- 2026-06-11 · Core date math = days-from-civil (Hinnant algorithm) on plain ints; week index = (epochDays+3)/7 (Monday-aligned) · streak/daily logic needs date arithmetic and Core cannot touch DateTime (§8.3); the Game layer supplies today's date.
+- 2026-06-11 · streak rules: +1 per consecutive day; a 1-day gap consumes a held freeze instead of resetting; otherwise reset to 1; at most one freeze held; freeze acquisition limited to one per calendar week (coin sink wired in Phase 6) · §3.3/§5.2 name the freeze and its 300-coin price but not mechanics; mirrors the stated Star Ladder convention.
+- 2026-06-11 · daily number #N = days since economy.json `daily.epochDate` (2026-06-11 = #1) · §3.3's share card shows "#142" without defining the origin.
+- 2026-06-11 · share card: water bar = 10 squares (🟦×level + ⬛×rest, drown line scale), up to 3 distinct rescued species in rescue order, emoji per species from creatures.json, score with comma grouping, fixed URL riptide.game/d/N · golden-tested verbatim per contract 5D.
+- 2026-06-11 · Rungo font files are not in the repo — UI uses Unity's LegacyRuntime.ttf until Nick provides the licensed Rungo assets from Star Ladder · flagged for visual gate 2; font swap is one line in UiKit.
+- 2026-06-11 · daily attempt-lock and streak persist via PlayerPrefs JSON in Phase 5; the versioned save file (Phase 6) absorbs them · contract 5D needs working streaks one phase before the save system exists.
+- 2026-06-11 · screens are code-built uGUI (legacy Text, no TMP) following the Phase 4 no-authored-assets rule · TMP would drag in asset dependencies; legacy Text ships in com.unity.ugui.
+- 2026-06-11 · string assertions over emoji must be ordinal · caught live: Unity's Mono runs culture-sensitive IndexOf in NUnit's Does.Contain and treats emoji as ignorable — a "not contains 🐙" check passed on CoreCLR and failed on Mono; ordinal IndexOf is exact on both.
