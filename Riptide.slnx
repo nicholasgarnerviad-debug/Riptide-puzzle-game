@@ -1,2 +1,4 @@
 ﻿<Solution>
+  <Project Path="Riptide.Core.csproj" />
+  <Project Path="Riptide.Core.Tests.csproj" />
 </Solution>
