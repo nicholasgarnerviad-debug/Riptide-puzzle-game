@@ -3,7 +3,8 @@
     "rootNamespace": "Riptide.UI",
     "references": [
         "Riptide.Game",
-        "Riptide.Core"
+        "Riptide.Core",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
