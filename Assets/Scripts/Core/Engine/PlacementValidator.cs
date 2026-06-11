@@ -14,6 +14,19 @@ namespace Riptide.Core
         public static bool AnyPlacementExists(GameState state, PieceId piece) =>
             AnyPlacementExistsRaw(state.CellsView, state.WaterLevel, piece);
 
+        /// <summary>Raw-board overload for tooling and tests (pure query, copies the cells).</summary>
+        public static bool AnyPlacementExists(System.Collections.Generic.IReadOnlyList<Cell> cells,
+            int waterLevel, PieceId piece)
+        {
+            var copy = new Cell[BoardSpec.CellCount];
+            for (int i = 0; i < copy.Length && i < cells.Count; i++)
+            {
+                copy[i] = cells[i];
+            }
+
+            return AnyPlacementExistsRaw(copy, waterLevel, piece);
+        }
+
         /// <summary>True when at least one tray piece has at least one legal placement.</summary>
         public static bool AnyTrayPlacementExists(GameState state) =>
             AnyTrayPlacementExistsRaw(state.CellsView, state.WaterLevel, state.TrayView);

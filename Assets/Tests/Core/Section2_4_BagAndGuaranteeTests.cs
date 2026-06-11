@@ -213,7 +213,7 @@ namespace Riptide.Core.Tests
                 bool anyPlaceable = false;
                 foreach (TrayPiece piece in deal.Pieces)
                 {
-                    anyPlaceable |= PlacementValidator.AnyPlacementExistsRaw(cells, waterLevel, piece.Piece);
+                    anyPlaceable |= PlacementValidator.AnyPlacementExists(cells, waterLevel, piece.Piece);
                 }
 
                 if (deal.GuaranteeExhausted)
