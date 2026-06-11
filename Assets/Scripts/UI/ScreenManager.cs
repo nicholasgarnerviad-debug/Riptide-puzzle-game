@@ -85,6 +85,8 @@ namespace Riptide.UI
             Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             InputController.Create(boardRig.transform, store, tray, driver, cam, InputTuning.CreateDefault());
             hud = HudOverlay.Create(canvas.GetComponent<RectTransform>(), flow);
+            AudioDirector.Create(boardRig.transform, flow);
+            TutorialDirector.Create(canvas.GetComponent<RectTransform>(), flow);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DebugOverlay.Create(boardRig.transform, store, flow.CurrentSeed, flow.Analytics);
 #endif

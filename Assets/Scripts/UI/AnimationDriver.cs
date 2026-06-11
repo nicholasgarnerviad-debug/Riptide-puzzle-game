@@ -99,9 +99,15 @@ namespace Riptide.UI
                 sr.color = Palette.BlockColor(colorId);
             }
 
-            // 2) Clear pop: 30ms per-cell stagger across the cleared rows (GDD 7.3).
+            // 2) Clear pop: 30ms per-cell stagger across the cleared rows (GDD 7.3),
+            //    with the combo screen-edge glow pulse from x1.5 up.
             if (events.RowsCleared.Count > 0)
             {
+                if (events.Scoring.ComboHalves >= 3)
+                {
+                    StartCoroutine(ComboEdgeGlow());
+                }
+
                 float stagger = 0.03f;
                 int cellIndex = 0;
                 foreach (int row in events.RowsCleared)
@@ -215,6 +221,31 @@ namespace Riptide.UI
                 Color c = Color.Lerp(sr.color, Palette.Coral, u);
                 c.a = 1f - u;
                 sr.color = c;
+                yield return null;
+            }
+
+            Destroy(go);
+        }
+
+        /// <summary>GDD 7.3: combo = screen-edge glow pulse.</summary>
+        private IEnumerator ComboEdgeGlow()
+        {
+            var go = new GameObject("comboGlow");
+            go.transform.SetParent(transform, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = SpriteFactory.Cell();
+            sr.color = new Color(Palette.MeterFilled.r, Palette.MeterFilled.g, Palette.MeterFilled.b, 0f);
+            sr.sortingOrder = 95;
+            go.transform.position = new Vector3(0f, 0f, 0f);
+            go.transform.localScale = new Vector3(26f, 26f, 1f);
+
+            float t = 0f;
+            const float life = 0.4f;
+            while (t < life)
+            {
+                t += Time.deltaTime;
+                float pulse = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / life));
+                sr.color = new Color(sr.color.r, sr.color.g, sr.color.b, 0.18f * pulse);
                 yield return null;
             }
 

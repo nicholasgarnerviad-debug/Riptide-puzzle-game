@@ -128,13 +128,26 @@ namespace Riptide.Game
             && Store.State.Config.BoostersAllowed
             && Meta.CanAfford(BoosterCost(kind));
 
+        /// <summary>GDD 9 L4: one free Drain Pump, granted by the tutorial, no ad, no coins.</summary>
+        public bool TutorialDrainPumpPending { get; private set; }
+
+        public void GrantTutorialDrainPump() => TutorialDrainPumpPending = true;
+
         /// <summary>
         /// GDD 5.3 buy-and-use: the coin spend happens only after the sim accepts
-        /// the move (an invalid Bubble Pop target costs nothing).
+        /// the move (an invalid Bubble Pop target costs nothing). The tutorial's
+        /// granted Drain Pump bypasses the wallet once.
         /// </summary>
         public bool TryUseBooster(BoosterKind kind, GridPos? target = null)
         {
-            if (!CanUseBooster(kind))
+            bool tutorialFreebie = kind == BoosterKind.DrainPump && TutorialDrainPumpPending;
+            if (!tutorialFreebie && !CanUseBooster(kind))
+            {
+                return false;
+            }
+
+            if (tutorialFreebie && (Store == null || Store.State.Status.IsTerminal()
+                || !Store.State.Config.BoostersAllowed))
             {
                 return false;
             }
@@ -161,6 +174,13 @@ namespace Riptide.Game
             catch (InvalidMoveException)
             {
                 return false;
+            }
+
+            if (tutorialFreebie)
+            {
+                TutorialDrainPumpPending = false;
+                Analytics.LogBoosterUsed(kind.ToString(), "tutorial");
+                return true;
             }
 
             Meta.TrySpendCoins(BoosterCost(kind));
