@@ -1,4 +1,8 @@
 ﻿<Solution>
   <Project Path="Riptide.Core.csproj" />
+  <Project Path="Riptide.UI.csproj" />
   <Project Path="Riptide.Core.Tests.csproj" />
+  <Project Path="Riptide.Game.csproj" />
+  <Project Path="Riptide.PlayMode.Tests.csproj" />
+  <Project Path="Riptide.EditorAutomation.csproj" />
 </Solution>
