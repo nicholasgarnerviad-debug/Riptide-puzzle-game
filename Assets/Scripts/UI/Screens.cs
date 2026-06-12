@@ -289,12 +289,17 @@ namespace Riptide.UI
         }
     }
 
-    /// <summary>Spec §4.2 zone map: 10 zone cards, 20 nodes each, stars and locks.</summary>
+    /// <summary>Spec §4.2 zone map: 10 zone cards, 20 nodes each, stars and locks.
+    /// Modern pass: named zone header cards, circular nodes with state rings,
+    /// the current level glowing (§4.2 node states).</summary>
     public sealed class ZoneMapScreen : MonoBehaviour, IScreenRefresh
     {
         private GameFlow flow = null!;
-        private readonly System.Collections.Generic.List<(int zone, int index, Button button, TextMeshProUGUI label)> nodes
-            = new System.Collections.Generic.List<(int, int, Button, TextMeshProUGUI)>();
+        private readonly System.Collections.Generic.List<(int zone, int index, Button button,
+            TextMeshProUGUI label, Image ring, GameObject glow)> nodes
+            = new System.Collections.Generic.List<(int, int, Button, TextMeshProUGUI, Image, GameObject)>();
+        private readonly System.Collections.Generic.List<(int zone, TextMeshProUGUI stars)> zoneStars
+            = new System.Collections.Generic.List<(int, TextMeshProUGUI)>();
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -325,16 +330,31 @@ namespace Riptide.UI
             scroll.horizontal = false;
             scroll.vertical = true;
 
-            const float headerH = 100f;
+            const float headerH = 130f;
             const float cell = 184f;
-            const float pad = 16f;
-            float y = 0f;
+            float y = 20f;
             for (int zone = 1; zone <= 10; zone++)
             {
-                TextMeshProUGUI header = UiText.Create(content, $"zone{zone}",
-                    string.Format(flow.Strings.Get("zone.title"), zone), "heading", "text.primary");
-                UiComponents.Place(header.rectTransform, new Vector2(0.5f, 1f), new Vector2(600f, headerH));
-                header.rectTransform.anchoredPosition = new Vector2(0f, -y - headerH * 0.5f);
+                // Named zone header card (§4.2; zones.* finally on the map).
+                RectTransform headerCard = UiComponents.Rect(content, $"zoneHeader{zone}", new Vector2(940f, 110f));
+                UiComponents.Place(headerCard, new Vector2(0.5f, 1f), new Vector2(940f, 110f));
+                headerCard.anchoredPosition = new Vector2(0f, -y - 55f);
+                var headerImage = headerCard.gameObject.AddComponent<Image>();
+                headerImage.sprite = MenuSprites.PanelGradient();
+                headerImage.type = Image.Type.Sliced;
+                headerImage.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 24f;
+                headerImage.raycastTarget = false;
+                ThemedElement.Bind(headerCard.gameObject, "bg.surface");
+                TextMeshProUGUI header = UiText.Create(headerCard, "name",
+                    string.Format(flow.Strings.Get("zone.title"), zone) + " — "
+                        + flow.Strings.Get($"zones.{zone}"),
+                    "heading", "accent.primary");
+                header.alignment = TextAlignmentOptions.Left;
+                UiComponents.Place(header.rectTransform, new Vector2(0.34f, 0.5f), new Vector2(560f, 70f));
+                TextMeshProUGUI stars = UiText.Create(headerCard, "stars", "", "caption", "text.secondary");
+                stars.alignment = TextAlignmentOptions.Right;
+                UiComponents.Place(stars.rectTransform, new Vector2(0.83f, 0.5f), new Vector2(260f, 50f));
+                screen.zoneStars.Add((zone, stars));
                 y += headerH;
 
                 for (int index = 1; index <= 20; index++)
@@ -343,15 +363,43 @@ namespace Riptide.UI
                     int row = (index - 1) / 5;
                     int zoneCopy = zone;
                     int indexCopy = index;
-                    Button node = UiComponents.ButtonSecondary(content, $"z{zone}l{index}", index.ToString(),
-                        () => screen.OnNode(zoneCopy, indexCopy));
-                    var nodeRt = (RectTransform)node.transform;
-                    UiComponents.Place(nodeRt, new Vector2(0.5f, 1f), new Vector2(cell - pad, cell - pad));
+
+                    // Circular node: glow (current) under ring under inner disc.
+                    RectTransform nodeRt = UiComponents.Rect(content, $"z{zone}l{index}", new Vector2(146f, 146f));
+                    UiComponents.Place(nodeRt, new Vector2(0.5f, 1f), new Vector2(146f, 146f));
                     nodeRt.anchoredPosition = new Vector2((col - 2) * cell, -y - row * cell - cell * 0.5f);
-                    screen.nodes.Add((zone, index, node, node.GetComponentInChildren<TextMeshProUGUI>()));
+
+                    var glowGo = new GameObject("glow", typeof(RectTransform));
+                    glowGo.transform.SetParent(nodeRt, false);
+                    ((RectTransform)glowGo.transform).sizeDelta = new Vector2(210f, 210f);
+                    var glowImage = glowGo.AddComponent<Image>();
+                    glowImage.sprite = MenuSprites.SoftGlow();
+                    glowImage.raycastTarget = false;
+                    ThemedElement.Bind(glowGo, "glow.primary");
+                    glowGo.SetActive(false);
+
+                    var ringImage = nodeRt.gameObject.AddComponent<Image>();
+                    ringImage.sprite = SpriteFactory.Dot();
+
+                    RectTransform inner = UiComponents.Rect(nodeRt, "inner", new Vector2(130f, 130f));
+                    UiComponents.Place(inner, new Vector2(0.5f, 0.5f), new Vector2(130f, 130f));
+                    var innerImage = inner.gameObject.AddComponent<Image>();
+                    innerImage.sprite = SpriteFactory.Dot();
+                    innerImage.raycastTarget = false;
+                    ThemedElement.Bind(inner.gameObject, "bg.deep");
+
+                    TextMeshProUGUI label = UiText.Create(nodeRt, "label", "", "body", "text.primary");
+                    UiComponents.Stretch(label.rectTransform);
+
+                    var node = nodeRt.gameObject.AddComponent<Button>();
+                    node.targetGraphic = ringImage;
+                    node.onClick.AddListener(() => screen.OnNode(zoneCopy, indexCopy));
+                    nodeRt.gameObject.AddComponent<PressEffect>();
+
+                    screen.nodes.Add((zone, index, node, label, ringImage, glowGo));
                 }
 
-                y += 4 * cell + 30f;
+                y += 4 * cell + 40f;
             }
 
             content.sizeDelta = new Vector2(0f, y + 40f);
@@ -369,16 +417,34 @@ namespace Riptide.UI
 
         public void Refresh()
         {
-            foreach ((int zone, int index, Button button, TextMeshProUGUI label) in nodes)
+            (int currentZone, int currentIndex) = flow.Meta.Voyage.NextLevel();
+            foreach ((int zone, int index, Button button, TextMeshProUGUI label, Image ring, GameObject glow) in nodes)
             {
                 bool unlocked = flow.Meta.Voyage.IsUnlocked(zone, index);
+                bool current = zone == currentZone && index == currentIndex;
                 int stars = flow.Meta.Voyage.StarsFor(VoyageProgress.LevelId(zone, index));
                 button.interactable = unlocked;
+                glow.SetActive(current);
+                // §4.2 node states: locked subtle ring · current cyan + glow ·
+                // complete bright ring with star count.
+                ring.color = ThemeRuntime.Color(current ? "accent.primary"
+                    : stars > 0 ? "stroke.bright" : unlocked ? "bg.raised" : "stroke.subtle");
                 // '*' until an icon set lands: LiberationSans SDF has no U+2605 star.
                 label.text = unlocked
                     ? (stars > 0 ? $"{index}\n{new string('*', stars)}" : index.ToString())
                     : "—";
                 label.color = ThemeRuntime.Color(unlocked ? "text.primary" : "text.muted");
+            }
+
+            foreach ((int zone, TextMeshProUGUI stars) in zoneStars)
+            {
+                int total = 0;
+                for (int index = 1; index <= 20; index++)
+                {
+                    total += flow.Meta.Voyage.StarsFor(VoyageProgress.LevelId(zone, index));
+                }
+
+                stars.text = string.Format(flow.Strings.Get("zone.stars"), total);
             }
         }
     }

@@ -6,11 +6,14 @@ using UnityEngine.UI;
 
 namespace Riptide.UI
 {
-    /// <summary>Spec §4.7 settings: toggle rows + ghost rows. Plain, fast, done.</summary>
+    /// <summary>
+    /// Spec §4.7 settings, modern pass: a stats card with icon tiles, grouped
+    /// section cards (preferences with REAL switches; about with chevron rows).
+    /// </summary>
     public sealed class SettingsScreen : MonoBehaviour, IScreenRefresh
     {
-        private readonly System.Collections.Generic.List<(string key, string label, Button button)> toggles
-            = new System.Collections.Generic.List<(string, string, Button)>();
+        private readonly System.Collections.Generic.List<(string key, Image track, RectTransform knob)> toggles
+            = new System.Collections.Generic.List<(string, Image, RectTransform)>();
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -21,60 +24,143 @@ namespace Riptide.UI
                 "title", "text.primary");
             UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.945f), new Vector2(700f, 90f));
 
-            // ROADMAP M5: identity stats from data the save already holds.
-            TextMeshProUGUI statsHeader = UiText.Create(root, "statsHeader",
+            // ROADMAP M5: identity stats — now an icon-tile card, not microtext.
+            RectTransform statsCard = UiComponents.Card(root, "stats", new Vector2(960f, 280f));
+            UiComponents.Place(statsCard, new Vector2(0.5f, 0.825f), new Vector2(960f, 280f));
+            TextMeshProUGUI statsHeader = UiText.Create(statsCard, "header",
                 flow.Strings.Get("stats.title"), "micro", "text.muted");
-            UiComponents.Place(statsHeader.rectTransform, new Vector2(0.5f, 0.895f), new Vector2(700f, 40f));
+            UiComponents.Place(statsHeader.rectTransform, new Vector2(0.5f, 0.87f), new Vector2(700f, 38f));
             long rescued = 0;
             foreach (int count in flow.Meta.Save.SpeciesRescues)
             {
                 rescued += count;
             }
 
-            TextMeshProUGUI stats1 = UiText.Create(root, "stats1",
-                string.Format(flow.Strings.Get("stats.line1"), rescued, flow.Meta.Voyage.TotalStars,
-                    Riptide.Core.ShareCard.GroupThousands(flow.Meta.EndlessBest)),
-                "caption", "text.secondary");
-            UiComponents.Place(stats1.rectTransform, new Vector2(0.5f, 0.865f), new Vector2(960f, 44f));
-            TextMeshProUGUI stats2 = UiText.Create(root, "stats2",
-                string.Format(flow.Strings.Get("stats.line2"), flow.Meta.Streak.Best,
-                    flow.Meta.Save.DecorationsOwned.Count),
-                "caption", "text.secondary");
-            UiComponents.Place(stats2.rectTransform, new Vector2(0.5f, 0.835f), new Vector2(960f, 44f));
+            StatTile(statsCard, 0, "fish", Riptide.Core.ShareCard.GroupThousands(rescued),
+                flow.Strings.Get("stats.rescued"));
+            StatTile(statsCard, 1, "compass", flow.Meta.Voyage.TotalStars.ToString(),
+                flow.Strings.Get("stats.stars"));
+            StatTile(statsCard, 2, "waves", Riptide.Core.ShareCard.GroupThousands(flow.Meta.EndlessBest),
+                flow.Strings.Get("stats.best"));
+            StatTile(statsCard, 3, "sun", flow.Meta.Streak.Best.ToString(),
+                flow.Strings.Get("stats.streak"));
+            StatTile(statsCard, 4, "chest", flow.Meta.Save.DecorationsOwned.Count.ToString(),
+                flow.Strings.Get("stats.decor"));
 
-            screen.AddToggle(root, 0.77f, "settings.audio.on", flow.Strings.Get("settings.audio"));
-            screen.AddToggle(root, 0.685f, "settings.music.on", flow.Strings.Get("settings.music"));
-            screen.AddToggle(root, 0.60f, "settings.haptics.on", flow.Strings.Get("settings.haptics"));
-            screen.AddToggle(root, 0.515f, "settings.reducedMotion.on", flow.Strings.Get("settings.reducedMotion"));
+            // Preferences: one grouped card, label left, REAL switch right.
+            RectTransform prefs = UiComponents.Card(root, "prefs", new Vector2(960f, 480f));
+            UiComponents.Place(prefs, new Vector2(0.5f, 0.585f), new Vector2(960f, 480f));
+            screen.ToggleRow(prefs, 0, "settings.audio.on", flow.Strings.Get("settings.audio"));
+            screen.ToggleRow(prefs, 1, "settings.music.on", flow.Strings.Get("settings.music"));
+            screen.ToggleRow(prefs, 2, "settings.haptics.on", flow.Strings.Get("settings.haptics"));
+            screen.ToggleRow(prefs, 3, "settings.reducedMotion.on", flow.Strings.Get("settings.reducedMotion"));
 
-            Ghost(root, 0.42f, flow.Strings.Get("settings.consent"), () => flow.Consent?.Reopen());
-            Ghost(root, 0.35f, flow.Strings.Get("settings.restore"), () => flow.Iap?.Restore());
-            Ghost(root, 0.28f, flow.Strings.Get("settings.privacy"),
+            // About: grouped chevron rows.
+            RectTransform about = UiComponents.Card(root, "about", new Vector2(960f, 480f));
+            UiComponents.Place(about, new Vector2(0.5f, 0.335f), new Vector2(960f, 480f));
+            LinkRow(about, 0, flow.Strings.Get("settings.consent"), () => flow.Consent?.Reopen());
+            LinkRow(about, 1, flow.Strings.Get("settings.restore"), () => flow.Iap?.Restore());
+            LinkRow(about, 2, flow.Strings.Get("settings.privacy"),
                 () => Application.OpenURL("https://riptide.game/privacy"));
-            Ghost(root, 0.21f, flow.Strings.Get("settings.terms"),
+            LinkRow(about, 3, flow.Strings.Get("settings.terms"),
                 () => Application.OpenURL("https://riptide.game/terms"));
-            Ghost(root, 0.12f, flow.Strings.Get("common.back"), () => flow.GoTo(FlowScreen.Home));
+
+            Button back = UiComponents.ButtonGhost(root, "back", flow.Strings.Get("common.back"),
+                () => flow.GoTo(FlowScreen.Home));
+            UiComponents.Place((RectTransform)back.transform, new Vector2(0.5f, 0.115f), new Vector2(400f, 90f));
 
             TextMeshProUGUI version = UiText.Create(root, "version",
                 string.Format(flow.Strings.Get("settings.version"), Application.version),
                 "micro", "text.muted");
-            UiComponents.Place(version.rectTransform, new Vector2(0.5f, 0.05f), new Vector2(500f, 40f));
+            UiComponents.Place(version.rectTransform, new Vector2(0.5f, 0.06f), new Vector2(500f, 40f));
 
             screen.Refresh();
             return root;
         }
 
-        private void AddToggle(RectTransform root, float y, string key, string label)
+        private static void StatTile(RectTransform card, int index, string icon, string value, string label)
         {
-            Button row = UiComponents.ButtonSecondary(root, key, "", () => Toggle(key));
-            UiComponents.Place((RectTransform)row.transform, new Vector2(0.5f, y), new Vector2(760f, 110f));
-            toggles.Add((key, label, row));
+            float x = 0.10f + index * 0.20f;
+            RectTransform iconRt = UiComponents.Rect(card, $"statIcon{index}", new Vector2(52f, 52f));
+            UiComponents.Place(iconRt, new Vector2(x, 0.60f), new Vector2(52f, 52f));
+            var iconImage = iconRt.gameObject.AddComponent<Image>();
+            iconImage.sprite = MenuSprites.Icon(icon);
+            iconImage.raycastTarget = false;
+            ThemedElement.Bind(iconRt.gameObject, "accent.primary");
+
+            TextMeshProUGUI valueText = UiText.Create(card, $"statValue{index}", value, "score", "text.primary");
+            UiComponents.Place(valueText.rectTransform, new Vector2(x, 0.36f), new Vector2(180f, 52f));
+            TextMeshProUGUI labelText = UiText.Create(card, $"statLabel{index}", label, "micro", "text.muted");
+            UiComponents.Place(labelText.rectTransform, new Vector2(x, 0.16f), new Vector2(180f, 34f));
         }
 
-        private static void Ghost(RectTransform root, float y, string label, Action onClick)
+        private void ToggleRow(RectTransform card, int index, string key, string label)
         {
-            Button row = UiComponents.ButtonGhost(root, label, label, onClick);
-            UiComponents.Place((RectTransform)row.transform, new Vector2(0.5f, y), new Vector2(760f, 84f));
+            RectTransform row = GroupRow(card, index, key, label, () => Toggle(key));
+
+            RectTransform track = UiComponents.Rect(row, "track", new Vector2(104f, 56f));
+            track.anchorMin = new Vector2(1f, 0.5f);
+            track.anchorMax = new Vector2(1f, 0.5f);
+            track.anchoredPosition = new Vector2(-92f, 0f);
+            var trackImage = UiComponents.RoundedImage(track.gameObject, 28f);
+            trackImage.raycastTarget = false;
+
+            RectTransform knob = UiComponents.Rect(track, "knob", new Vector2(42f, 42f));
+            knob.anchorMin = new Vector2(0.5f, 0.5f);
+            knob.anchorMax = new Vector2(0.5f, 0.5f);
+            var knobImage = knob.gameObject.AddComponent<Image>();
+            knobImage.sprite = SpriteFactory.Dot();
+            knobImage.raycastTarget = false;
+            ThemedElement.Bind(knob.gameObject, "text.primary");
+
+            toggles.Add((key, trackImage, knob));
+        }
+
+        private static void LinkRow(RectTransform card, int index, string label, Action onClick)
+        {
+            RectTransform row = GroupRow(card, index, label, label, onClick);
+            TextMeshProUGUI chevron = UiText.Create(row, "chevron", "›", "heading", "text.muted");
+            UiComponents.Place(chevron.rectTransform, new Vector2(1f, 0.5f), new Vector2(50f, 60f));
+            chevron.rectTransform.anchoredPosition = new Vector2(-66f, 0f);
+        }
+
+        /// <summary>A grouped-card row: full-width tap target, left label, hairline below.</summary>
+        private static RectTransform GroupRow(RectTransform card, int index, string name, string label,
+            Action onClick)
+        {
+            RectTransform row = UiComponents.Rect(card, name, new Vector2(0f, 108f));
+            row.anchorMin = new Vector2(0f, 1f);
+            row.anchorMax = new Vector2(1f, 1f);
+            row.pivot = new Vector2(0.5f, 1f);
+            row.offsetMin = new Vector2(16f, -22f - 110f * (index + 1));
+            row.offsetMax = new Vector2(-16f, -22f - 110f * index);
+            var bg = row.gameObject.AddComponent<Image>();
+            bg.sprite = SpriteFactory.Solid();
+            bg.color = new Color(0f, 0f, 0f, 0f); // tap target only
+            UiComponents.PadHitTarget(row); // 120 ref-px touch floor (§3)
+            var button = row.gameObject.AddComponent<Button>();
+            button.onClick.AddListener(() => onClick());
+            row.gameObject.AddComponent<PressEffect>();
+
+            TextMeshProUGUI text = UiText.Create(row, "label", label, "body", "text.primary");
+            text.alignment = TextAlignmentOptions.Left;
+            UiComponents.Place(text.rectTransform, new Vector2(0f, 0.5f), new Vector2(560f, 60f));
+            text.rectTransform.anchoredPosition = new Vector2(330f, 0f);
+
+            if (index < 3)
+            {
+                RectTransform line = UiComponents.Rect(row, "hairline", Vector2.zero);
+                line.anchorMin = new Vector2(0f, 0f);
+                line.anchorMax = new Vector2(1f, 0f);
+                line.offsetMin = new Vector2(28f, -1f);
+                line.offsetMax = new Vector2(-28f, 1f);
+                var lineImage = line.gameObject.AddComponent<Image>();
+                lineImage.sprite = SpriteFactory.Solid();
+                lineImage.raycastTarget = false;
+                ThemedElement.Bind(line.gameObject, "stroke.subtle");
+            }
+
+            return row;
         }
 
         private void Toggle(string key)
@@ -86,11 +172,13 @@ namespace Riptide.UI
 
         public void Refresh()
         {
-            foreach ((string key, string label, Button button) in toggles)
+            foreach ((string key, Image track, RectTransform knob) in toggles)
             {
                 int fallback = key == "settings.reducedMotion.on" ? 0 : 1;
                 bool on = PlayerPrefs.GetInt(key, fallback) == 1;
-                button.GetComponentInChildren<TextMeshProUGUI>().text = $"{label} — {(on ? "ON" : "OFF")}";
+                // State-driven switch: cyan track + knob right when on.
+                track.color = ThemeRuntime.Color(on ? "accent.deep" : "bg.raised");
+                knob.anchoredPosition = new Vector2(on ? 24f : -24f, 0f);
             }
         }
     }

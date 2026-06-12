@@ -228,6 +228,12 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-12 · diorama rebuilt as a SCENE: the two solid-rect "parallax layers" became silhouette layers (new tileable `Dunes` sprite + kelp/rocks icon props on the near layer, accent.deep tint), with a water-column gradient and two sunbeams inside the viewport; parallax tracking unchanged · stacked flat rectangles were the screen's whole problem.
 - 2026-06-12 · creatures sit in circular two-tone wells (surface ring + raised inner) that carry the idle bob; info-card portrait gets a matching well; an empty info card now invites with `tidepool.tapHint` instead of staring blankly; header joins the Home/Shop language (centered title, coin pill left, Edit right).
 
+## Settings + remaining screens modern pass (Nick's mododd.png, "modernize this and finish all the tabs", 2026-06-12)
+
+- 2026-06-12 · Settings rebuilt as grouped section cards: stats = icon-tile card (fish/compass/waves/sun/chest + tabular values — was three lines of microtext), preferences = rows with REAL switches (track+knob, accent when on — "Sound — OFF" text-buttons read as broken buttons), about = chevron link rows with hairlines; rows are full-width invisible tap targets padded to the 120px floor · stats.line1/2 keys retired from use (kept in json), 5 short stat-label keys added.
+- 2026-06-12 · ZoneMap modernized: zone headers become gradient cards carrying the zone NAME (zones.* keys now on the map, spec §4.2) + a live "{n}/60 stars" counter (new zone.stars key); square nodes become circular ring nodes with §4.2 state colors (locked subtle · unlocked raised · complete bright · CURRENT cyan + soft glow) · grid layout kept over the spec's S-path — denser and it already reads.
+- 2026-06-12 · DailyIntro gets its ritual identity: glowing amber sun mark above the date headline · the rest already inherits the global capsule/card language.
+
 ## Mid-run save & resume (SAVE_RESUME_DESIGN.md approved via "resume aswell", 2026-06-12)
 
 - 2026-06-12 · run record = inputs only (mode identity, seed, move list, post-move StateHash), own atomic file `riptide_run.json`, written EVERY move in the same frame; ulong seed/hash serialize as strings (FNV-1a 64 daily seeds exceed the JSON parser's signed-long range — caught at design time) · design §2–4.

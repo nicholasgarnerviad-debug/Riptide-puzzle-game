@@ -291,11 +291,25 @@ namespace Riptide.UI
             var screen = root.gameObject.AddComponent<DailyIntroScreen>();
             screen.flow = flow;
 
+            // The ritual gets an identity: a glowing sun mark above the date.
+            RectTransform sunGlow = UiComponents.Rect(root, "sunGlow", new Vector2(360f, 360f));
+            UiComponents.Place(sunGlow, new Vector2(0.5f, 0.845f), new Vector2(360f, 360f));
+            var sunGlowImage = sunGlow.gameObject.AddComponent<Image>();
+            sunGlowImage.sprite = MenuSprites.SoftGlow();
+            sunGlowImage.raycastTarget = false;
+            ThemedElement.Bind(sunGlow.gameObject, "glow.primary");
+            RectTransform sun = UiComponents.Rect(root, "sun", new Vector2(150f, 150f));
+            UiComponents.Place(sun, new Vector2(0.5f, 0.845f), new Vector2(150f, 150f));
+            var sunImage = sun.gameObject.AddComponent<Image>();
+            sunImage.sprite = MenuSprites.Icon("sun");
+            sunImage.raycastTarget = false;
+            ThemedElement.Bind(sun.gameObject, "warning");
+
             screen.title = UiText.Create(root, "title", "", "title", "text.primary");
-            UiComponents.Place(screen.title.rectTransform, new Vector2(0.5f, 0.74f), new Vector2(920f, 120f));
+            UiComponents.Place(screen.title.rectTransform, new Vector2(0.5f, 0.72f), new Vector2(920f, 120f));
 
             screen.body = UiText.Create(root, "body", "", "body", "text.secondary");
-            UiComponents.Place(screen.body.rectTransform, new Vector2(0.5f, 0.62f), new Vector2(900f, 80f));
+            UiComponents.Place(screen.body.rectTransform, new Vector2(0.5f, 0.61f), new Vector2(900f, 80f));
 
             screen.streak = UiComponents.StreakFlameComponent(root);
             UiComponents.Place((RectTransform)screen.streak.transform, new Vector2(0.5f, 0.52f), new Vector2(240f, 64f));
