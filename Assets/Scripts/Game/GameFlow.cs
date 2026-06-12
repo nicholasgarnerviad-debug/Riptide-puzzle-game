@@ -12,6 +12,7 @@ namespace Riptide.Game
         Playing,
         Results,
         DailyResults,
+        DailyIntro,
         Settings,
         Shop,
         Tidepool,
@@ -47,6 +48,7 @@ namespace Riptide.Game
         public int? ParMoves;
         public int TidesSurvived;
         public int FinalWaterLevel;
+        public int Rescues;
         public bool NewEndlessBest;
         public int DailyNumber;
         public string ShareCardText = "";
@@ -434,6 +436,7 @@ namespace Riptide.Game
                 Moves = final.MoveCount,
                 TidesSurvived = final.Goals.TidesSurvived,
                 FinalWaterLevel = final.WaterLevel,
+                Rescues = runRescues,
             };
 
             switch (Mode)

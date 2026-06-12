@@ -108,14 +108,22 @@ namespace Riptide.UI
             });
         }
 
-        private void Update()
+        /// <summary>The screen ids bottom→top (BackRouter derives "previous" from this).</summary>
+        public IReadOnlyList<string> Ids
         {
-            // Android back: pop; at root the OS backgrounds the app (spec §4).
-            if (UnityEngine.InputSystem.Keyboard.current != null
-                && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
+            get
             {
-                Pop();
+                var ids = new List<string>(stack.Count);
+                foreach ((string id, _, _) in stack)
+                {
+                    ids.Add(id);
+                }
+
+                return ids;
             }
         }
+
+        // Android back is routed by ScreenManager through BackRouter (5-UI-a):
+        // one nav authority, so no Escape handling here.
     }
 }

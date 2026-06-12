@@ -26,7 +26,7 @@ namespace Riptide.UI
         private bool popArmed;
         private bool pointerWasDown;
 
-        public static HudOverlay Create(RectTransform canvasRoot, GameFlow flow)
+        public static HudOverlay Create(RectTransform canvasRoot, GameFlow flow, System.Action? onPause = null)
         {
             RectTransform root = UiKit.Container(canvasRoot, "HudOverlay");
             UiKit.Stretch(root);
@@ -40,8 +40,20 @@ namespace Riptide.UI
             hud.score = UiKit.Label(root, "score", "", 44, UiKit.TextColor, TextAnchor.UpperCenter);
             UiKit.Place(hud.score.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(400f, 80f), new Vector2(0f, -40f));
 
+            // Spec §4.3: the top-right slot is the pause control; without a pause
+            // sheet wired (CreateGame test rigs) it falls back to Home.
             Button menu = UiKit.TextButton(root, "menu", flow.Strings.Get("hud.back"), 30,
-                () => flow.GoTo(FlowScreen.Home));
+                () =>
+                {
+                    if (onPause != null)
+                    {
+                        onPause();
+                    }
+                    else
+                    {
+                        flow.GoTo(FlowScreen.Home);
+                    }
+                });
             UiKit.Place((RectTransform)menu.transform, new Vector2(0.92f, 0.97f), new Vector2(170f, 64f), new Vector2(0f, -32f));
 
             hud.coins = UiKit.Label(root, "coins", "", 38, ThemeRuntime.Color("coin"), TextAnchor.UpperCenter);

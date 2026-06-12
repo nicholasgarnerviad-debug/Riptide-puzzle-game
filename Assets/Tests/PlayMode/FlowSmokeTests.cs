@@ -105,6 +105,12 @@ namespace Riptide.PlayMode.Tests
             Assert.That(outcome.ShareCardText, Does.StartWith("Riptide #2 🌊"));
             Assert.That(outcome.ShareCardText, Does.Contain("riptide.game/d/2"));
 
+            // 5-UI-a §4.5: the on-screen preview is the share string VERBATIM.
+            var resultsScreen = Object.FindFirstObjectByType<DailyResultsScreen>(FindObjectsInactive.Include);
+            Assert.That(resultsScreen, Is.Not.Null, "daily results screen built");
+            Assert.That(resultsScreen!.PreviewText, Is.EqualTo(outcome.ShareCardText),
+                "preview renders exactly what will paste (§4.5)");
+
             Assert.That(flow.Meta.CanAttemptDailyToday(), Is.False, "GDD 3.3: one attempt per day");
             Assert.That(flow.StartDaily(), Is.False, "second fresh attempt refused");
 

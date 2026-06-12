@@ -61,6 +61,8 @@ namespace Riptide.UI
 
         private static bool SoundOn => PlayerPrefs.GetInt("settings.audio.on", 1) == 1;
 
+        private static bool MusicOn => PlayerPrefs.GetInt("settings.music.on", 1) == 1;
+
         public void PlayButton() => Play(SfxId.Button, 1f);
 
         private void OnRunStarted()
@@ -93,7 +95,7 @@ namespace Riptide.UI
 
         private void Update()
         {
-            if (!SoundOn)
+            if (!SoundOn || !MusicOn)
             {
                 calmSource.volume = 0f;
                 tenseSource.volume = 0f;

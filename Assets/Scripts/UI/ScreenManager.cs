@@ -1,29 +1,41 @@
+using System;
 using System.Collections.Generic;
 using Riptide.Core;
 using Riptide.Game;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Riptide.UI
 {
     /// <summary>
-    /// Owns the screen canvas, builds GDD 9 screens lazily, follows GameFlow
-    /// transitions, and bridges run-end (animations settled) to the results flow.
-    /// The Phase 4 board rig is built on the first run and toggled with Playing.
+    /// 5-UI-a: GameFlow remains the navigation source of truth; this manager
+    /// projects FlowScreen changes onto a ScreenStack (push new / pop back to a
+    /// screen already in the stack / refresh the top), owns the Pause sheet, the
+    /// first-run age gate, toasts, and routes Android back through BackRouter.
+    /// The board rig swaps in for Playing; screens hide behind it.
     /// </summary>
     public sealed class ScreenManager : MonoBehaviour
     {
         private GameFlow flow = null!;
         private Canvas canvas = null!;
-        private readonly Dictionary<FlowScreen, RectTransform> screens = new Dictionary<FlowScreen, RectTransform>();
+        private RectTransform screensRoot = null!;
+        private ScreenStack stack = null!;
+        private readonly Dictionary<FlowScreen, RectTransform> screens
+            = new Dictionary<FlowScreen, RectTransform>();
 
         private GameObject? boardRig;
         private AnimationDriver? driver;
         private HudOverlay? hud;
+        private PauseSheet? pause;
+        private ConsentAgeGate? ageGate;
+        private ToastManager toasts = null!;
         private bool instantAnimations;
 
         public GameFlow Flow => flow;
         public AnimationDriver? Driver => driver;
+        public ScreenStack Stack => stack;
+        public ToastManager Toasts => toasts;
+        public bool PauseShown => pause != null && pause.Shown;
+        public bool AgeGateOpen => ageGate != null && ageGate.IsOpen;
 
         public static ScreenManager Create(Transform parent, GameFlow flow, bool instantAnimations)
         {
@@ -33,6 +45,19 @@ namespace Riptide.UI
             manager.flow = flow;
             manager.instantAnimations = instantAnimations;
             manager.canvas = UiKit.CreateCanvas(go.transform, "ScreenCanvas");
+            var canvasRoot = manager.canvas.GetComponent<RectTransform>();
+
+            manager.screensRoot = UiKit.Container(canvasRoot, "Screens");
+            UiKit.Stretch(manager.screensRoot);
+            manager.stack = ScreenStack.Create(manager.screensRoot);
+            manager.toasts = ToastManager.Create(canvasRoot);
+
+            // §4.7 first-run age gate sits above everything until answered.
+            if (ConsentAgeGate.Required)
+            {
+                manager.ageGate = ConsentAgeGate.Build(canvasRoot, flow);
+            }
+
             flow.ScreenChanged += manager.OnScreenChanged;
             flow.RunStarted += manager.OnRunStarted;
             manager.OnScreenChanged(flow.Screen);
@@ -59,6 +84,70 @@ namespace Riptide.UI
             {
                 flow.ShowOutcomeScreen();
             }
+
+            HandleBackButton();
+        }
+
+        private void HandleBackButton()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard == null || !keyboard.escapeKey.wasPressedThisFrame)
+            {
+                return;
+            }
+
+            BackDecision decision = BackRouter.Decide(flow.Screen, PauseShown, AgeGateOpen, PreviousScreen());
+            switch (decision.Action)
+            {
+                case BackAction.DismissSheet:
+                    pause?.Dismiss();
+                    break;
+                case BackAction.OpenPauseSheet:
+                    ShowPause();
+                    break;
+                case BackAction.GoTo:
+                    flow.GoTo(decision.Target);
+                    break;
+                case BackAction.Blocked:
+                case BackAction.BackgroundApp:
+                    break; // OS-level or consumed silently.
+            }
+        }
+
+        /// <summary>The screen beneath the top of the stack, when there is one.</summary>
+        public FlowScreen? PreviousScreen()
+        {
+            IReadOnlyList<string> ids = stack.Ids;
+            if (ids.Count < 2)
+            {
+                return null;
+            }
+
+            return Enum.TryParse(ids[ids.Count - 2], out FlowScreen parsed) ? parsed : null;
+        }
+
+        /// <summary>§6.2: resuming mid-run never drops you straight back into the water.</summary>
+        private void OnApplicationPause(bool paused)
+        {
+            if (!paused && flow != null && flow.Screen == FlowScreen.Playing)
+            {
+                ShowPause();
+            }
+        }
+
+        public void ShowPause()
+        {
+            if (flow.Screen != FlowScreen.Playing)
+            {
+                return;
+            }
+
+            if (pause == null)
+            {
+                pause = PauseSheet.Build(canvas.GetComponent<RectTransform>(), flow);
+            }
+
+            pause.Show();
         }
 
         private void OnRunStarted()
@@ -86,7 +175,7 @@ namespace Riptide.UI
 
             Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             InputController.Create(boardRig.transform, store, tray, driver, cam, InputTuning.CreateDefault());
-            hud = HudOverlay.Create(canvas.GetComponent<RectTransform>(), flow);
+            hud = HudOverlay.Create(canvas.GetComponent<RectTransform>(), flow, ShowPause);
             AudioDirector.Create(boardRig.transform, flow, driver);
             TutorialDirector.Create(canvas.GetComponent<RectTransform>(), flow);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -98,26 +187,65 @@ namespace Riptide.UI
 
         private void OnScreenChanged(FlowScreen screen)
         {
-            foreach (KeyValuePair<FlowScreen, RectTransform> entry in screens)
-            {
-                entry.Value.gameObject.SetActive(false);
-            }
-
-            if (screen != FlowScreen.Playing)
-            {
-                RectTransform root = GetOrBuild(screen);
-                Refresh(screen, root);
-                root.gameObject.SetActive(true);
-            }
-
+            bool playing = screen == FlowScreen.Playing;
+            screensRoot.gameObject.SetActive(!playing);
             if (boardRig != null)
             {
-                boardRig.SetActive(screen == FlowScreen.Playing);
+                boardRig.SetActive(playing);
             }
 
             if (hud != null)
             {
-                hud.gameObject.SetActive(screen == FlowScreen.Playing);
+                hud.gameObject.SetActive(playing);
+            }
+
+            if (playing)
+            {
+                return;
+            }
+
+            string id = screen.ToString();
+            if (stack.TopId == id)
+            {
+                RefreshTop(screen);
+                return;
+            }
+
+            if (Contains(id))
+            {
+                int guard = 0;
+                while (stack.TopId != id && guard++ < 16 && stack.Pop())
+                {
+                }
+
+                RefreshTop(screen);
+                return;
+            }
+
+            RectTransform root = GetOrBuild(screen);
+            Refresh(root);
+            stack.Push(id, root);
+        }
+
+        private bool Contains(string id)
+        {
+            foreach (string entry in stack.Ids)
+            {
+                if (entry == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RefreshTop(FlowScreen screen)
+        {
+            if (screens.TryGetValue(screen, out RectTransform? root))
+            {
+                root.gameObject.SetActive(true);
+                Refresh(root);
             }
         }
 
@@ -128,23 +256,28 @@ namespace Riptide.UI
                 return existing;
             }
 
-            var canvasRoot = canvas.GetComponent<RectTransform>();
-            RectTransform root = screen switch
-            {
-                FlowScreen.Home => HomeScreen.Build(canvasRoot, flow),
-                FlowScreen.ZoneMap => ZoneMapScreen.Build(canvasRoot, flow),
-                FlowScreen.Results => ResultsScreen.Build(canvasRoot, flow),
-                FlowScreen.DailyResults => DailyResultsScreen.Build(canvasRoot, flow),
-                FlowScreen.Settings => SettingsScreen.Build(canvasRoot, flow),
-                FlowScreen.Shop => ShopSheet.Build(canvasRoot, flow),
-                FlowScreen.Tidepool => TidepoolScreen.Build(canvasRoot, flow),
-                _ => UiKit.Panel(canvasRoot, "unknown", UiKit.PanelColor),
-            };
+            RectTransform root = Build(screen);
             screens[screen] = root;
             return root;
         }
 
-        private void Refresh(FlowScreen screen, RectTransform root)
+        private RectTransform Build(FlowScreen screen)
+        {
+            return screen switch
+            {
+                FlowScreen.Home => HomeScreen.Build(screensRoot, flow),
+                FlowScreen.ZoneMap => ZoneMapScreen.Build(screensRoot, flow),
+                FlowScreen.Results => ResultsScreen.Build(screensRoot, flow),
+                FlowScreen.DailyResults => DailyResultsScreen.Build(screensRoot, flow),
+                FlowScreen.DailyIntro => DailyIntroScreen.Build(screensRoot, flow),
+                FlowScreen.Settings => SettingsScreen.Build(screensRoot, flow),
+                FlowScreen.Shop => ShopScreen.Build(screensRoot, flow, this),
+                FlowScreen.Tidepool => TidepoolScreen.Build(screensRoot, flow),
+                _ => UiComponents.Card(screensRoot, "unknown", Vector2.zero),
+            };
+        }
+
+        private static void Refresh(RectTransform root)
         {
             IScreenRefresh? refresh = root.GetComponent<IScreenRefresh>() as IScreenRefresh
                 ?? root.GetComponentInChildren<IScreenRefresh>(true);

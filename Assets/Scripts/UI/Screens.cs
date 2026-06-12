@@ -1,55 +1,63 @@
-﻿using Riptide.Core;
+using Riptide.Core;
 using Riptide.Game;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Riptide.UI
 {
-    /// <summary>Home (GDD 9): Voyage continue, Endless, Daily + streak flame, Tidepool, settings gear.</summary>
+    /// <summary>
+    /// Spec §4.1 Home: type-based wordmark (until branded art), voyage continue as
+    /// the primary action, Endless, the Daily card with streak flame, Tidepool and
+    /// a settings ghost, coin counter + rewarded chest.
+    /// </summary>
     public sealed class HomeScreen : MonoBehaviour, IScreenRefresh
     {
         private GameFlow flow = null!;
-        private Text voyageLabel = null!;
-        private Text streakLabel = null!;
+        private Button voyage = null!;
+        private StreakFlame streak = null!;
+        private CoinCounter coins = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
-            RectTransform root = UiKit.Panel(parent, "HomeScreen", UiKit.PanelColor);
-            UiKit.Stretch(root);
+            RectTransform root = ScreenChrome.Root(parent, "HomeScreen");
             var screen = root.gameObject.AddComponent<HomeScreen>();
             screen.flow = flow;
 
-            Text title = UiKit.Label(root, "title", flow.Strings.Get("app.title"), 110, UiKit.TextColor);
-            UiKit.Place(title.rectTransform, new Vector2(0.5f, 0.86f), new Vector2(900f, 140f), Vector2.zero);
+            TextMeshProUGUI wordmark = UiText.Create(root, "wordmark", flow.Strings.Get("app.title"),
+                "display", "accent.primary");
+            UiComponents.Place(wordmark.rectTransform, new Vector2(0.5f, 0.87f), new Vector2(900f, 140f));
 
-            Button voyage = UiKit.TextButton(root, "voyage", flow.Strings.Get("home.voyage"), 52,
-                () => flow.GoTo(FlowScreen.ZoneMap), UiKit.ButtonAccent);
-            UiKit.Place((RectTransform)voyage.transform, new Vector2(0.5f, 0.62f), new Vector2(640f, 130f), Vector2.zero);
-            screen.voyageLabel = voyage.GetComponentInChildren<Text>();
+            screen.coins = UiComponents.CoinCounterComponent(root);
+            UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.5f, 0.795f), new Vector2(300f, 72f));
 
-            Button endless = UiKit.TextButton(root, "endless", flow.Strings.Get("home.endless"), 52,
+            screen.voyage = UiComponents.ButtonPrimary(root, "voyage", flow.Strings.Get("home.voyage"),
+                () => flow.GoTo(FlowScreen.ZoneMap));
+            UiComponents.Place((RectTransform)screen.voyage.transform, new Vector2(0.5f, 0.645f), new Vector2(680f, 140f));
+
+            Button endless = UiComponents.ButtonSecondary(root, "endless", flow.Strings.Get("home.endless"),
                 flow.StartEndless);
-            UiKit.Place((RectTransform)endless.transform, new Vector2(0.5f, 0.50f), new Vector2(640f, 130f), Vector2.zero);
+            UiComponents.Place((RectTransform)endless.transform, new Vector2(0.5f, 0.525f), new Vector2(680f, 130f));
 
-            Button daily = UiKit.TextButton(root, "daily", flow.Strings.Get("home.daily"), 52,
-                () => flow.StartDaily());
-            UiKit.Place((RectTransform)daily.transform, new Vector2(0.5f, 0.38f), new Vector2(640f, 130f), Vector2.zero);
+            Button daily = UiComponents.ButtonSecondary(root, "daily", flow.Strings.Get("home.daily"),
+                () => flow.GoTo(FlowScreen.DailyIntro));
+            UiComponents.Place((RectTransform)daily.transform, new Vector2(0.5f, 0.405f), new Vector2(680f, 130f));
 
-            screen.streakLabel = UiKit.Label(root, "streak", "", 40, Palette.MeterDanger);
-            UiKit.Place(screen.streakLabel.rectTransform, new Vector2(0.5f, 0.315f), new Vector2(640f, 60f), Vector2.zero);
+            screen.streak = UiComponents.StreakFlameComponent(root);
+            UiComponents.Place((RectTransform)screen.streak.transform, new Vector2(0.5f, 0.325f), new Vector2(240f, 64f));
 
-            Button tidepool = UiKit.TextButton(root, "tidepool", flow.Strings.Get("home.tidepool"), 44,
+            Button tidepool = UiComponents.ButtonSecondary(root, "tidepool", flow.Strings.Get("home.tidepool"),
                 () => flow.GoTo(FlowScreen.Tidepool));
-            UiKit.Place((RectTransform)tidepool.transform, new Vector2(0.5f, 0.22f), new Vector2(640f, 110f), Vector2.zero);
+            UiComponents.Place((RectTransform)tidepool.transform, new Vector2(0.5f, 0.235f), new Vector2(680f, 120f));
 
-            Button settings = UiKit.TextButton(root, "settings", flow.Strings.Get("home.settings"), 36,
+            Button settings = UiComponents.ButtonGhost(root, "settings", flow.Strings.Get("home.settings"),
                 () => flow.GoTo(FlowScreen.Settings));
-            UiKit.Place((RectTransform)settings.transform, new Vector2(0.5f, 0.10f), new Vector2(400f, 90f), Vector2.zero);
+            UiComponents.Place((RectTransform)settings.transform, new Vector2(0.32f, 0.115f), new Vector2(420f, 92f));
 
             // GDD 6: rewarded coin chest, capped 3/day by the save.
-            Button chest = UiKit.TextButton(root, "chest", flow.Strings.Get("home.chest"), 32,
+            Button chest = UiComponents.ButtonReward(root, "chest", flow.Strings.Get("home.chest"),
                 () => { flow.TryClaimChestViaAd(); screen.Refresh(); });
-            UiKit.Place((RectTransform)chest.transform, new Vector2(0.85f, 0.10f), new Vector2(260f, 90f), Vector2.zero);
+            UiComponents.Place((RectTransform)chest.transform, new Vector2(0.70f, 0.115f), new Vector2(430f, 105f));
 
             screen.Refresh();
             return root;
@@ -58,42 +66,46 @@ namespace Riptide.UI
         public void Refresh()
         {
             (int zone, int index) = flow.Meta.Voyage.NextLevel();
-            voyageLabel.text = flow.Meta.Voyage.TotalStars == 0
+            voyage.GetComponentInChildren<TextMeshProUGUI>().text = flow.Meta.Voyage.TotalStars == 0
                 ? flow.Strings.Get("home.voyage")
                 : string.Format(flow.Strings.Get("home.voyageContinue"), zone, index);
 
-            int streak = flow.Meta.Streak.Current;
-            streakLabel.text = streak > 0 ? string.Format(flow.Strings.Get("home.dailyStreak"), streak) : "";
+            int current = flow.Meta.Streak.Current;
+            streak.gameObject.SetActive(current > 0);
+            streak.Set(current, pulse: false);
+            coins.SetInstant(flow.Meta.Coins);
         }
     }
 
-    /// <summary>Zone map (GDD 9): vertical scroll, 10 zones x 20 nodes with stars and locks.</summary>
+    /// <summary>Spec §4.2 zone map: 10 zone cards, 20 nodes each, stars and locks.</summary>
     public sealed class ZoneMapScreen : MonoBehaviour, IScreenRefresh
     {
         private GameFlow flow = null!;
-        private readonly System.Collections.Generic.List<(int zone, int index, Button button, Text label)> nodes
-            = new System.Collections.Generic.List<(int, int, Button, Text)>();
+        private readonly System.Collections.Generic.List<(int zone, int index, Button button, TextMeshProUGUI label)> nodes
+            = new System.Collections.Generic.List<(int, int, Button, TextMeshProUGUI)>();
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
-            RectTransform root = UiKit.Panel(parent, "ZoneMapScreen", UiKit.PanelColor);
-            UiKit.Stretch(root);
+            RectTransform root = ScreenChrome.Root(parent, "ZoneMapScreen");
             var screen = root.gameObject.AddComponent<ZoneMapScreen>();
             screen.flow = flow;
 
-            Button back = UiKit.TextButton(root, "back", flow.Strings.Get("common.back"), 36,
+            Button back = UiComponents.ButtonGhost(root, "back", flow.Strings.Get("common.back"),
                 () => flow.GoTo(FlowScreen.Home));
-            UiKit.Place((RectTransform)back.transform, new Vector2(0.12f, 0.955f), new Vector2(180f, 70f), Vector2.zero);
+            UiComponents.Place((RectTransform)back.transform, new Vector2(0.14f, 0.955f), new Vector2(240f, 80f));
 
-            RectTransform scrollRoot = UiKit.Panel(root, "scroll", new Color(0f, 0f, 0f, 0.25f));
+            RectTransform scrollRoot = UiComponents.Rect(root, "scroll", Vector2.zero);
             scrollRoot.anchorMin = new Vector2(0.04f, 0.02f);
             scrollRoot.anchorMax = new Vector2(0.96f, 0.92f);
             scrollRoot.offsetMin = Vector2.zero;
             scrollRoot.offsetMax = Vector2.zero;
+            var scrollImage = scrollRoot.gameObject.AddComponent<Image>();
+            scrollImage.sprite = SpriteFactory.Solid();
+            ThemedElement.Bind(scrollRoot.gameObject, "bg.abyss");
             var scroll = scrollRoot.gameObject.AddComponent<ScrollRect>();
             scrollRoot.gameObject.AddComponent<RectMask2D>();
 
-            RectTransform content = UiKit.Container(scrollRoot, "content");
+            RectTransform content = UiComponents.Rect(scrollRoot, "content", Vector2.zero);
             content.anchorMin = new Vector2(0f, 1f);
             content.anchorMax = new Vector2(1f, 1f);
             content.pivot = new Vector2(0.5f, 1f);
@@ -101,16 +113,16 @@ namespace Riptide.UI
             scroll.horizontal = false;
             scroll.vertical = true;
 
-            const float headerH = 90f;
-            const float cell = 180f;
-            const float pad = 14f;
+            const float headerH = 100f;
+            const float cell = 184f;
+            const float pad = 16f;
             float y = 0f;
             for (int zone = 1; zone <= 10; zone++)
             {
-                Text header = UiKit.Label(content, $"zone{zone}",
-                    string.Format(flow.Strings.Get("zone.title"), zone), 48, UiKit.TextColor);
-                UiKit.Place(header.rectTransform, new Vector2(0.5f, 1f), new Vector2(600f, headerH),
-                    new Vector2(0f, -y - headerH * 0.5f));
+                TextMeshProUGUI header = UiText.Create(content, $"zone{zone}",
+                    string.Format(flow.Strings.Get("zone.title"), zone), "heading", "text.primary");
+                UiComponents.Place(header.rectTransform, new Vector2(0.5f, 1f), new Vector2(600f, headerH));
+                header.rectTransform.anchoredPosition = new Vector2(0f, -y - headerH * 0.5f);
                 y += headerH;
 
                 for (int index = 1; index <= 20; index++)
@@ -119,12 +131,12 @@ namespace Riptide.UI
                     int row = (index - 1) / 5;
                     int zoneCopy = zone;
                     int indexCopy = index;
-                    Button node = UiKit.TextButton(content, $"z{zone}l{index}", index.ToString(), 40,
+                    Button node = UiComponents.ButtonSecondary(content, $"z{zone}l{index}", index.ToString(),
                         () => screen.OnNode(zoneCopy, indexCopy));
-                    UiKit.Place((RectTransform)node.transform, new Vector2(0.5f, 1f),
-                        new Vector2(cell - pad, cell - pad),
-                        new Vector2((col - 2) * cell, -y - row * cell - cell * 0.5f));
-                    screen.nodes.Add((zone, index, node, node.GetComponentInChildren<Text>()));
+                    var nodeRt = (RectTransform)node.transform;
+                    UiComponents.Place(nodeRt, new Vector2(0.5f, 1f), new Vector2(cell - pad, cell - pad));
+                    nodeRt.anchoredPosition = new Vector2((col - 2) * cell, -y - row * cell - cell * 0.5f);
+                    screen.nodes.Add((zone, index, node, node.GetComponentInChildren<TextMeshProUGUI>()));
                 }
 
                 y += 4 * cell + 30f;
@@ -145,116 +157,24 @@ namespace Riptide.UI
 
         public void Refresh()
         {
-            foreach ((int zone, int index, Button button, Text label) in nodes)
+            foreach ((int zone, int index, Button button, TextMeshProUGUI label) in nodes)
             {
                 bool unlocked = flow.Meta.Voyage.IsUnlocked(zone, index);
                 int stars = flow.Meta.Voyage.StarsFor(VoyageProgress.LevelId(zone, index));
                 button.interactable = unlocked;
+                // '*' until an icon set lands: LiberationSans SDF has no U+2605 star.
                 label.text = unlocked
-                    ? (stars > 0 ? $"{index}\n{new string('★', stars)}" : index.ToString())
-                    : "🔒";
-                label.color = unlocked ? UiKit.TextColor : UiKit.TextDim;
+                    ? (stars > 0 ? $"{index}\n{new string('*', stars)}" : index.ToString())
+                    : "—";
+                label.color = ThemeRuntime.Color(unlocked ? "text.primary" : "text.muted");
             }
-        }
-    }
-
-    /// <summary>Settings (GDD 9): audio/haptics toggles; consent, restore, policy links stubbed for P7/P8.</summary>
-    public sealed class SettingsScreen : MonoBehaviour, IScreenRefresh
-    {
-        private GameFlow flow = null!;
-        private Text audioLabel = null!;
-        private Text hapticsLabel = null!;
-
-        public static RectTransform Build(RectTransform parent, GameFlow flow)
-        {
-            RectTransform root = UiKit.Panel(parent, "SettingsScreen", UiKit.PanelColor);
-            UiKit.Stretch(root);
-            var screen = root.gameObject.AddComponent<SettingsScreen>();
-            screen.flow = flow;
-
-            Text title = UiKit.Label(root, "title", flow.Strings.Get("settings.title"), 64, UiKit.TextColor);
-            UiKit.Place(title.rectTransform, new Vector2(0.5f, 0.9f), new Vector2(700f, 100f), Vector2.zero);
-
-            Button audio = UiKit.TextButton(root, "audio", "", 44, () => screen.Toggle("settings.audio.on"));
-            UiKit.Place((RectTransform)audio.transform, new Vector2(0.5f, 0.72f), new Vector2(640f, 110f), Vector2.zero);
-            screen.audioLabel = audio.GetComponentInChildren<Text>();
-
-            Button haptics = UiKit.TextButton(root, "haptics", "", 44, () => screen.Toggle("settings.haptics.on"));
-            UiKit.Place((RectTransform)haptics.transform, new Vector2(0.5f, 0.60f), new Vector2(640f, 110f), Vector2.zero);
-            screen.hapticsLabel = haptics.GetComponentInChildren<Text>();
-
-            Button consent = UiKit.TextButton(root, "consent", flow.Strings.Get("settings.consent"), 38,
-                () => flow.Consent?.Reopen());
-            UiKit.Place((RectTransform)consent.transform, new Vector2(0.5f, 0.48f), new Vector2(640f, 100f), Vector2.zero);
-
-            Button restore = UiKit.TextButton(root, "restore", flow.Strings.Get("settings.restore"), 38,
-                () => flow.Iap?.Restore());
-            UiKit.Place((RectTransform)restore.transform, new Vector2(0.5f, 0.37f), new Vector2(640f, 100f), Vector2.zero);
-
-            Button privacy = UiKit.TextButton(root, "privacy", flow.Strings.Get("settings.privacy"), 38,
-                () => Application.OpenURL("https://riptide.game/privacy"));
-            UiKit.Place((RectTransform)privacy.transform, new Vector2(0.5f, 0.26f), new Vector2(640f, 100f), Vector2.zero);
-
-            Button terms = UiKit.TextButton(root, "terms", flow.Strings.Get("settings.terms"), 38,
-                () => Application.OpenURL("https://riptide.game/terms"));
-            UiKit.Place((RectTransform)terms.transform, new Vector2(0.5f, 0.15f), new Vector2(640f, 100f), Vector2.zero);
-
-            Button back = UiKit.TextButton(root, "back", flow.Strings.Get("common.back"), 40,
-                () => flow.GoTo(FlowScreen.Home));
-            UiKit.Place((RectTransform)back.transform, new Vector2(0.5f, 0.05f), new Vector2(400f, 90f), Vector2.zero);
-
-            screen.Refresh();
-            return root;
-        }
-
-        private void Toggle(string key)
-        {
-            PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key, 1) == 1 ? 0 : 1);
-            PlayerPrefs.Save();
-            Refresh();
-        }
-
-        public void Refresh()
-        {
-            audioLabel.text = $"{flow.Strings.Get("settings.audio")}: {OnOff("settings.audio.on")}";
-            hapticsLabel.text = $"{flow.Strings.Get("settings.haptics")}: {OnOff("settings.haptics.on")}";
-        }
-
-        private static string OnOff(string key) => PlayerPrefs.GetInt(key, 1) == 1 ? "ON" : "OFF";
-    }
-
-    /// <summary>Shop sheet (GDD 9) — modal stub until Phase 7 wires IAP.</summary>
-    public static class ShopSheet
-    {
-        public static RectTransform Build(RectTransform parent, GameFlow flow)
-        {
-            RectTransform root = UiKit.Panel(parent, "ShopSheet", new Color(0f, 0f, 0f, 0.6f));
-            UiKit.Stretch(root);
-
-            RectTransform sheet = UiKit.Panel(root, "sheet", UiKit.PanelColor);
-            UiKit.Place(sheet, new Vector2(0.5f, 0.5f), new Vector2(820f, 700f), Vector2.zero);
-
-            Text title = UiKit.Label(sheet, "title", flow.Strings.Get("shop.title"), 56, UiKit.TextColor);
-            UiKit.Place(title.rectTransform, new Vector2(0.5f, 0.85f), new Vector2(700f, 90f), Vector2.zero);
-
-            Button removeAds = UiKit.TextButton(sheet, "removeAds", flow.Strings.Get("shop.removeAds"), 42, () => { });
-            removeAds.interactable = false;
-            UiKit.Place((RectTransform)removeAds.transform, new Vector2(0.5f, 0.6f), new Vector2(680f, 110f), Vector2.zero);
-
-            Text soon = UiKit.Label(sheet, "soon", flow.Strings.Get("shop.comingSoon"), 34, UiKit.TextDim);
-            UiKit.Place(soon.rectTransform, new Vector2(0.5f, 0.4f), new Vector2(700f, 120f), Vector2.zero);
-
-            Button close = UiKit.TextButton(sheet, "close", flow.Strings.Get("common.close"), 40,
-                () => flow.GoTo(FlowScreen.Home));
-            UiKit.Place((RectTransform)close.transform, new Vector2(0.5f, 0.14f), new Vector2(360f, 90f), Vector2.zero);
-
-            return root;
         }
     }
 
     /// <summary>
     /// GDD 5.1 Tidepool: horizontally scrolling diorama of rescued species with
     /// lifetime counters and tap-for-flavor, plus the 20-item decoration coin sink.
+    /// (Visual diorama pass — parallax, idle bobbing, slots — lands in 8-UI.)
     /// </summary>
     public sealed class TidepoolScreen : MonoBehaviour, IScreenRefresh
     {

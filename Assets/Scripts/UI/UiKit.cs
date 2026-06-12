@@ -40,10 +40,11 @@ namespace Riptide.UI
             go.transform.SetParent(parent, false);
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            // Spec §2: reference 1080×2400, match = 1.0 (height).
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080f, 1920f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.referenceResolution = new Vector2(1080f, 2400f);
+            scaler.matchWidthOrHeight = 1f;
             go.AddComponent<GraphicRaycaster>();
             EnsureEventSystem();
             return canvas;
