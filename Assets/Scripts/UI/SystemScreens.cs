@@ -419,17 +419,41 @@ namespace Riptide.UI
         }
     }
 
-    /// <summary>Shared screen scaffolding: themed background + ambience (snow, vignette).</summary>
+    /// <summary>
+    /// Shared screen scaffolding. Universal-fit pass: each screen root is now a
+    /// TRANSPARENT safe-area-padded rect (content never under a notch), while the
+    /// backdrop (bg + snow + vignette) is ONE shared full-bleed layer behind the
+    /// stack (ScreenBackdrop) — it must extend under notches, and one snow system
+    /// beats eight (§9 budgets).
+    /// </summary>
     internal static class ScreenChrome
     {
         public static RectTransform Root(RectTransform parent, string name)
         {
             RectTransform root = UiComponents.Rect(parent, name, Vector2.zero);
             UiComponents.Stretch(root);
+
+            // Screens stay opaque to input even though their pixels come from the
+            // shared backdrop — stray taps must not reach lower stack entries.
+            var blocker = root.gameObject.AddComponent<Image>();
+            blocker.sprite = SpriteFactory.Solid();
+            blocker.color = new Color(0f, 0f, 0f, 0f);
+
+            root.gameObject.AddComponent<SafeArea>();
+            return root;
+        }
+    }
+
+    /// <summary>The single full-bleed menu backdrop living behind the screen stack.</summary>
+    internal static class ScreenBackdrop
+    {
+        public static RectTransform Create(RectTransform parent)
+        {
+            RectTransform root = UiComponents.Rect(parent, "Backdrop", Vector2.zero);
+            UiComponents.Stretch(root);
             var bg = root.gameObject.AddComponent<Image>();
             bg.sprite = SpriteFactory.Solid();
             ThemedElement.Bind(root.gameObject, "bg.deep");
-            root.gameObject.AddComponent<SafeArea>();
 
             // 8-UI ambience: we're underwater everywhere, menus included.
             CanvasSnow.Create(root);
@@ -439,6 +463,8 @@ namespace Riptide.UI
             vignette.sprite = SpriteFactory.Vignette();
             vignette.color = new Color(0f, 0f, 0f, 0.55f);
             vignette.raycastTarget = false;
+
+            root.SetAsFirstSibling();
             return root;
         }
     }

@@ -50,6 +50,10 @@ namespace Riptide.UI
 
             manager.screensRoot = UiKit.Container(canvasRoot, "Screens");
             UiKit.Stretch(manager.screensRoot);
+
+            // Universal-fit pass: one shared full-bleed backdrop behind the stack;
+            // screen roots themselves are transparent and safe-area padded.
+            ScreenBackdrop.Create(manager.screensRoot);
             manager.stack = ScreenStack.Create(manager.screensRoot);
             manager.toasts = ToastManager.Create(canvasRoot);
 

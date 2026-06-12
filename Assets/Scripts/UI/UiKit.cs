@@ -40,11 +40,15 @@ namespace Riptide.UI
             go.transform.SetParent(parent, false);
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            // Spec §2: reference 1080×2400, match = 1.0 (height).
+            // Spec §2 as amended (universal fit): reference 1080×2347 — the
+            // iPhone 16 Pro Max 19.5:9 basis at the 1080 token width — matched on
+            // WIDTH, so ref-px token sizes hold everywhere and vertical space
+            // flexes per device. Values live in the theme layout block.
+            Riptide.Core.LayoutSpec layout = ThemeRuntime.Theme.Layout;
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080f, 2400f);
-            scaler.matchWidthOrHeight = 1f;
+            scaler.referenceResolution = new Vector2(layout.CanvasRefWidth, layout.CanvasRefHeight);
+            scaler.matchWidthOrHeight = 0f;
             go.AddComponent<GraphicRaycaster>();
             EnsureEventSystem();
             return canvas;

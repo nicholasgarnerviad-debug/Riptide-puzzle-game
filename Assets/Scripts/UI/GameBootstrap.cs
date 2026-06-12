@@ -113,10 +113,12 @@ namespace Riptide.UI
             }
 
             cam.orthographic = true;
-            cam.orthographicSize = 8.7f;
-            cam.transform.position = new Vector3(0f, -0.2f, -10f);
             cam.backgroundColor = Palette.Background;
             cam.clearFlags = CameraClearFlags.SolidColor;
+
+            // Universal screen fit: ortho size + Y from CameraFit.Solve (Core,
+            // device-matrix tested); re-applied on resolution/safe-area changes.
+            CameraFitter.Attach(cam);
         }
 
         private static Camera FindFirstCamera()

@@ -38,6 +38,19 @@ namespace Riptide.UI
 
         public static float BoardTopY => Origin.y + (BoardSpec.Height - 1) * CellSize + CellSize * 0.5f;
 
+        public static float BoardHalfWidth => BoardSpec.Width * 0.5f;
+
+        /// <summary>Board frame inset beyond the cells (BoardChromeView draws it).</summary>
+        public const float FramePad = 0.55f;
+
+        /// <summary>Tray card height (TrayView draws it).</summary>
+        public const float TrayCardHeight = 2.7f;
+
+        /// <summary>World-Y extents of the game composition — what the camera fit must show.</summary>
+        public static float ContentTopY => BoardTopY + FramePad;
+
+        public static float ContentBottomY => TrayCenter.y - TrayCardHeight * 0.5f;
+
         public static float WaterlineY(float waterLevel) => BoardBottomY + waterLevel * CellSize;
 
         public static Vector3 TrayCenter => new Vector3(0f, BoardBottomY - 2.0f, 0f);

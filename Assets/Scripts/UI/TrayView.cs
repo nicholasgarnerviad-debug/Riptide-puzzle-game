@@ -29,7 +29,7 @@ namespace Riptide.UI
             var card = cardGo.AddComponent<SpriteRenderer>();
             card.sprite = SpriteFactory.RoundedFill();
             card.drawMode = SpriteDrawMode.Sliced;
-            card.size = new Vector2(BoardSpec.Width + 1f, 2.7f);
+            card.size = new Vector2(BoardSpec.Width + 1f, BoardLayout.TrayCardHeight);
             card.color = ThemeRuntime.Color("bg.surface");
             card.sortingOrder = 25;
 
@@ -39,7 +39,7 @@ namespace Riptide.UI
             var stroke = strokeGo.AddComponent<SpriteRenderer>();
             stroke.sprite = SpriteFactory.RoundedStroke();
             stroke.drawMode = SpriteDrawMode.Sliced;
-            stroke.size = new Vector2(BoardSpec.Width + 1f, 2.7f);
+            stroke.size = new Vector2(BoardSpec.Width + 1f, BoardLayout.TrayCardHeight);
             stroke.color = ThemeRuntime.Color("stroke.subtle");
             stroke.sortingOrder = 26;
         }

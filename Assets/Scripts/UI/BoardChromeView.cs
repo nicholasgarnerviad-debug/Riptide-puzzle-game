@@ -68,7 +68,7 @@ namespace Riptide.UI
 
         private void BuildFrame()
         {
-            float pad = 0.55f;
+            float pad = BoardLayout.FramePad;
             float width = BoardSpec.Width + 2f * pad;
             float height = BoardSpec.Height + 2f * pad;
             float centerY = (BoardLayout.BoardBottomY + BoardLayout.BoardTopY) * 0.5f;
@@ -119,18 +119,21 @@ namespace Riptide.UI
 
             // Warning marker at the left margin. LiberationSans has no U+26A0, so
             // a danger dot + "!" stands in until the branded glyph set lands.
+            // Universal fit: everything left of the board must stay inside the
+            // theme's boardSideAllowance — the camera shows exactly that much.
+            float markerX = leftX - 0.38f;
             var markerGo = new GameObject("floodMarker");
             markerGo.transform.SetParent(transform, false);
-            markerGo.transform.position = new Vector3(leftX - 0.45f, floodLineY, 0f);
+            markerGo.transform.position = new Vector3(markerX, floodLineY, 0f);
             floodMarkerDot = markerGo.AddComponent<SpriteRenderer>();
             floodMarkerDot.sprite = SpriteFactory.Dot();
             floodMarkerDot.color = dashColor;
             floodMarkerDot.sortingOrder = FloodSorting;
-            markerGo.transform.localScale = Vector3.one * 0.55f;
+            markerGo.transform.localScale = Vector3.one * 0.45f;
 
             floodMarkerText = UiText.CreateWorld(transform, "floodMarkerText", "!",
                 "micro", "text.onAccent", FloodSorting + 1);
-            floodMarkerText.transform.position = new Vector3(leftX - 0.45f, floodLineY, 0f);
+            floodMarkerText.transform.position = new Vector3(markerX, floodLineY, 0f);
         }
 
         private void BuildDepthGauge()
@@ -162,7 +165,8 @@ namespace Riptide.UI
 
                 TextMeshPro label = UiText.CreateWorld(transform, $"gaugeLabel_{level}",
                     level.ToString(), "micro", "text.muted", GaugeSorting + 1);
-                label.transform.position = new Vector3(gaugeX - 0.42f, BoardLayout.WaterlineY(level), 0f);
+                // Inside the side allowance (universal fit) — peripheral, not clipped.
+                label.transform.position = new Vector3(gaugeX - 0.30f, BoardLayout.WaterlineY(level), 0f);
             }
 
             var notchGo = new GameObject("gaugeNotch");

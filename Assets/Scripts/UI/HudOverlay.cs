@@ -30,6 +30,17 @@ namespace Riptide.UI
         private bool pointerWasDown;
         private float milestoneUntil;
 
+        /// <summary>Booster rail world X — over the board's right edge (board half-width 4.5).</summary>
+        private const float RailX = 3.1f;
+        private const float FreeAdX = 4.15f;
+
+        private static void PinRail(Button button, Vector2 sizeRefPx, float worldX, float worldY)
+        {
+            var rt = (RectTransform)button.transform;
+            rt.sizeDelta = sizeRefPx;
+            WorldAnchor.Pin(rt, new Vector3(worldX, worldY, 0f));
+        }
+
         public static HudOverlay Create(RectTransform canvasRoot, GameFlow flow, System.Action? onPause = null)
         {
             RectTransform root = UiKit.Container(canvasRoot, "HudOverlay");
@@ -37,16 +48,24 @@ namespace Riptide.UI
             var hud = root.gameObject.AddComponent<HudOverlay>();
             hud.flow = flow;
 
+            // Universal fit: the top bar lives inside the safe area (notches /
+            // punch-holes); world-tracking elements (booster rail, milestone) pin
+            // to world positions in full-screen space instead — the camera fit
+            // already keeps those out of unsafe territory.
+            RectTransform safe = UiKit.Container(root, "safe");
+            UiKit.Stretch(safe);
+            safe.gameObject.AddComponent<SafeArea>();
+
             // Spec §4.3 top bar: goal chips LEFT, score CENTER, pause/menu RIGHT.
-            hud.goals = UiKit.Label(root, "goals", "", 36, UiKit.TextColor, TextAnchor.UpperLeft);
+            hud.goals = UiKit.Label(safe, "goals", "", 36, UiKit.TextColor, TextAnchor.UpperLeft);
             UiKit.Place(hud.goals.rectTransform, new Vector2(0.05f, 0.97f), new Vector2(560f, 220f), new Vector2(280f, -110f));
 
-            hud.score = UiKit.Label(root, "score", "", 44, UiKit.TextColor, TextAnchor.UpperCenter);
+            hud.score = UiKit.Label(safe, "score", "", 44, UiKit.TextColor, TextAnchor.UpperCenter);
             UiKit.Place(hud.score.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(400f, 80f), new Vector2(0f, -40f));
 
             // Spec §4.3: the top-right slot is the pause control; without a pause
             // sheet wired (CreateGame test rigs) it falls back to Home.
-            Button menu = UiKit.TextButton(root, "menu", flow.Strings.Get("hud.back"), 30,
+            Button menu = UiKit.TextButton(safe, "menu", flow.Strings.Get("hud.back"), 30,
                 () =>
                 {
                     if (onPause != null)
@@ -60,34 +79,37 @@ namespace Riptide.UI
                 });
             UiKit.Place((RectTransform)menu.transform, new Vector2(0.92f, 0.97f), new Vector2(170f, 64f), new Vector2(0f, -32f));
 
-            hud.coins = UiKit.Label(root, "coins", "", 38, ThemeRuntime.Color("coin"), TextAnchor.UpperCenter);
+            hud.coins = UiKit.Label(safe, "coins", "", 38, ThemeRuntime.Color("coin"), TextAnchor.UpperCenter);
             UiKit.Place(hud.coins.rectTransform, new Vector2(0.5f, 0.925f), new Vector2(400f, 60f), new Vector2(0f, -30f));
 
-            // Spec §4.3 item 4: booster rail right-aligned ABOVE the tray strip.
+            // Spec §4.3 item 4: booster rail right-aligned ABOVE the tray strip —
+            // world-pinned over the board's right edge so it tracks the camera fit
+            // on every aspect (normalized anchors drifted off the board).
             hud.drainButton = UiKit.TextButton(root, "drain", "", 28, () => hud.UseSimpleBooster(BoosterKind.DrainPump));
-            UiKit.Place((RectTransform)hud.drainButton.transform, new Vector2(0.86f, 0.385f), new Vector2(250f, 80f), Vector2.zero);
+            PinRail(hud.drainButton, new Vector2(250f, 80f), RailX, -2.1f);
             hud.popButton = UiKit.TextButton(root, "pop", "", 28, hud.TogglePopMode);
-            UiKit.Place((RectTransform)hud.popButton.transform, new Vector2(0.86f, 0.335f), new Vector2(250f, 80f), Vector2.zero);
+            PinRail(hud.popButton, new Vector2(250f, 80f), RailX, -3.0f);
             hud.rerollButton = UiKit.TextButton(root, "reroll", "", 28, () => hud.UseSimpleBooster(BoosterKind.NewTide));
-            UiKit.Place((RectTransform)hud.rerollButton.transform, new Vector2(0.86f, 0.285f), new Vector2(250f, 80f), Vector2.zero);
+            PinRail(hud.rerollButton, new Vector2(250f, 80f), RailX, -3.9f);
             hud.swapButton = UiKit.TextButton(root, "swap", "", 28, hud.ToggleSwapMode);
-            UiKit.Place((RectTransform)hud.swapButton.transform, new Vector2(0.86f, 0.235f), new Vector2(250f, 80f), Vector2.zero);
+            PinRail(hud.swapButton, new Vector2(250f, 80f), RailX, -4.8f);
 
-            // ROADMAP M4: endless milestone pop.
+            // ROADMAP M4: endless milestone pop — over the board's lower half.
             hud.milestoneLabel = UiKit.Label(root, "milestone", "", 34, Palette.MeterFilled);
-            UiKit.Place(hud.milestoneLabel.rectTransform, new Vector2(0.5f, 0.30f), new Vector2(800f, 60f), Vector2.zero);
+            hud.milestoneLabel.rectTransform.sizeDelta = new Vector2(800f, 60f);
+            WorldAnchor.Pin(hud.milestoneLabel.rectTransform, new Vector3(0f, -3.5f, 0f));
             hud.milestoneLabel.gameObject.SetActive(false);
             flow.MilestoneReached += hud.OnMilestone;
 
             // GDD 5.3: one free Drain Pump and one free New Tide per game via rewarded ad.
             hud.freeDrain = UiKit.TextButton(root, "freeDrain", "▶ ad", 24,
                 () => { flow.TryFreeBoosterViaAd(BoosterKind.DrainPump); hud.RefreshFromState(); });
-            UiKit.Place((RectTransform)hud.freeDrain.transform, new Vector2(0.965f, 0.385f), new Vector2(90f, 80f), Vector2.zero);
+            PinRail(hud.freeDrain, new Vector2(90f, 80f), FreeAdX, -2.1f);
             hud.freeReroll = UiKit.TextButton(root, "freeReroll", "▶ ad", 24,
                 () => { flow.TryFreeBoosterViaAd(BoosterKind.NewTide); hud.RefreshFromState(); });
-            UiKit.Place((RectTransform)hud.freeReroll.transform, new Vector2(0.965f, 0.285f), new Vector2(90f, 80f), Vector2.zero);
+            PinRail(hud.freeReroll, new Vector2(90f, 80f), FreeAdX, -3.9f);
 
-            hud.popHint = UiKit.Label(root, "popHint", flow.Strings.Get("booster.popHint"), 32, Palette.MeterDanger);
+            hud.popHint = UiKit.Label(safe, "popHint", flow.Strings.Get("booster.popHint"), 32, Palette.MeterDanger);
             UiKit.Place(hud.popHint.rectTransform, new Vector2(0.5f, 0.91f), new Vector2(800f, 60f), Vector2.zero);
             hud.popHint.gameObject.SetActive(false);
 

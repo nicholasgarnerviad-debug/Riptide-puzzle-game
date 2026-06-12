@@ -95,7 +95,7 @@ Screen transition: outgoing screen fades to 0 + drifts down 24px; incoming fades
 ## 2. Layout system & technical base
 
 - **Stack: UGUI** (Canvas + TextMeshPro with Rungo SDF assets), not UI Toolkit. Rationale: juice-heavy game UI, world-space coupling with the board, mature tweening path, and consistency with Star Ladder conventions. (⚑ flagged: if Star Ladder actually shipped UI Toolkit, mirror that instead — say so before Phase 4.)
-- One `Canvas` per screen, CanvasScaler: Scale With Screen Size, reference 1080×2400, match = 1.0 (height).
+- One `Canvas` per screen, CanvasScaler: Scale With Screen Size, ~~reference 1080×2400, match = 1.0 (height)~~ **[amended 2026-06-12]** reference **1080×2347 (19.5:9 — iPhone 16 Pro Max basis), match = 0 (width)**: ref-px token values hold verbatim on every device; vertical space flexes (taller phones gain it, 16:9 loses it — screens must anchor-stack, no fixed-height compositions). The world-space game camera is fitted by `CameraFit.Solve` (width-driven, safe-area-aware, vertical fallback for tablets); its bands live in the ui_theme.json `layout` block. See §12.
 - **SafeArea component** on every screen root (handles notches/punch-holes; test device list in §10). The board never enters unsafe area; HUD pins inside it.
 - Tweening: a single in-house `Tween` utility over `AnimationCurve`s defined in `ui_theme.json` motion block (no third-party dependency; deterministic, testable durations). All tweens cancellable and idempotent.
 - Layout anchors only — zero hardcoded positions in C#. Each screen is a prefab; screens live under one `ScreenStack` (push/pop with transition per §1.4), driven by the Game-layer store (UI dispatches intents, renders from state — house style, views never own logic).
@@ -269,7 +269,19 @@ place (thunk, light) · clear (chime+pitch/combo, medium, per-cell pop 30ms stag
 ---
 
 ## 11. Open items for Nick (⚑)
+
 1. **UGUI confirm** (§2) — match Star Ladder's actual stack.
 2. **Wordmark/logo**: one curated AI-art session needed (same pipeline as creatures). Until then the type-based fallback ships in dev builds.
 3. **Zone accent hues** for zones 2–10 (zone 1 = cyan family is locked; propose at zone-content time).
 4. This spec deliberately omits decoration art direction for Tidepool items beyond "flat vector, same family" — flag if you want a board.
+
+---
+
+## 12. Amendments — universal screen fit + genre UI pass (2026-06-12, Nick-approved plan)
+
+Basis device: **iPhone 16 Pro Max (1320×2868, 19.5:9)**; the game must fit every portrait phone (19.5:9 → 21:9) and degrade gracefully on 16:9/tablets.
+
+1. **§2 canvas**: reference 1080×2347, match width (see amended bullet above).
+2. **Game camera**: `CameraFit.Solve` (Core, device-matrix tested) replaces fixed framing — board + side allowance spans the width; content column top-anchors below safe area + HUD band; tablets fall back to vertical-span fit. Numbers in ui_theme.json `layout`.
+3. **Safe area**: screen roots are transparent safe-padded rects; ONE shared full-bleed backdrop (bg/snow/vignette) lives behind the stack. HUD top bar safe-padded; booster rail + milestone pop world-pinned so they track the board on every aspect.
+4. **Genre alignment (research: Block Blast / Woodoku conventions), theme intact**: praise text beats on multi-row clears (nautical copy, type-only, no particle burst — anti-goals hold); visible combo multiplier chip beside the score; personal-best chip in Endless; tray minis scaled up toward genre readability; new-best banner moment on Endless results.
