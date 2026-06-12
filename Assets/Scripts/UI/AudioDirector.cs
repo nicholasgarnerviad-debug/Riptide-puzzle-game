@@ -24,7 +24,6 @@ namespace Riptide.UI
             go.transform.SetParent(parent, false);
             var director = go.AddComponent<AudioDirector>();
             director.flow = flow;
-            director.driver = driver;
             director.sfxSource = go.AddComponent<AudioSource>();
             director.calmSource = go.AddComponent<AudioSource>();
             director.tenseSource = go.AddComponent<AudioSource>();
@@ -36,23 +35,32 @@ namespace Riptide.UI
             director.tenseSource.volume = 0f;
             director.calmSource.Play();
             director.tenseSource.Play();
-
-            if (driver != null)
-            {
-                driver.BeatStarted += director.OnBeat;
-            }
-
+            director.SetDriver(driver);
             flow.RunStarted += director.OnRunStarted;
             return director;
         }
 
-        private void OnDestroy()
+        /// <summary>
+        /// 8-UI: the director lives at the app root (music must survive menus);
+        /// the board-rig driver attaches once a run builds it.
+        /// </summary>
+        public void SetDriver(AnimationDriver? newDriver)
         {
             if (driver != null)
             {
                 driver.BeatStarted -= OnBeat;
             }
 
+            driver = newDriver;
+            if (driver != null)
+            {
+                driver.BeatStarted += OnBeat;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            SetDriver(null);
             if (flow != null)
             {
                 flow.RunStarted -= OnRunStarted;

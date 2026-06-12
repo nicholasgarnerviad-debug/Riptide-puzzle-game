@@ -59,7 +59,8 @@ namespace Riptide.UI
                             sr.color = Palette.BlockColor(cell.Id);
                             break;
                         case CellKind.Coral:
-                            sr.sprite = SpriteFactory.Cell();
+                            // §8: coral is textured, not just recolored.
+                            sr.sprite = SpriteFactory.CoralCell();
                             sr.color = Palette.Coral;
                             break;
                         case CellKind.Creature:

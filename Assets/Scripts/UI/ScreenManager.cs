@@ -28,6 +28,7 @@ namespace Riptide.UI
         private PauseSheet? pause;
         private ConsentAgeGate? ageGate;
         private ToastManager toasts = null!;
+        private AudioDirector? audio;
         private bool instantAnimations;
 
         public GameFlow Flow => flow;
@@ -51,6 +52,9 @@ namespace Riptide.UI
             UiKit.Stretch(manager.screensRoot);
             manager.stack = ScreenStack.Create(manager.screensRoot);
             manager.toasts = ToastManager.Create(canvasRoot);
+
+            // 8-UI: music lives at the app root so menus keep their ambience.
+            manager.audio = AudioDirector.Create(go.transform, flow, null);
 
             // §4.7 first-run age gate sits above everything until answered.
             if (ConsentAgeGate.Required)
@@ -169,6 +173,7 @@ namespace Riptide.UI
             TrayView tray = TrayView.Create(boardRig.transform);
             TideMeterRing meter = TideMeterRing.Create(boardRig.transform);
             BoardChromeView chrome = BoardChromeView.Create(boardRig.transform);
+            MarineSnow.Create(boardRig.transform);
             driver = AnimationDriver.Create(boardRig.transform, store, board, water, tray, meter, chrome);
             driver.InstantMode = instantAnimations;
             JuiceDirector.Create(boardRig.transform, driver);
@@ -176,7 +181,7 @@ namespace Riptide.UI
             Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             InputController.Create(boardRig.transform, store, tray, driver, cam, InputTuning.CreateDefault());
             hud = HudOverlay.Create(canvas.GetComponent<RectTransform>(), flow, ShowPause);
-            AudioDirector.Create(boardRig.transform, flow, driver);
+            audio?.SetDriver(driver);
             TutorialDirector.Create(canvas.GetComponent<RectTransform>(), flow);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DebugOverlay.Create(boardRig.transform, store, flow.CurrentSeed, flow.Analytics);

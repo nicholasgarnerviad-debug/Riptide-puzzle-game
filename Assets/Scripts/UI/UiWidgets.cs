@@ -191,21 +191,28 @@ namespace Riptide.UI
             }
         }
 
-        public void Show(int earned)
+        public void Show(int earned, System.Action<int>? onFill = null)
         {
             Filled = Mathf.Clamp(earned, 0, 3);
-            StartCoroutine(FillSequence());
+            StartCoroutine(FillSequence(onFill));
         }
 
-        private IEnumerator FillSequence()
+        private IEnumerator FillSequence(System.Action<int>? onFill)
         {
+            // §1.4: staggers off under reduced motion.
+            float stagger = ThemeRuntime.ReducedMotion ? 0f : 0.12f;
             for (int i = 0; i < 3; i++)
             {
                 int index = i;
                 if (index < Filled)
                 {
-                    yield return new WaitForSeconds(0.12f * index);
+                    if (stagger > 0f)
+                    {
+                        yield return new WaitForSeconds(stagger * index);
+                    }
+
                     stars[index].color = ThemeRuntime.Color("positive");
+                    onFill?.Invoke(index);
                     Vector3 baseScale = stars[index].transform.localScale;
                     Tween.Run(this, "t.fast", "easeOutQuart",
                         u => stars[index].transform.localScale = baseScale * (0.6f + 0.4f * u));

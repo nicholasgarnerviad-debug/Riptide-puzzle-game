@@ -55,10 +55,13 @@ namespace Riptide.UI
             IsResolving = false;
         }
 
+        // §1.4: the user's reduced-motion toggle halves even the GDD-locked water
+        // beats — an explicit accessibility override (DECISIONS.md). Queue and
+        // WaterView share these so the input-lock window always matches.
         public static float DrainSeconds(bool multiDrain) =>
-            ThemeRuntime.Seconds(multiDrain ? "t.drainMulti" : "t.drain");
+            ThemeRuntime.MotionSeconds(multiDrain ? "t.drainMulti" : "t.drain");
 
-        public static float RiseSeconds() => ThemeRuntime.Seconds("t.rise");
+        public static float RiseSeconds() => ThemeRuntime.MotionSeconds("t.rise");
 
         /// <summary>Blocking time left for the clear beat after drain/rise take their cut.</summary>
         public static float ClearBudgetSeconds(bool drains, bool multiDrain, bool rises)
@@ -78,9 +81,9 @@ namespace Riptide.UI
         {
             const float popLife = 0.12f;
             const float nominal = 0.03f;
-            if (cellCount <= 0)
+            if (cellCount <= 0 || ThemeRuntime.ReducedMotion)
             {
-                return 0f;
+                return 0f; // §1.4: staggers off under reduced motion.
             }
 
             float fit = (ClearBudgetSeconds(drains, multiDrain, rises) - popLife) / cellCount;

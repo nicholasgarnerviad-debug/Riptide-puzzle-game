@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using Riptide.Core;
 using UnityEngine;
 
@@ -8,10 +8,28 @@ namespace Riptide.UI
     /// Spec §7: one place maps beat names → (SFX, haptic) tuples from the
     /// ui_theme.json juice table — all values data, none in code. Animations are
     /// the beats themselves (AnimationDriver); this director handles the audible
-    /// and tactile halves, with the GDD 7.2 pitch modulations.
+    /// and tactile halves with the GDD 7.2 pitch modulations. The whole table is
+    /// resolved ONCE at create time so a beat allocates nothing (§9 budget,
+    /// covered by the play-mode allocation test).
     /// </summary>
     public sealed class JuiceDirector : MonoBehaviour
     {
+        private readonly struct ResolvedJuice
+        {
+            public readonly bool HasSfx;
+            public readonly SfxId Sfx;
+            public readonly int HapticTier; // 0 none · 1 light · 2 medium · 3 heavy
+
+            public ResolvedJuice(bool hasSfx, SfxId sfx, int hapticTier)
+            {
+                HasSfx = hasSfx;
+                Sfx = sfx;
+                HapticTier = hapticTier;
+            }
+        }
+
+        private readonly Dictionary<string, ResolvedJuice> resolved =
+            new Dictionary<string, ResolvedJuice>(System.StringComparer.Ordinal);
         private AnimationDriver driver = null!;
         private AudioSource sfxSource = null!;
 
@@ -22,8 +40,34 @@ namespace Riptide.UI
             var juice = go.AddComponent<JuiceDirector>();
             juice.driver = driver;
             juice.sfxSource = go.AddComponent<AudioSource>();
+            juice.ResolveTable();
             driver.BeatStarted += juice.OnBeat;
             return juice;
+        }
+
+        private void ResolveTable()
+        {
+            foreach (KeyValuePair<string, JuiceEntry> entry in ThemeRuntime.Theme.Juice)
+            {
+                bool hasSfx = System.Enum.TryParse(entry.Value.Sfx, out SfxId id);
+                if (hasSfx)
+                {
+                    AudioSynth.Sfx(id); // warm the clip cache off the hot path
+                }
+
+                resolved[entry.Key] = new ResolvedJuice(hasSfx, id, TierOf(entry.Value.Haptic));
+            }
+        }
+
+        internal static int TierOf(string haptic)
+        {
+            switch (haptic)
+            {
+                case "light": return 1;
+                case "medium": return 2;
+                case "heavy": return 3;
+                default: return 0;
+            }
         }
 
         private void OnDestroy()
@@ -36,44 +80,34 @@ namespace Riptide.UI
 
         private static bool SoundOn => PlayerPrefs.GetInt("settings.audio.on", 1) == 1;
 
-        private void OnBeat(string beat, MoveResult result)
+        /// <summary>Hot path: dictionary hit + clip lookup only — no allocations (§9, CI-tested).</summary>
+        public void OnBeat(string beat, MoveResult result)
         {
-            if (!ThemeRuntime.Theme.Juice.TryGetValue(beat, out JuiceEntry? entry) || entry == null)
+            if (!resolved.TryGetValue(beat, out ResolvedJuice juice))
             {
                 return;
             }
 
-            PlaySfx(entry.Sfx, Pitch(beat, result));
-            PlayHaptic(entry.Haptic);
-        }
-
-        private void PlaySfx(string sfxName, float pitch)
-        {
-            if (!SoundOn || string.IsNullOrEmpty(sfxName))
+            if (juice.HasSfx && SoundOn)
             {
-                return;
+                sfxSource.pitch = Pitch(beat, result);
+                sfxSource.PlayOneShot(AudioSynth.Sfx(juice.Sfx), 0.85f);
             }
 
-            if (!Enum.TryParse(sfxName, out SfxId id))
-            {
-                return; // Unknown table entry: silent, never a crash.
-            }
-
-            sfxSource.pitch = pitch;
-            sfxSource.PlayOneShot(AudioSynth.Sfx(id), 0.85f);
+            PlayHaptic(juice.HapticTier);
         }
 
-        private static void PlayHaptic(string tier)
+        internal static void PlayHaptic(int tier)
         {
             switch (tier)
             {
-                case "light":
+                case 1:
                     Haptics.Light();
                     break;
-                case "medium":
+                case 2:
                     Haptics.Medium();
                     break;
-                case "heavy":
+                case 3:
                     Haptics.Heavy();
                     break;
             }
@@ -93,6 +127,42 @@ namespace Riptide.UI
                 default:
                     return 1f;
             }
+        }
+    }
+
+    /// <summary>
+    /// Screen-side juice (§7 star/streak rows): same data table, same gates, for
+    /// moments that fire from screens rather than board beats.
+    /// </summary>
+    public static class UiJuice
+    {
+        private static AudioSource? source;
+
+        public static void Play(string beat)
+        {
+            if (!ThemeRuntime.Theme.Juice.TryGetValue(beat, out JuiceEntry? entry) || entry == null)
+            {
+                return;
+            }
+
+            if (PlayerPrefs.GetInt("settings.audio.on", 1) == 1
+                && System.Enum.TryParse(entry.Sfx, out SfxId id))
+            {
+                Source().PlayOneShot(AudioSynth.Sfx(id), 0.85f);
+            }
+
+            JuiceDirector.PlayHaptic(JuiceDirector.TierOf(entry.Haptic));
+        }
+
+        private static AudioSource Source()
+        {
+            if (source == null)
+            {
+                var go = new GameObject("UiJuice");
+                source = go.AddComponent<AudioSource>();
+            }
+
+            return source;
         }
     }
 }

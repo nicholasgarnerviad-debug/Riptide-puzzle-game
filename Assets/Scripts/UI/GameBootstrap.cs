@@ -88,6 +88,7 @@ namespace Riptide.UI
             Tray = TrayView.Create(transform);
             Meter = TideMeterRing.Create(transform);
             Chrome = BoardChromeView.Create(transform);
+            MarineSnow.Create(transform);
             Driver = AnimationDriver.Create(transform, Store, Board, Water, Tray, Meter, Chrome);
             Driver.InstantMode = instantAnimations;
             JuiceDirector.Create(transform, Driver);

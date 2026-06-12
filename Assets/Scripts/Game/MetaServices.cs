@@ -141,6 +141,26 @@ namespace Riptide.Game
 
         public bool OwnsDecoration(string id) => store.Data.DecorationsOwned.Contains(id);
 
+        /// <summary>UI spec §4.6 Tidepool placement (save v3) — persists immediately.</summary>
+        public string DecorationAt(int slot) => store.Data.DecorationAt(slot);
+
+        public bool TryPlaceDecoration(int slot, string decorationId)
+        {
+            if (!store.Data.TryPlaceDecoration(slot, decorationId))
+            {
+                return false;
+            }
+
+            SaveNow();
+            return true;
+        }
+
+        public void ClearDecorationSlot(int slot)
+        {
+            store.Data.ClearDecorationSlot(slot);
+            SaveNow();
+        }
+
         public bool TryBuyDecoration(Decoration decoration)
         {
             if (OwnsDecoration(decoration.Id) || !wallet.TrySpend(decoration.Cost))

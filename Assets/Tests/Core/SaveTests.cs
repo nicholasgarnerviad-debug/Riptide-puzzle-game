@@ -62,6 +62,7 @@ namespace Riptide.Core.Tests
                 RemoveAds = true,
             };
             save.DecorationsOwned.Add("kelp_tall");
+            Assert.That(save.TryPlaceDecoration(2, "kelp_tall"), Is.True);
 
             SaveData? restored = SaveData.TryParse(save.Serialize());
 
@@ -70,6 +71,56 @@ namespace Riptide.Core.Tests
             Assert.That(restored.Coins, Is.EqualTo(999), "coin persistence — the audit regression (contract 6D)");
             Assert.That(restored.Streak, Is.EqualTo(save.Streak));
             Assert.That(restored.RemoveAds, Is.True);
+            Assert.That(restored.DecorationAt(2), Is.EqualTo("kelp_tall"), "v3 placement survives");
+        }
+
+        [Test]
+        public void V2Save_MigratesToV3_WithEmptyDecorationSlots()
+        {
+            const string v2 = @"{
+  ""version"": 2,
+  ""coins"": 10,
+  ""voyage"": """",
+  ""streak"": [0, 0, 0, -1, 0],
+  ""endlessBest"": 0,
+  ""dailyAttemptDay"": -1,
+  ""dailyRetryUsed"": false,
+  ""speciesRescues"": [],
+  ""decorations"": [""anchor""],
+  ""chestDay"": -1,
+  ""chestClaims"": 0,
+  ""removeAds"": false,
+  ""lastInterstitialAt"": 1770000000,
+  ""interstitialDay"": 20617,
+  ""interstitialsToday"": 2
+}";
+            SaveData? save = SaveData.TryParse(v2);
+
+            Assert.That(save, Is.Not.Null, "v2 saves stay loadable");
+            Assert.That(save!.InterstitialsToday, Is.EqualTo(2), "v2 fields preserved");
+            Assert.That(save.DecorationSlots, Is.Empty, "v2 → v3: placement defaults to no slots");
+            Assert.That(save.DecorationAt(0), Is.EqualTo(""));
+        }
+
+        [Test]
+        public void DecorationPlacement_OnlyOwned_OneSlotEach_AndClearable()
+        {
+            var save = new SaveData();
+            save.DecorationsOwned.Add("anchor");
+
+            Assert.That(save.TryPlaceDecoration(0, "kelp_tall"), Is.False, "§4.6: unowned never places");
+            Assert.That(save.TryPlaceDecoration(-1, "anchor"), Is.False);
+            Assert.That(save.TryPlaceDecoration(SaveData.MaxDecorationSlots, "anchor"), Is.False);
+
+            Assert.That(save.TryPlaceDecoration(1, "anchor"), Is.True);
+            Assert.That(save.DecorationAt(1), Is.EqualTo("anchor"));
+
+            Assert.That(save.TryPlaceDecoration(4, "anchor"), Is.True, "placing again moves it");
+            Assert.That(save.DecorationAt(1), Is.EqualTo(""), "old slot vacated");
+            Assert.That(save.DecorationAt(4), Is.EqualTo("anchor"));
+
+            save.ClearDecorationSlot(4);
+            Assert.That(save.DecorationAt(4), Is.EqualTo(""));
         }
 
         [TestCase("")]

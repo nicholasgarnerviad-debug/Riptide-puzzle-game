@@ -10,6 +10,7 @@ namespace Riptide.UI
     public static class SpriteFactory
     {
         private static Sprite? cell;
+        private static Sprite? coralCell;
         private static Sprite? creature;
         private static Sprite? solid;
         private static Sprite? dot;
@@ -89,6 +90,44 @@ namespace Riptide.UI
             }
 
             return creature;
+        }
+
+        /// <summary>
+        /// Spec §8: color is never the only signal — petrified coral carries a
+        /// pocked texture so it reads even under full color-blindness.
+        /// </summary>
+        public static Sprite CoralCell()
+        {
+            if (coralCell == null)
+            {
+                coralCell = BuildCoral(64, 10);
+            }
+
+            return coralCell;
+        }
+
+        private static Sprite BuildCoral(int size, int corner)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float alpha = RoundedAlpha(x, y, size, corner);
+                    float brightness = 1f;
+                    if (alpha > 0f)
+                    {
+                        // Deterministic pock pattern: dark pits on a rough surface.
+                        float n = Mathf.PerlinNoise(x * 0.22f + 5.13f, y * 0.22f + 9.71f);
+                        brightness = n < 0.35f ? 0.55f : 0.92f + 0.08f * n;
+                    }
+
+                    tex.SetPixel(x, y, new Color(brightness, brightness, brightness, alpha));
+                }
+            }
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
         }
 
         public static Sprite Solid()

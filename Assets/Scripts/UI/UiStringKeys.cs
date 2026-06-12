@@ -35,6 +35,7 @@ namespace Riptide.UI
             "errors.ad_unavailable", "errors.purchase_failed",
             "tidepool.title", "tidepool.rescued", "tidepool.never",
             "tidepool.decorations", "tidepool.owned", "tidepool.buy",
+            "tidepool.edit", "tidepool.done", "tidepool.unknown", "tidepool.placeHint",
             "tutorial.l1.drag", "tutorial.l1.clear", "tutorial.l2.meter",
             "tutorial.l3.rescue", "tutorial.l4.pump", "tutorial.l5.go",
             "common.back", "common.play",

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Riptide.Core;
 using UnityEngine;
 
@@ -185,31 +186,38 @@ namespace Riptide.UI
             ApplyColors();
         }
 
-        /// <summary>§5.1 rise: t.rise surge up one row, 6px overshoot, settle; foam brightens.</summary>
+        /// <summary>§5.1 rise: t.rise surge up one row, 6px overshoot, settle; foam brightens.
+        /// Reduced motion (§1.4): simple lerp — no overshoot.</summary>
         public IEnumerator AnimateRise(float toLevel)
         {
             foamBoost = 0.5f;
-            float overshoot = ThemeRuntime.WorldFromRefPx(OvershootRefPx) / BoardLayout.CellSize;
-            yield return AnimateTo(toLevel, ThemeRuntime.Seconds("t.rise"), easeIn: true, overshoot);
+            float overshoot = ThemeRuntime.ReducedMotion
+                ? 0f
+                : ThemeRuntime.WorldFromRefPx(OvershootRefPx) / BoardLayout.CellSize;
+            yield return AnimateTo(toLevel, UiEventQueue.RiseSeconds(), easeIn: true, overshoot);
         }
 
-        /// <summary>§5.1 drain: recede + droplets + per-row sparkle; multi-row stretches and edge-pulses.</summary>
+        /// <summary>§5.1 drain: recede + droplets + per-row sparkle; multi-row stretches and edge-pulses.
+        /// Reduced motion (§1.4): simple lerp — no particles, no edge pulse.</summary>
         public IEnumerator AnimateDrain(float toLevel, int rowsDrained)
         {
             bool multi = rowsDrained > 1;
-            float seconds = ThemeRuntime.Seconds(multi ? "t.drainMulti" : "t.drain");
-            SpawnDroplets(Mathf.Min(MaxDroplets, 6 + rowsDrained * 5));
-            for (int row = 0; row < rowsDrained; row++)
+            float seconds = UiEventQueue.DrainSeconds(multi);
+            if (!ThemeRuntime.ReducedMotion)
             {
-                SpawnRowSparkles(currentLevel - row - 0.5f);
+                SpawnDroplets(Mathf.Min(MaxDroplets, 6 + rowsDrained * 5));
+                for (int row = 0; row < rowsDrained; row++)
+                {
+                    SpawnRowSparkles(currentLevel - row - 0.5f);
+                }
+
+                if (multi)
+                {
+                    StartCoroutine(EdgePulse());
+                }
             }
 
             foamBoost = 0.6f;
-            if (multi)
-            {
-                StartCoroutine(EdgePulse());
-            }
-
             yield return AnimateTo(toLevel, seconds, easeIn: false, 0f);
         }
 
@@ -232,41 +240,63 @@ namespace Riptide.UI
             ApplyLevel();
         }
 
+        // §9: particles pooled — drains reuse renderers instead of allocating.
+        private readonly Stack<SpriteRenderer> particlePool = new Stack<SpriteRenderer>();
+
+        private SpriteRenderer RentParticle()
+        {
+            if (particlePool.Count > 0)
+            {
+                SpriteRenderer pooled = particlePool.Pop();
+                pooled.gameObject.SetActive(true);
+                return pooled;
+            }
+
+            var go = new GameObject("waterParticle");
+            go.transform.SetParent(transform, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = SpriteFactory.Dot();
+            sr.sortingOrder = 60;
+            return sr;
+        }
+
+        private void ReturnParticle(SpriteRenderer sr)
+        {
+            sr.gameObject.SetActive(false);
+            particlePool.Push(sr);
+        }
+
         private void SpawnDroplets(int count)
         {
             float waterlineY = BoardLayout.WaterlineY(currentLevel);
             for (int i = 0; i < count; i++)
             {
-                var go = new GameObject("droplet");
-                go.transform.SetParent(transform, false);
+                SpriteRenderer sr = RentParticle();
                 float x = Random.Range(-BoardSpec.Width * 0.5f, BoardSpec.Width * 0.5f);
-                go.transform.position = new Vector3(x, waterlineY + Random.Range(0f, 0.2f), 0f);
-                go.transform.localScale = Vector3.one * Random.Range(0.12f, 0.24f);
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = SpriteFactory.Dot();
+                sr.transform.position = new Vector3(x, waterlineY + Random.Range(0f, 0.2f), 0f);
+                sr.transform.localScale = Vector3.one * Random.Range(0.12f, 0.24f);
                 sr.color = ThemeRuntime.Color("water.foamLine");
-                sr.sortingOrder = 60;
-                StartCoroutine(DropletLife(go, sr, Random.Range(0.35f, 0.55f)));
+                StartCoroutine(DropletLife(sr, Random.Range(0.35f, 0.55f)));
             }
         }
 
-        private IEnumerator DropletLife(GameObject go, SpriteRenderer sr, float life)
+        private IEnumerator DropletLife(SpriteRenderer sr, float life)
         {
             float t = 0f;
-            Vector3 start = go.transform.position;
+            Vector3 start = sr.transform.position;
             float vx = Random.Range(-0.4f, 0.4f);
             while (t < life)
             {
                 t += Time.deltaTime;
                 float u = t / life;
-                go.transform.position = start + new Vector3(vx * u, -2.2f * u * u, 0f);
+                sr.transform.position = start + new Vector3(vx * u, -2.2f * u * u, 0f);
                 Color c = sr.color;
                 c.a = 1f - u;
                 sr.color = c;
                 yield return null;
             }
 
-            Destroy(go);
+            ReturnParticle(sr);
         }
 
         private void SpawnRowSparkles(float atLevel)
@@ -274,16 +304,12 @@ namespace Riptide.UI
             float y = BoardLayout.WaterlineY(Mathf.Max(0f, atLevel));
             for (int i = 0; i < 6; i++)
             {
-                var go = new GameObject("sparkle");
-                go.transform.SetParent(transform, false);
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = SpriteFactory.Dot();
+                SpriteRenderer sr = RentParticle();
                 sr.color = ThemeRuntime.Color("water.foamLine");
-                sr.sortingOrder = 60;
-                go.transform.position = new Vector3((i - 2.5f) * 1.5f + Random.Range(-0.4f, 0.4f),
+                sr.transform.position = new Vector3((i - 2.5f) * 1.5f + Random.Range(-0.4f, 0.4f),
                     y + Random.Range(-0.1f, 0.25f), 0f);
-                go.transform.localScale = Vector3.one * Random.Range(0.2f, 0.42f);
-                StartCoroutine(DropletLife(go, sr, 0.5f));
+                sr.transform.localScale = Vector3.one * Random.Range(0.2f, 0.42f);
+                StartCoroutine(DropletLife(sr, 0.5f));
             }
         }
 

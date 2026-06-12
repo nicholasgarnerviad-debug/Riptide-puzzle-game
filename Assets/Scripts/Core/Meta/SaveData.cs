@@ -12,7 +12,7 @@ namespace Riptide.Core
     /// </summary>
     public sealed class SaveData
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public long Coins;
         public string VoyageProgress = "";
@@ -31,6 +31,12 @@ namespace Riptide.Core
         public long LastInterstitialUnixSeconds;
         public long InterstitialDay = -1;
         public int InterstitialsToday;
+
+        // v3: Tidepool decoration placement (UI spec §4.6) — index = slot, "" = empty.
+        public List<string> DecorationSlots = new List<string>();
+
+        /// <summary>Sanity ceiling so a hand-tampered save can't balloon the list.</summary>
+        public const int MaxDecorationSlots = 16;
 
         public string Serialize()
         {
@@ -64,7 +70,15 @@ namespace Riptide.Core
             sb.Append($"  \"removeAds\": {(RemoveAds ? "true" : "false")},\n");
             sb.Append($"  \"lastInterstitialAt\": {LastInterstitialUnixSeconds},\n");
             sb.Append($"  \"interstitialDay\": {InterstitialDay},\n");
-            sb.Append($"  \"interstitialsToday\": {InterstitialsToday}\n");
+            sb.Append($"  \"interstitialsToday\": {InterstitialsToday},\n");
+            sb.Append("  \"decorationSlots\": [");
+            for (int i = 0; i < DecorationSlots.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append('"').Append(Escape(DecorationSlots[i])).Append('"');
+            }
+
+            sb.Append("]\n");
             sb.Append("}");
             return sb.ToString();
         }
@@ -142,6 +156,21 @@ namespace Riptide.Core
                     save.InterstitialsToday = Math.Max(0, root.Require("interstitialsToday").AsInt());
                 }
 
+                // v2 → v3 migration: placement simply defaults to empty slots.
+                if (version >= 3)
+                {
+                    JsonArray slots = root.Require("decorationSlots").AsArray();
+                    if (slots.Count > MaxDecorationSlots)
+                    {
+                        return null;
+                    }
+
+                    foreach (JsonValue item in slots.Items)
+                    {
+                        save.DecorationSlots.Add(item.AsString());
+                    }
+                }
+
                 return save;
             }
             catch (JsonParseException)
@@ -169,6 +198,47 @@ namespace Riptide.Core
             if (speciesId >= 0 && speciesId < SpeciesRescues.Length)
             {
                 SpeciesRescues[speciesId]++;
+            }
+        }
+
+        /// <summary>UI spec §4.6: the decoration sitting in a slot ("" when empty).</summary>
+        public string DecorationAt(int slot) =>
+            slot >= 0 && slot < DecorationSlots.Count ? DecorationSlots[slot] : "";
+
+        /// <summary>
+        /// §4.6 tap-to-place: only owned decorations, fixed slot points, and one
+        /// slot per decoration (placing again moves it).
+        /// </summary>
+        public bool TryPlaceDecoration(int slot, string decorationId)
+        {
+            if (slot < 0 || slot >= MaxDecorationSlots || string.IsNullOrEmpty(decorationId)
+                || !DecorationsOwned.Contains(decorationId))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < DecorationSlots.Count; i++)
+            {
+                if (DecorationSlots[i] == decorationId)
+                {
+                    DecorationSlots[i] = "";
+                }
+            }
+
+            while (DecorationSlots.Count <= slot)
+            {
+                DecorationSlots.Add("");
+            }
+
+            DecorationSlots[slot] = decorationId;
+            return true;
+        }
+
+        public void ClearDecorationSlot(int slot)
+        {
+            if (slot >= 0 && slot < DecorationSlots.Count)
+            {
+                DecorationSlots[slot] = "";
             }
         }
 

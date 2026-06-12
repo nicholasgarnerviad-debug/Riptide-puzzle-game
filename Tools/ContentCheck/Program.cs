@@ -161,7 +161,92 @@ namespace Riptide.Tools.ContentCheck
                 }
             }
 
-            return 0;
+            return AuditCvd(theme, blocks);
+        }
+
+        /// <summary>
+        /// Spec §8: "tested against deuteranopia/protanopia simulation … a
+        /// palette-distance check script — automatable, no eyes needed."
+        /// Machado et al. (2009) severity-1.0 matrices in linear RGB; pairwise
+        /// distances measured back in gamma space. Hard floor blocks; the spec's
+        /// own known collision (coralPink↔teal) warns pending Nick's ruling.
+        /// </summary>
+        private static int AuditCvd(UiTheme theme, string[] blocks)
+        {
+            double[][] protan =
+            {
+                new[] { 0.152286, 1.052583, -0.204868 },
+                new[] { 0.114503, 0.786281, 0.099216 },
+                new[] { -0.003882, -0.048116, 1.051998 },
+            };
+            double[][] deutan =
+            {
+                new[] { 0.367322, 0.860646, -0.227968 },
+                new[] { 0.280085, 0.672501, 0.047413 },
+                new[] { -0.011820, 0.042940, 0.968881 },
+            };
+
+            int result = 0;
+            foreach ((string simName, double[][] m) in new[] { ("protanopia", protan), ("deuteranopia", deutan) })
+            {
+                var simulated = new List<(string key, double r, double g, double b)>();
+                foreach (string key in blocks)
+                {
+                    ThemeColor c = theme.Color(key);
+                    double lr = SrgbToLinear(c.R);
+                    double lg = SrgbToLinear(c.G);
+                    double lb = SrgbToLinear(c.B);
+                    double sr = m[0][0] * lr + m[0][1] * lg + m[0][2] * lb;
+                    double sg = m[1][0] * lr + m[1][1] * lg + m[1][2] * lb;
+                    double sb = m[2][0] * lr + m[2][1] * lg + m[2][2] * lb;
+                    simulated.Add((key, LinearToSrgb(sr), LinearToSrgb(sg), LinearToSrgb(sb)));
+                }
+
+                double worst = double.MaxValue;
+                string worstPair = "";
+                for (int i = 0; i < simulated.Count; i++)
+                {
+                    for (int j = i + 1; j < simulated.Count; j++)
+                    {
+                        double dr = simulated[i].r - simulated[j].r;
+                        double dg = simulated[i].g - simulated[j].g;
+                        double db = simulated[i].b - simulated[j].b;
+                        double dist = Math.Sqrt(dr * dr + dg * dg + db * db);
+                        if (dist < worst)
+                        {
+                            worst = dist;
+                            worstPair = $"{simulated[i].key} <-> {simulated[j].key}";
+                        }
+
+                        if (dist < 0.04)
+                        {
+                            Console.Error.WriteLine(
+                                $"ui_theme.json: {simName} collision {simulated[i].key} <-> {simulated[j].key} " +
+                                $"distance {dist:F3} < 0.04 hard floor");
+                            result = 1;
+                        }
+                        else if (dist < 0.10)
+                        {
+                            Console.WriteLine(
+                                $"WARN ui_theme.json: {simName} near-collision {simulated[i].key} <-> " +
+                                $"{simulated[j].key} distance {dist:F3} < 0.10 — palette ruling pending (DECISIONS.md)");
+                        }
+                    }
+                }
+
+                Console.WriteLine($"OK CVD {simName}: min pair distance {worst:F3} ({worstPair})");
+            }
+
+            return result;
+        }
+
+        private static double SrgbToLinear(double c) =>
+            c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+
+        private static double LinearToSrgb(double c)
+        {
+            c = Math.Max(0.0, Math.Min(1.0, c));
+            return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.Pow(c, 1.0 / 2.4) - 0.055;
         }
 
         private static void ValidateStrings(string json)

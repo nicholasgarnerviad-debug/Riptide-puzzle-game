@@ -149,7 +149,7 @@ namespace Riptide.UI
             stars.gameObject.SetActive(win && outcome.Mode == GameMode.Voyage);
             if (win && outcome.Mode == GameMode.Voyage)
             {
-                stars.Show(outcome.Stars);
+                stars.Show(outcome.Stars, _ => UiJuice.Play("star")); // §7: star, per star
             }
 
             if (outcome.Mode == GameMode.Endless)
@@ -319,6 +319,7 @@ namespace Riptide.UI
         private Button retryCoins = null!;
         private Button freeze = null!;
         private ScreenManager? manager;
+        private RunOutcome? juicedOutcome;
 
         /// <summary>The preview text — tests assert it equals the Core golden verbatim.</summary>
         public string PreviewText => card.text;
@@ -381,8 +382,9 @@ namespace Riptide.UI
                 return;
             }
 
-            // Clipboard now; the native share intent ships with the visual card (§6.4, 8-UI).
-            GUIUtility.systemCopyBuffer = outcome.ShareCardText;
+            // §6.4: renders the 1080×1350 card + fires the platform share
+            // (Android text intent / editor clipboard).
+            ShareCardRenderer.Share(outcome.ShareCardText);
             manager?.Toasts.Show(flow.Strings.Get("daily.shared"));
         }
 
@@ -421,6 +423,13 @@ namespace Riptide.UI
             card.text = outcome.ShareCardText;
             streak.text = string.Format(flow.Strings.Get("daily.streak"),
                 flow.Meta.Streak.Current, flow.Meta.Streak.Best);
+
+            // §7: streak milestone juice, once per outcome.
+            if (outcome.Won && juicedOutcome != outcome)
+            {
+                juicedOutcome = outcome;
+                UiJuice.Play("streak");
+            }
 
             bool retryAvailable = !outcome.Won && flow.Meta.DailyRetryAvailable();
             retry.gameObject.SetActive(retryAvailable);
