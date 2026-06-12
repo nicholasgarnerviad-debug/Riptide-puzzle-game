@@ -105,6 +105,7 @@ namespace Riptide.UI
         private GameFlow flow = null!;
         private ScreenManager manager = null!;
         private Button buy = null!;
+        private CoinCounter coinPill = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow, ScreenManager manager)
         {
@@ -115,32 +116,111 @@ namespace Riptide.UI
 
             TextMeshProUGUI title = UiText.Create(root, "title", flow.Strings.Get("shop.title"),
                 "title", "text.primary");
-            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.92f), new Vector2(700f, 100f));
+            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.935f), new Vector2(700f, 100f));
 
-            RectTransform hero = UiComponents.Card(root, "hero", new Vector2(880f, 360f));
-            UiComponents.Place(hero, new Vector2(0.5f, 0.70f), new Vector2(880f, 360f));
+            // Players check their balance in a shop — coin pill, top-right.
+            RectTransform coinPill = UiComponents.Rect(root, "coinPill", new Vector2(250f, 78f));
+            UiComponents.Place(coinPill, new Vector2(0.84f, 0.935f), new Vector2(250f, 78f));
+            Image pillImage = UiComponents.RoundedImage(coinPill.gameObject, 39f);
+            pillImage.raycastTarget = false;
+            ThemedElement.Bind(coinPill.gameObject, "bg.surface");
+            UiComponents.RoundedStrokeImage(coinPill, "stroke.subtle", 39f);
+            screen.coinPill = UiComponents.CoinCounterComponent(coinPill);
+            UiComponents.Place((RectTransform)screen.coinPill.transform, new Vector2(0.5f, 0.5f), new Vector2(230f, 64f));
+
+            // HERO (research: featured offer up top — icon identity, benefit
+            // bullets, the PRICE lives on the button and nowhere else).
+            RectTransform hero = UiComponents.Card(root, "hero", new Vector2(960f, 420f));
+            UiComponents.Place(hero, new Vector2(0.5f, 0.745f), new Vector2(960f, 420f));
+            UiComponents.RoundedStrokeImage(hero, "accent.deep", 32f);
+
+            RectTransform heroBadge = UiComponents.Rect(hero, "badge", new Vector2(140f, 140f));
+            UiComponents.Place(heroBadge, new Vector2(0.145f, 0.70f), new Vector2(140f, 140f));
+            var heroBadgeBg = heroBadge.gameObject.AddComponent<Image>();
+            heroBadgeBg.sprite = SpriteFactory.Dot();
+            heroBadgeBg.raycastTarget = false;
+            ThemedElement.Bind(heroBadge.gameObject, "bg.raised");
+            TextMeshProUGUI adGlyph = UiText.Create(heroBadge, "adText", "AD", "caption", "text.muted");
+            UiComponents.Place(adGlyph.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(100f, 50f));
+            RectTransform slash = UiComponents.Rect(heroBadge, "slash", new Vector2(96f, 96f));
+            UiComponents.Place(slash, new Vector2(0.5f, 0.5f), new Vector2(96f, 96f));
+            var slashImage = slash.gameObject.AddComponent<Image>();
+            slashImage.sprite = MenuSprites.Icon("noAds");
+            slashImage.raycastTarget = false;
+            ThemedElement.Bind(slash.gameObject, "danger");
+
             TextMeshProUGUI heroTitle = UiText.Create(hero, "heroTitle",
-                flow.Strings.Get("shop.removeAds"), "heading", "text.primary");
-            UiComponents.Place(heroTitle.rectTransform, new Vector2(0.5f, 0.78f), new Vector2(800f, 80f));
-            TextMeshProUGUI promise = UiText.Create(hero, "promise",
-                flow.Strings.Get("shop.promise"), "caption", "text.secondary");
-            UiComponents.Place(promise.rectTransform, new Vector2(0.5f, 0.55f), new Vector2(800f, 60f));
-            screen.buy = UiComponents.ButtonPrimary(hero, "buy", flow.Strings.Get("shop.removeAds"),
-                screen.OnBuyRemoveAds);
-            UiComponents.Place((RectTransform)screen.buy.transform, new Vector2(0.5f, 0.22f), new Vector2(620f, 120f));
+                flow.Strings.Get("shop.removeAds"), "title", "text.primary");
+            heroTitle.alignment = TextAlignmentOptions.Left;
+            UiComponents.Place(heroTitle.rectTransform, new Vector2(0.62f, 0.80f), new Vector2(580f, 80f));
+            TextMeshProUGUI benefit1 = UiText.Create(hero, "benefit1",
+                flow.Strings.Get("shop.benefit1"), "caption", "text.secondary");
+            benefit1.alignment = TextAlignmentOptions.Left;
+            UiComponents.Place(benefit1.rectTransform, new Vector2(0.62f, 0.62f), new Vector2(580f, 48f));
+            TextMeshProUGUI benefit2 = UiText.Create(hero, "benefit2",
+                flow.Strings.Get("shop.benefit2"), "caption", "text.secondary");
+            benefit2.alignment = TextAlignmentOptions.Left;
+            UiComponents.Place(benefit2.rectTransform, new Vector2(0.62f, 0.50f), new Vector2(580f, 48f));
 
+            screen.buy = UiComponents.ButtonPrimary(hero, "buy",
+                flow.Strings.Get("shop.price.removeAds"), screen.OnBuyRemoveAds);
+            UiComponents.Place((RectTransform)screen.buy.transform, new Vector2(0.5f, 0.18f), new Vector2(640f, 130f));
+
+            // COIN PACKS (research: scaling coin-pile art, big amounts, price
+            // capsules, BEST VALUE badge for hierarchy; one shared caption —
+            // the per-card caption was overflowing across its neighbors).
             string[] packKeys = { "shop.pack.small", "shop.pack.medium", "shop.pack.large" };
+            string[] amountKeys = { "shop.pack.smallAmount", "shop.pack.mediumAmount", "shop.pack.largeAmount" };
+            string[] priceKeys = { "shop.price.small", "shop.price.medium", "shop.price.large" };
+            string[] iconIds = { "coins1", "coins2", "coins3" };
             for (int i = 0; i < 3; i++)
             {
-                RectTransform pack = UiComponents.Card(root, $"pack{i}", new Vector2(300f, 320f));
-                UiComponents.Place(pack, new Vector2(0.20f + 0.30f * i, 0.40f), new Vector2(300f, 320f));
+                RectTransform pack = UiComponents.Card(root, $"pack{i}", new Vector2(304f, 400f));
+                UiComponents.Place(pack, new Vector2(0.185f + 0.315f * i, 0.455f), new Vector2(304f, 400f));
+
+                RectTransform icon = UiComponents.Rect(pack, "icon", new Vector2(96f, 96f));
+                UiComponents.Place(icon, new Vector2(0.5f, 0.78f), new Vector2(96f, 96f));
+                var iconImage = icon.gameObject.AddComponent<Image>();
+                iconImage.sprite = MenuSprites.Icon(iconIds[i]);
+                iconImage.raycastTarget = false;
+                ThemedElement.Bind(icon.gameObject, "coin");
+
+                TextMeshProUGUI amount = UiText.Create(pack, "amount",
+                    flow.Strings.Get(amountKeys[i]), "score", "coin");
+                UiComponents.Place(amount.rectTransform, new Vector2(0.5f, 0.52f), new Vector2(280f, 60f));
                 TextMeshProUGUI packName = UiText.Create(pack, "name",
-                    flow.Strings.Get(packKeys[i]), "body", "text.primary");
-                UiComponents.Place(packName.rectTransform, new Vector2(0.5f, 0.62f), new Vector2(280f, 110f));
-                TextMeshProUGUI soon = UiText.Create(pack, "soon",
-                    flow.Strings.Get("shop.comingSoon"), "micro", "text.muted");
-                UiComponents.Place(soon.rectTransform, new Vector2(0.5f, 0.2f), new Vector2(280f, 80f));
+                    flow.Strings.Get(packKeys[i]), "caption", "text.secondary");
+                UiComponents.Place(packName.rectTransform, new Vector2(0.5f, 0.36f), new Vector2(280f, 44f));
+
+                // Disabled price capsule until the IAP SDK lands.
+                RectTransform price = UiComponents.Rect(pack, "price", new Vector2(200f, 76f));
+                UiComponents.Place(price, new Vector2(0.5f, 0.14f), new Vector2(200f, 76f));
+                var priceImage = price.gameObject.AddComponent<Image>();
+                priceImage.sprite = MenuSprites.CapsuleGradient();
+                priceImage.type = Image.Type.Sliced;
+                priceImage.pixelsPerUnitMultiplier = 22f * (100f / 64f) / 28f;
+                priceImage.raycastTarget = false;
+                ThemedElement.Bind(price.gameObject, "bg.raised");
+                TextMeshProUGUI priceText = UiText.Create(price, "label",
+                    flow.Strings.Get(priceKeys[i]), "body", "text.muted");
+                UiComponents.Stretch(priceText.rectTransform);
+
+                if (i == 2)
+                {
+                    RectTransform best = UiComponents.Rect(pack, "bestValue", new Vector2(190f, 52f));
+                    UiComponents.Place(best, new Vector2(0.5f, 1.0f), new Vector2(190f, 52f));
+                    var bestImage = UiComponents.RoundedImage(best.gameObject, 26f);
+                    bestImage.raycastTarget = false;
+                    ThemedElement.Bind(best.gameObject, "warning");
+                    TextMeshProUGUI bestText = UiText.Create(best, "label",
+                        flow.Strings.Get("shop.bestValue"), "micro", "text.onAccent");
+                    UiComponents.Stretch(bestText.rectTransform);
+                }
             }
+
+            TextMeshProUGUI soon = UiText.Create(root, "soon",
+                flow.Strings.Get("shop.comingSoon"), "micro", "text.muted");
+            UiComponents.Place(soon.rectTransform, new Vector2(0.5f, 0.30f), new Vector2(900f, 44f));
 
             Button back = UiComponents.ButtonGhost(root, "back", flow.Strings.Get("common.back"),
                 () => flow.GoTo(FlowScreen.Home));
@@ -164,7 +244,8 @@ namespace Riptide.UI
             bool owned = flow.Iap != null && flow.Iap.RemoveAdsOwned;
             buy.interactable = !owned;
             buy.GetComponentInChildren<TextMeshProUGUI>().text =
-                flow.Strings.Get(owned ? "shop.thanks" : "shop.removeAds");
+                flow.Strings.Get(owned ? "shop.owned" : "shop.price.removeAds");
+            coinPill.SetInstant(flow.Meta.Coins);
         }
     }
 

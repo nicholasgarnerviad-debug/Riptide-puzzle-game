@@ -218,6 +218,10 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-12 · place-settle juice: every placed cell pops 1.16→1 over 2×t.instant (eased, skipped in InstantMode) — the §7 "thunk" made visible (research: amplified eased feedback per input) · the place beat had SFX+haptic but zero motion.
 - 2026-06-12 · TideMeterRing gains a soft inner glow disc (glow.primary) — §5.2 calls it the most important element; it looked like a thin gray circle · HUD: score 58pt bold, pause control is now an icon button (new "pause" glyph), booster rail + free-ad chips join the themed rounded language (StyleChrome) instead of legacy gray panels.
 
+## Shop rebuild (Nick: "this is awful … deep research on modern shops", 2026-06-12)
+
+- 2026-06-12 · shop recomposed per IAP-merchandising research (Turbine playbook / Balancy 5-shop teardown / Game UI Database): hero = no-ads icon roundel + benefit bullets + price ON THE CTA ONLY (was duplicated in title and button); coin packs get scaling coin-pile icons, prominent amounts (1,200/3,500/8,000 — the GDD §6 numbers), disabled price capsules ($1.99/$4.99/$9.99 anchor pricing) and a BEST VALUE badge on the chest; ONE shared coming-soon caption (the per-card caption was overflowing across neighbors — real bug); coin balance pill top-right; owned state = "Owned" on the CTA · new icons noAds/coins1-3; 11 new shop string keys; packs stay non-interactable until the IAP SDK pass.
+
 ## Mid-run save & resume (SAVE_RESUME_DESIGN.md approved via "resume aswell", 2026-06-12)
 
 - 2026-06-12 · run record = inputs only (mode identity, seed, move list, post-move StateHash), own atomic file `riptide_run.json`, written EVERY move in the same frame; ulong seed/hash serialize as strings (FNV-1a 64 daily seeds exceed the JSON parser's signed-long range — caught at design time) · design §2–4.

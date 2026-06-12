@@ -196,6 +196,22 @@ namespace Riptide.UI
                     RoundedBlock(a, 42f, 34f, 58f, 94f, 7f);
                     RoundedBlock(a, 70f, 34f, 86f, 94f, 7f);
                     break;
+                case "noAds":
+                    Ring(a, c, c, 46f, 7f);
+                    Seg(a, c - 30f, c + 30f, c + 30f, c - 30f, 7f);
+                    break;
+                case "coins1":
+                    Coin(a, c, c, 30f);
+                    break;
+                case "coins2":
+                    Coin(a, c - 16f, c + 14f, 26f);
+                    Coin(a, c + 16f, c - 14f, 26f);
+                    break;
+                case "coins3":
+                    Coin(a, c - 22f, c - 16f, 24f);
+                    Coin(a, c + 22f, c - 16f, 24f);
+                    Coin(a, c, c + 20f, 24f);
+                    break;
                 default:
                     Disc(a, c, c, 40f);
                     break;
@@ -301,6 +317,13 @@ namespace Riptide.UI
                     Blend(a, x, y, Mathf.Clamp01(w * 0.5f - dist + 0.5f));
                 }
             }
+        }
+
+        /// <summary>A coin: solid disc with a slot-line glint cut across it.</summary>
+        private static void Coin(float[,] a, float cx, float cy, float r)
+        {
+            Disc(a, cx, cy, r);
+            CutLine(a, cy, cx - r * 0.55f, cx + r * 0.55f, 2.4f);
         }
 
         private static void Wave(float[,] a, float cy, float w)
