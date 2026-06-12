@@ -21,6 +21,8 @@ namespace Riptide.UI
             "continue.title", "continue.body", "continue.ad", "continue.coins", "continue.decline",
             "upsell.removeAds", "hud.milestone",
             "hud.combo", "hud.best", "praise.double", "praise.triple", "praise.quad",
+            "resume.title", "resume.body.voyage", "resume.body.endless", "resume.body.daily",
+            "resume.continue", "resume.abandon", "resume.expired",
             "stats.title", "stats.line1", "stats.line2",
             "home.dailyReady", "home.zoneProgress",
             "results.win", "results.lose.drown", "results.lose.stuck", "results.lose.creature",

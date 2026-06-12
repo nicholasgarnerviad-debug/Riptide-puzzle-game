@@ -69,6 +69,13 @@ namespace Riptide.UI
             flow.ScreenChanged += manager.OnScreenChanged;
             flow.RunStarted += manager.OnRunStarted;
             manager.OnScreenChanged(flow.Screen);
+
+            // Mid-run resume prompt — but headless test boots never stall on it.
+            if (flow.PendingRun != null && flow.Screen == FlowScreen.Home && !instantAnimations)
+            {
+                ResumeSheet.Build(canvasRoot, flow, manager.toasts).Show();
+            }
+
             return manager;
         }
 

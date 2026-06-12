@@ -159,10 +159,20 @@ namespace Riptide.Core
         public RunReplayStatus Status { get; }
         public GameState? State { get; }
 
-        public RunReplayResult(RunReplayStatus status, GameState? state)
+        /// <summary>Run stats re-derived from the replayed MoveEvents — the Game
+        /// layer's outcome accounting resumes where it left off.</summary>
+        public int Rescues { get; }
+        public int MaxWater { get; }
+        public IReadOnlyList<int> RescuedSpeciesInOrder { get; }
+
+        public RunReplayResult(RunReplayStatus status, GameState? state, int rescues,
+            int maxWater, IReadOnlyList<int> rescuedSpeciesInOrder)
         {
             Status = status;
             State = state;
+            Rescues = rescues;
+            MaxWater = maxWater;
+            RescuedSpeciesInOrder = rescuedSpeciesInOrder;
         }
     }
 
@@ -174,24 +184,42 @@ namespace Riptide.Core
     /// </summary>
     public static class RunReplay
     {
+        private static readonly int[] NoSpecies = new int[0];
+
         public static RunReplayResult Rebuild(LevelConfig config, RunRecord record)
         {
             GameState state = GameState.NewGame(config, record.Seed);
+            int rescues = 0;
+            int maxWater = state.WaterLevel;
+            var species = new List<int>();
             foreach (Move move in record.Moves)
             {
+                MoveResult result;
                 try
                 {
-                    state = SimEngine.ApplyMove(state, move).Next;
+                    result = SimEngine.ApplyMove(state, move);
                 }
                 catch (InvalidMoveException)
                 {
-                    return new RunReplayResult(RunReplayStatus.IllegalMove, null);
+                    return new RunReplayResult(RunReplayStatus.IllegalMove, null, 0, 0, NoSpecies);
+                }
+
+                state = result.Next;
+                rescues += result.Events.RescuedCreatures.Count;
+                foreach (CreatureEvent rescue in result.Events.RescuedCreatures)
+                {
+                    species.Add(rescue.CreatureId);
+                }
+
+                if (state.WaterLevel > maxWater)
+                {
+                    maxWater = state.WaterLevel;
                 }
             }
 
             return StateHash.Compute(state) == record.StateHashAfterMoves
-                ? new RunReplayResult(RunReplayStatus.Ok, state)
-                : new RunReplayResult(RunReplayStatus.Diverged, null);
+                ? new RunReplayResult(RunReplayStatus.Ok, state, rescues, maxWater, species)
+                : new RunReplayResult(RunReplayStatus.Diverged, null, 0, 0, NoSpecies);
         }
     }
 }

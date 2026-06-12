@@ -114,13 +114,21 @@ namespace Riptide.Game
         private readonly List<byte> dailyRescuedSpecies = new List<byte>();
         private readonly System.Random casualSeeds = new System.Random();
 
-        public GameFlow(EconomyConfig economy, CreatureRoster roster, StringTable strings, MetaServices meta)
+        public GameFlow(EconomyConfig economy, CreatureRoster roster, StringTable strings, MetaServices meta,
+            RunRecorder? recorder = null)
         {
             Economy = economy;
             Roster = roster;
             Strings = strings;
             Meta = meta;
+            Recorder = recorder ?? new RunRecorder();
         }
+
+        /// <summary>Mid-run persistence (SAVE_RESUME_DESIGN.md).</summary>
+        public RunRecorder Recorder { get; }
+
+        /// <summary>A pending mid-run record found at boot (date-checked for Daily); null otherwise.</summary>
+        public RunRecord? PendingRun { get; private set; }
 
         private IReadOnlyList<Decoration>? decorations;
 
@@ -320,6 +328,14 @@ namespace Riptide.Game
 
         public void GoTo(FlowScreen screen)
         {
+            // Quit-to-home keeps abandon semantics (design §4): a live run left
+            // for Home is over — no resume-after-quit in the GDD.
+            if (Screen == FlowScreen.Playing && screen == FlowScreen.Home
+                && Store != null && !Store.State.Status.IsTerminal())
+            {
+                Recorder.Finish();
+            }
+
             Screen = screen;
             ScreenChanged?.Invoke(screen);
         }
@@ -330,6 +346,7 @@ namespace Riptide.Game
             CurrentLevel = def;
             Mode = GameMode.Voyage;
             CurrentSeed = (ulong)casualSeeds.Next(1, int.MaxValue);
+            Recorder.Begin("Voyage", zone, index, 0, CurrentSeed);
             BeginRun(def.ToLevelConfig(Economy, Roster.Count));
         }
 
@@ -338,6 +355,7 @@ namespace Riptide.Game
             CurrentLevel = null;
             Mode = GameMode.Endless;
             CurrentSeed = (ulong)casualSeeds.Next(1, int.MaxValue);
+            Recorder.Begin("Endless", 0, 0, 0, CurrentSeed);
             BeginRun(ModeFactory.Endless(Economy, Roster.Count));
         }
 
@@ -369,6 +387,7 @@ namespace Riptide.Game
             CurrentLevel = null;
             dailyRescuedSpecies.Clear();
             CurrentSeed = SeedForEpochDay(today);
+            Recorder.Begin("Daily", 0, 0, today, CurrentSeed);
             BeginRun(ModeFactory.Daily(Economy, Roster.Count));
             return true;
         }
@@ -378,6 +397,132 @@ namespace Riptide.Game
             // Reverse epoch-day to civil date for DailySeed (which hashes yyyy-MM-dd).
             DateTime date = new DateTime(1970, 1, 1).AddDays(epochDay);
             return DailySeed.For(date.Year, date.Month, date.Day);
+        }
+
+        /// <summary>
+        /// Boot check (SAVE_RESUME_DESIGN.md §5): surfaces a pending mid-run
+        /// record. A Daily record from another day is discarded outright — the
+        /// attempt was consumed that day and the board no longer exists.
+        /// </summary>
+        public void DetectPendingRun()
+        {
+            RunRecord? record = Recorder.ReadPending();
+            if (record != null && record.Mode == "Daily" && record.EpochDay != Meta.TodayEpochDay())
+            {
+                Recorder.DeleteFile();
+                record = null;
+            }
+
+            PendingRun = record;
+        }
+
+        /// <summary>
+        /// Replays the pending record through the engine and re-enters Playing at
+        /// the exact recorded state. Any divergence (content drift, corruption,
+        /// illegal move) discards gracefully and returns false (design §6).
+        /// Side effects of the original moves (rescue counters, milestones,
+        /// wallet) are NOT re-fired — they already happened.
+        /// </summary>
+        public bool ResumeRun()
+        {
+            RunRecord? record = PendingRun;
+            PendingRun = null;
+            if (record == null)
+            {
+                return false;
+            }
+
+            LevelConfig config;
+            LevelDef? level = null;
+            GameMode mode;
+            switch (record.Mode)
+            {
+                case "Voyage":
+                    if (record.Zone < 1 || record.Zone > 10 || record.Level < 1 || record.Level > 20)
+                    {
+                        Recorder.DeleteFile();
+                        return false;
+                    }
+
+                    level = ZoneLevels(record.Zone)[record.Level - 1];
+                    config = level.ToLevelConfig(Economy, Roster.Count);
+                    mode = GameMode.Voyage;
+                    break;
+                case "Endless":
+                    config = ModeFactory.Endless(Economy, Roster.Count);
+                    mode = GameMode.Endless;
+                    break;
+                case "Daily":
+                    config = ModeFactory.Daily(Economy, Roster.Count);
+                    mode = GameMode.Daily;
+                    break;
+                default:
+                    Recorder.DeleteFile();
+                    return false;
+            }
+
+            RunReplayResult replay = RunReplay.Rebuild(config, record);
+            if (replay.Status != RunReplayStatus.Ok)
+            {
+                Recorder.DeleteFile();
+                return false;
+            }
+
+            Mode = mode;
+            CurrentLevel = level;
+            CurrentSeed = record.Seed;
+            dailyWasRetry = false;
+            dailyRescuedSpecies.Clear();
+            if (mode == GameMode.Daily)
+            {
+                foreach (int id in replay.RescuedSpeciesInOrder)
+                {
+                    if (!dailyRescuedSpecies.Contains((byte)id))
+                    {
+                        dailyRescuedSpecies.Add((byte)id);
+                    }
+                }
+            }
+
+            if (Store == null)
+            {
+                Store = new GameStore(config, record.Seed);
+                Store.MoveApplied += OnMoveApplied;
+            }
+
+            Store.Restore(replay.State!);
+
+            runMaxWater = replay.MaxWater;
+            runRescues = replay.Rescues;
+            freeDrainUsedThisRun = false;
+            freeNewTideUsedThisRun = false;
+            ContinueOfferPending = false;
+
+            Recorder.Resume(record);
+            GoTo(FlowScreen.Playing);
+            RunStarted?.Invoke();
+
+            // Killed between the terminal move and the outcome (design §7.2):
+            // re-raise the continue offer, or conclude the run exactly once.
+            if (Store.State.Status.IsTerminal())
+            {
+                if (CanOfferContinue(Store.State))
+                {
+                    ContinueOfferPending = true;
+                }
+                else
+                {
+                    FinishRun(Store.State);
+                }
+            }
+
+            return true;
+        }
+
+        public void AbandonPendingRun()
+        {
+            Recorder.DeleteFile();
+            PendingRun = null;
         }
 
         private void BeginRun(LevelConfig config)
@@ -409,6 +554,10 @@ namespace Riptide.Game
 
         private void OnMoveApplied(Move move, MoveResult result)
         {
+            // Mid-run save: persist the inputs in the same frame as the move
+            // (design §4 — OnApplicationPause is unreliable on OS kill).
+            Recorder.Append(move, result.Next);
+
             // GDD 5.1: lifetime rescue counters feed the Tidepool, every mode.
             if (result.Events.RescuedCreatures.Count > 0)
             {
@@ -521,6 +670,10 @@ namespace Riptide.Game
 
         private void FinishRun(GameState final)
         {
+            // The run concluded — the outcome path runs exactly once, and the
+            // pending record must never offer to replay a finished run.
+            Recorder.Finish();
+
             var outcome = new RunOutcome
             {
                 Mode = Mode,

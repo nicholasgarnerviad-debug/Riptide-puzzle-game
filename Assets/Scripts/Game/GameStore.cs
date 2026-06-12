@@ -29,6 +29,18 @@ namespace Riptide.Game
         }
 
         /// <summary>
+        /// Mid-run resume: adopts a REPLAYED state directly. Views rebuild via
+        /// GameReset; MoveApplied is deliberately not fired — the moves' side
+        /// effects (rescue counters, milestones) already happened in the original
+        /// run and must not double-count.
+        /// </summary>
+        public void Restore(GameState replayed)
+        {
+            State = replayed ?? throw new ArgumentNullException(nameof(replayed));
+            GameReset?.Invoke(State);
+        }
+
+        /// <summary>
         /// Dispatches a move; returns false when the game is already over — except
         /// the continue, which is exactly the move that re-enters a drowned game
         /// (SimEngine validates the specifics).

@@ -1,6 +1,6 @@
 # Mid-run Save & Resume — Design (ROADMAP deferred #1)
 
-**Status: PROPOSED — awaiting Nick's approval before any implementation.**
+**Status: APPROVED (Nick, "resume aswell", 2026-06-12) — implemented same day; deltas logged in DECISIONS.md.**
 Companion to RIPTIDE_GDD.md §8.2/§8.4 and ROADMAP.md ("replay the move list against the
 seed; design doc first — interrupt points, version tolerance").
 

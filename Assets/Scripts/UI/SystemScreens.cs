@@ -420,6 +420,65 @@ namespace Riptide.UI
     }
 
     /// <summary>
+    /// Mid-run resume prompt (SAVE_RESUME_DESIGN.md §5): a sheet over Home when a
+    /// pending run record survived a process death. Resume replays to the exact
+    /// state; Abandon discards (Voyage/Endless lose nothing; a Daily attempt was
+    /// already consumed at its StartDaily).
+    /// </summary>
+    public sealed class ResumeSheet : MonoBehaviour
+    {
+        private Sheet sheet = null!;
+
+        public bool Shown => sheet != null && sheet.Shown;
+
+        public static ResumeSheet Build(RectTransform canvasRoot, GameFlow flow, ToastManager toasts)
+        {
+            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "ResumeSheet", 640f);
+            var resume = sheet.gameObject.AddComponent<ResumeSheet>();
+            resume.sheet = sheet;
+
+            RectTransform body = sheet.Body;
+            TextMeshProUGUI title = UiText.Create(body, "title", flow.Strings.Get("resume.title"),
+                "heading", "text.primary");
+            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.84f), new Vector2(700f, 80f));
+
+            Riptide.Core.RunRecord? record = flow.PendingRun;
+            string bodyText = record == null ? "" : record.Mode switch
+            {
+                "Voyage" => string.Format(flow.Strings.Get("resume.body.voyage"),
+                    record.Zone, record.Level, record.Moves.Count),
+                "Daily" => string.Format(flow.Strings.Get("resume.body.daily"), record.Moves.Count),
+                _ => string.Format(flow.Strings.Get("resume.body.endless"), record.Moves.Count),
+            };
+            TextMeshProUGUI info = UiText.Create(body, "body", bodyText, "body", "text.secondary");
+            UiComponents.Place(info.rectTransform, new Vector2(0.5f, 0.64f), new Vector2(780f, 60f));
+
+            Button go = UiComponents.ButtonPrimary(body, "resume", flow.Strings.Get("resume.continue"),
+                () =>
+                {
+                    resume.sheet.Dismiss();
+                    if (!flow.ResumeRun())
+                    {
+                        toasts.Show(flow.Strings.Get("resume.expired"));
+                    }
+                });
+            UiComponents.Place((RectTransform)go.transform, new Vector2(0.5f, 0.40f), new Vector2(640f, 124f));
+
+            Button abandon = UiComponents.ButtonGhost(body, "abandon", flow.Strings.Get("resume.abandon"),
+                () =>
+                {
+                    flow.AbandonPendingRun();
+                    resume.sheet.Dismiss();
+                });
+            UiComponents.Place((RectTransform)abandon.transform, new Vector2(0.5f, 0.15f), new Vector2(640f, 90f));
+
+            return resume;
+        }
+
+        public void Show() => sheet.Show();
+    }
+
+    /// <summary>
     /// Shared screen scaffolding. Universal-fit pass: each screen root is now a
     /// TRANSPARENT safe-area-padded rect (content never under a notch), while the
     /// backdrop (bg + snow + vignette) is ONE shared full-bleed layer behind the

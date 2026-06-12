@@ -74,6 +74,10 @@ namespace Riptide.UI
             // GDD 7A: consent resolves BEFORE any ad init (AdService listens).
             consent.Request();
 
+            // Mid-run save: a record that survived a process death surfaces as a
+            // resume prompt over Home (SAVE_RESUME_DESIGN.md §5).
+            flow.DetectPendingRun();
+
             ScreenManager screens = ScreenManager.Create(root.transform, flow, instantAnimations);
             return (flow, screens);
         }
