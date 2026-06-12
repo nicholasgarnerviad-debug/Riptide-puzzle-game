@@ -120,8 +120,14 @@ namespace Riptide.UI
 
         internal void Build(RectTransform root)
         {
-            TextMeshProUGUI glyph = UiText.Create(root, "glyph", "●", "heading", "coin");
-            UiComponents.Place(glyph.rectTransform, new Vector2(0.12f, 0.5f), new Vector2(64f, 64f));
+            // Coin glyph as an Image: the font has no ● (boxes read as broken UI).
+            var glyphGo = new GameObject("glyph", typeof(RectTransform));
+            glyphGo.transform.SetParent(root, false);
+            var glyph = glyphGo.AddComponent<Image>();
+            glyph.sprite = SpriteFactory.Dot();
+            glyph.raycastTarget = false;
+            ThemedElement.Bind(glyphGo, "coin");
+            UiComponents.Place((RectTransform)glyphGo.transform, new Vector2(0.14f, 0.5f), new Vector2(44f, 44f));
             label = UiText.Create(root, "value", "0", "score", "text.primary", TextAlignmentOptions.MidlineLeft);
             UiComponents.Place(label.rectTransform, new Vector2(0.62f, 0.5f), new Vector2(220f, 64f));
         }
@@ -254,25 +260,34 @@ namespace Riptide.UI
         }
     }
 
-    /// <summary>§3.13: streak count with flame glyph; PulseOnce on increment.</summary>
+    /// <summary>§3.13: streak count with flame mark; PulseOnce on increment.
+    /// The flame is an Image teardrop (no flame glyph in the placeholder font).</summary>
     public sealed class StreakFlame : MonoBehaviour
     {
         private TextMeshProUGUI label = null!;
 
         internal void Build(RectTransform root)
         {
-            label = UiText.Create(root, "label", "🔥 0", "heading", "danger");
-            UiComponents.Stretch(label.rectTransform);
+            var flameGo = new GameObject("flame", typeof(RectTransform));
+            flameGo.transform.SetParent(root, false);
+            var flame = flameGo.AddComponent<Image>();
+            flame.sprite = SpriteFactory.Dot();
+            flame.raycastTarget = false;
+            ThemedElement.Bind(flameGo, "danger");
+            UiComponents.Place((RectTransform)flameGo.transform, new Vector2(0.22f, 0.5f), new Vector2(34f, 44f));
+
+            label = UiText.Create(root, "label", "0", "heading", "danger", TextAlignmentOptions.MidlineLeft);
+            UiComponents.Place(label.rectTransform, new Vector2(0.62f, 0.5f), new Vector2(120f, 60f));
         }
 
         public void Set(int streak, bool pulse)
         {
-            label.text = $"🔥 {streak}";
+            label.text = streak.ToString();
             if (pulse)
             {
-                Vector3 baseScale = label.transform.localScale;
+                Vector3 baseScale = transform.localScale;
                 Tween.Run(this, "t.fast", "easeOutQuart",
-                    u => label.transform.localScale = baseScale * (1f + 0.25f * Mathf.Sin(Mathf.PI * u)));
+                    u => transform.localScale = baseScale * (1f + 0.25f * Mathf.Sin(Mathf.PI * u)));
             }
         }
     }

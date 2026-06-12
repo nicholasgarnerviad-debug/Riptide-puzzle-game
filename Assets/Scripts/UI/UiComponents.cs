@@ -42,8 +42,11 @@ namespace Riptide.UI
             badgeRt.anchoredPosition = new Vector2(52f, 0f);
             var badgeImage = badge.AddComponent<Image>();
             badgeImage.sprite = SpriteFactory.Dot();
+            badgeImage.raycastTarget = false;
             ThemedElement.Bind(badge, "warning");
-            UiText.Create(badgeRt, "play", "▶", "micro", "text.onAccent");
+            // "AD" in plain text: LiberationSans has no ▶ glyph (renders a box).
+            TextMeshProUGUI ad = UiText.Create(badgeRt, "ad", "AD", "micro", "text.onAccent");
+            Stretch(ad.rectTransform);
             return button;
         }
 
@@ -51,15 +54,42 @@ namespace Riptide.UI
         {
             RectTransform root = Rect(parent, name, new Vector2(96f, 96f));
             PadHitTarget(root);
-            var image = root.gameObject.AddComponent<Image>();
-            image.sprite = SpriteFactory.Cell();
+            Image image = RoundedImage(root.gameObject, 12f); // r.s
             ThemedElement.Bind(root.gameObject, "bg.raised");
+            RoundedStrokeImage(root, "stroke.bright", 12f);
             var button = root.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(() => onClick());
             root.gameObject.AddComponent<PressEffect>();
-            UiText.Create(root, "glyph", glyph, "heading", "text.primary");
+            TextMeshProUGUI glyphText = UiText.Create(root, "glyph", glyph, "title", "text.primary");
+            Stretch(glyphText.rectTransform);
             return button;
+        }
+
+        /// <summary>Sliced rounded fill at a radius token (§1.3) — never stretch the corners.</summary>
+        internal static Image RoundedImage(GameObject go, float cornerRefPx)
+        {
+            var image = go.AddComponent<Image>();
+            image.sprite = SpriteFactory.RoundedFill();
+            image.type = Image.Type.Sliced;
+            // Sprite border is 14px at 64ppu against the canvas's 100 reference:
+            // multiplier maps it onto the requested ref-px corner radius.
+            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / Mathf.Max(8f, cornerRefPx);
+            return image;
+        }
+
+        internal static Image RoundedStrokeImage(RectTransform parent, string colorToken, float cornerRefPx)
+        {
+            var go = new GameObject("stroke", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            Stretch((RectTransform)go.transform);
+            var image = go.AddComponent<Image>();
+            image.sprite = SpriteFactory.RoundedStroke();
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / Mathf.Max(8f, cornerRefPx);
+            image.raycastTarget = false;
+            ThemedElement.Bind(go, colorToken);
+            return image;
         }
 
         private static Button BuildButton(RectTransform parent, string name, string label, Action onClick,
@@ -67,8 +97,7 @@ namespace Riptide.UI
         {
             RectTransform root = Rect(parent, name, new Vector2(560f, 130f));
             PadHitTarget(root);
-            var image = root.gameObject.AddComponent<Image>();
-            image.sprite = SpriteFactory.Cell();
+            Image image = RoundedImage(root.gameObject, 20f); // r.m
             ThemedElement.Bind(root.gameObject, fillToken);
             var button = root.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
@@ -77,6 +106,10 @@ namespace Riptide.UI
             if (glow)
             {
                 AddGlow(root);
+            }
+            else
+            {
+                RoundedStrokeImage(root, "stroke.bright", 20f);
             }
 
             TextMeshProUGUI text = UiText.Create(root, "label", label, "body", textToken);
@@ -89,9 +122,9 @@ namespace Riptide.UI
         public static RectTransform Card(RectTransform parent, string name, Vector2 size)
         {
             RectTransform root = Rect(parent, name, size);
-            var image = root.gameObject.AddComponent<Image>();
-            image.sprite = SpriteFactory.Cell();
+            RoundedImage(root.gameObject, 32f); // r.l
             ThemedElement.Bind(root.gameObject, "bg.surface");
+            RoundedStrokeImage(root, "stroke.subtle", 32f);
             return root;
         }
 
@@ -110,8 +143,7 @@ namespace Riptide.UI
             body.pivot = new Vector2(0.5f, 0f);
             body.offsetMin = new Vector2(0f, 0f);
             body.offsetMax = new Vector2(0f, heightRefPx);
-            var bodyImage = body.gameObject.AddComponent<Image>();
-            bodyImage.sprite = SpriteFactory.Cell();
+            RoundedImage(body.gameObject, 32f); // r.l (§1.3: sheets)
             ThemedElement.Bind(body.gameObject, "bg.surface");
 
             RectTransform handle = Rect(body, "handle", new Vector2(120f, 10f));
@@ -233,15 +265,19 @@ namespace Riptide.UI
 
         private static void AddGlow(RectTransform root)
         {
+            // Elevation = glow (§1.3), but as a tight rim light — never a halo
+            // blob (the stretched-dot version was the first thing Nick flagged).
             var glow = new GameObject("glow", typeof(RectTransform));
             glow.transform.SetParent(root, false);
             glow.transform.SetAsFirstSibling();
             var glowRt = (RectTransform)glow.transform;
             Stretch(glowRt);
-            glowRt.offsetMin = new Vector2(-18f, -18f);
-            glowRt.offsetMax = new Vector2(18f, 18f);
+            glowRt.offsetMin = new Vector2(-7f, -7f);
+            glowRt.offsetMax = new Vector2(7f, 7f);
             var image = glow.AddComponent<Image>();
-            image.sprite = SpriteFactory.Dot();
+            image.sprite = SpriteFactory.RoundedFill();
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 26f;
             image.raycastTarget = false;
             ThemedElement.Bind(glow, "glow.primary");
         }

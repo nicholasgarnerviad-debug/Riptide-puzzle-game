@@ -235,23 +235,30 @@ namespace Riptide.UI
             ThemedElement.Bind(root.gameObject, "bg.abyss");
             var gate = root.gameObject.AddComponent<ConsentAgeGate>();
 
-            TextMeshProUGUI title = UiText.Create(root, "title",
+            // One composed card instead of elements adrift on the void.
+            RectTransform card = UiComponents.Card(root, "card", new Vector2(880f, 820f));
+            UiComponents.Place(card, new Vector2(0.5f, 0.55f), new Vector2(880f, 820f));
+
+            TextMeshProUGUI title = UiText.Create(card, "title",
                 flow.Strings.Get("consent.age.title"), "title", "text.primary");
-            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.72f), new Vector2(900f, 110f));
-            TextMeshProUGUI body = UiText.Create(root, "body",
+            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.84f), new Vector2(800f, 100f));
+            TextMeshProUGUI body = UiText.Create(card, "body",
                 flow.Strings.Get("consent.age.body"), "body", "text.secondary");
-            UiComponents.Place(body.rectTransform, new Vector2(0.5f, 0.63f), new Vector2(900f, 70f));
+            UiComponents.Place(body.rectTransform, new Vector2(0.5f, 0.70f), new Vector2(800f, 60f));
 
-            Button minus = UiComponents.IconButton(root, "minus", "‹", () => gate.Step(-1));
-            UiComponents.Place((RectTransform)minus.transform, new Vector2(0.30f, 0.50f), new Vector2(96f, 96f));
-            gate.yearLabel = UiText.Create(root, "year", "2000", "display", "text.primary");
+            // Year row: steppers flank the numeral, not the screen edges.
+            Button minus = UiComponents.IconButton(card, "minus", "‹", () => gate.Step(-1));
+            UiComponents.Place((RectTransform)minus.transform, new Vector2(0.5f, 0.50f), new Vector2(96f, 96f));
+            ((RectTransform)minus.transform).anchoredPosition = new Vector2(-280f, 0f);
+            gate.yearLabel = UiText.Create(card, "year", "2000", "display", "text.primary");
             UiComponents.Place(gate.yearLabel.rectTransform, new Vector2(0.5f, 0.50f), new Vector2(420f, 120f));
-            Button plus = UiComponents.IconButton(root, "plus", "›", () => gate.Step(1));
-            UiComponents.Place((RectTransform)plus.transform, new Vector2(0.70f, 0.50f), new Vector2(96f, 96f));
+            Button plus = UiComponents.IconButton(card, "plus", "›", () => gate.Step(1));
+            UiComponents.Place((RectTransform)plus.transform, new Vector2(0.5f, 0.50f), new Vector2(96f, 96f));
+            ((RectTransform)plus.transform).anchoredPosition = new Vector2(280f, 0f);
 
-            Button confirm = UiComponents.ButtonPrimary(root, "confirm",
+            Button confirm = UiComponents.ButtonPrimary(card, "confirm",
                 flow.Strings.Get("consent.age.confirm"), gate.Confirm);
-            UiComponents.Place((RectTransform)confirm.transform, new Vector2(0.5f, 0.32f), new Vector2(640f, 124f));
+            UiComponents.Place((RectTransform)confirm.transform, new Vector2(0.5f, 0.18f), new Vector2(640f, 130f));
 
             gate.Step(0);
             return gate;

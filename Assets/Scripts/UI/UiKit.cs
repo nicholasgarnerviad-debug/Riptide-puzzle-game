@@ -59,7 +59,11 @@ namespace Riptide.UI
 
             var go = new GameObject("EventSystem");
             go.AddComponent<EventSystem>();
-            go.AddComponent<InputSystemUIInputModule>();
+            var module = go.AddComponent<InputSystemUIInputModule>();
+            // A runtime-added module has NO actions asset — without this call no
+            // pointer event ever reaches the UI (every button dead; found at the
+            // first human session, invisible to flow-driven tests).
+            module.AssignDefaultActions();
         }
 
         public static RectTransform Panel(RectTransform parent, string name, Color color)

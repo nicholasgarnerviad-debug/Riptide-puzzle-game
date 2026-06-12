@@ -63,6 +63,7 @@ namespace Riptide.EditorAutomation
                 File.WriteAllText(PendingPath, "probe");
                 File.WriteAllText(ResultPath, "ENTERING PLAY\n");
                 Errors.Clear();
+                ForcePortraitGameView();
                 EditorApplication.isPlaying = true;
                 return;
             }
@@ -85,6 +86,61 @@ namespace Riptide.EditorAutomation
 
             File.Delete(PendingPath);
             WriteReport();
+        }
+
+        /// <summary>
+        /// The game is portrait 1080×2400; a Free Aspect landscape Game view shows
+        /// it at ~40% scale adrift in space (the "this is ugly" screenshot). Adds
+        /// and selects a fixed portrait size via the internal GameView API —
+        /// reflection, so failures just log and leave the aspect alone.
+        /// </summary>
+        private static void ForcePortraitGameView()
+        {
+            try
+            {
+                var sizesType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
+                var singletonType = typeof(ScriptableSingleton<>).MakeGenericType(sizesType);
+                object instance = singletonType.GetProperty("instance")!.GetValue(null);
+                object group = sizesType.GetMethod("GetGroup")!.Invoke(instance,
+                    new object[] { (int)instance.GetType().GetProperty("currentGroupType")!.GetValue(instance) });
+
+                var getTotal = group.GetType().GetMethod("GetTotalCount")!;
+                var getSize = group.GetType().GetMethod("GetGameViewSize")!;
+                int index = -1;
+                int total = (int)getTotal.Invoke(group, null);
+                for (int i = 0; i < total; i++)
+                {
+                    object size = getSize.Invoke(group, new object[] { i });
+                    string text = (string)size.GetType().GetProperty("baseText")!.GetValue(size);
+                    if (text == "Riptide Portrait")
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+
+                if (index < 0)
+                {
+                    var sizeType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSize");
+                    var enumType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizeType");
+                    object newSize = System.Activator.CreateInstance(sizeType,
+                        System.Enum.ToObject(enumType, 1 /* FixedResolution */), 1080, 2340, "Riptide Portrait");
+                    group.GetType().GetMethod("AddCustomSize")!.Invoke(group, new[] { newSize });
+                    index = (int)getTotal.Invoke(group, null) - 1;
+                }
+
+                var gameViewType = typeof(Editor).Assembly.GetType("UnityEditor.GameView");
+                EditorWindow gameView = EditorWindow.GetWindow(gameViewType);
+                gameViewType.GetProperty("selectedSizeIndex",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                        | System.Reflection.BindingFlags.NonPublic)!
+                    .SetValue(gameView, index);
+                Debug.Log($"AutoPlayProbe: game view set to Riptide Portrait (index {index})");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"AutoPlayProbe: could not set portrait game view ({ex.Message}) — pick 1080x2340 manually.");
+            }
         }
 
         private static void WriteReport()
