@@ -87,6 +87,7 @@ namespace Riptide.UI
             SetUpCamera();
 
             Store = new GameStore(config, seed);
+            GameSceneDressing.Create(transform);
             Board = BoardView.Create(transform);
             Water = WaterView.Create(transform, config.StartWaterLevel);
             Tray = TrayView.Create(transform);

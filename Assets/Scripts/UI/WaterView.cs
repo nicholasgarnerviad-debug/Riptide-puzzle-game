@@ -15,7 +15,9 @@ namespace Riptide.UI
     /// </summary>
     public sealed class WaterView : MonoBehaviour
     {
-        private const int SurfaceColumns = 18;
+        // Visual pass: 44 columns (was 18) — the surface reads as a continuous
+        // wave instead of a choppy bar chart; sprite count is still trivial.
+        private const int SurfaceColumns = 44;
         private const float BackAmpRefPx = 12f;   // §5.1
         private const float BackPeriod = 9f;      // §5.1
         private const float FrontAmpRefPx = 8f;   // §5.1
@@ -126,7 +128,7 @@ namespace Riptide.UI
             for (int i = 0; i < SurfaceColumns; i++)
             {
                 float x = -(BoardSpec.Width + 1f) * 0.5f + colWidth * (i + 0.5f);
-                float phase = i * 0.7f;
+                float phase = i * 0.286f; // wave shape preserved across 44 columns
                 float backY = waterline + backAmp * Mathf.Sin(driftTime * (2f * Mathf.PI / BackPeriod) + phase);
                 float frontY = waterline + frontAmp * Mathf.Sin(driftTime * (2f * Mathf.PI / FrontPeriod) + phase + Mathf.PI);
                 backCols[i].transform.position = new Vector3(x, backY, 0f);

@@ -34,7 +34,7 @@
     "shadow.soft":     { "hex": "05080C", "alpha": 0.55 },
     "ray.light":       { "hex": "2FA8C4", "alpha": 0.10 },
     "board.frameBg":   { "hex": "0D1320" },
-    "board.emptyCell": { "hex": "FFFFFF", "alpha": 0.05 },
+    "board.emptyCell": { "hex": "1E2A3D", "alpha": 0.85 },
     "meter.track":     { "hex": "FFFFFF", "alpha": 0.16 },
     "ghost.legal":     { "hex": "3EE6E0", "alpha": 0.45 },
     "ghost.illegal":   { "hex": "FF6B81", "alpha": 0.30 }

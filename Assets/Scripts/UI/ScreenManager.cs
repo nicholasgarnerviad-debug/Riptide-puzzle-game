@@ -215,6 +215,7 @@ namespace Riptide.UI
             boardRig = new GameObject("BoardRig");
             boardRig.transform.SetParent(transform, false);
 
+            GameSceneDressing.Create(boardRig.transform);
             BoardView board = BoardView.Create(boardRig.transform);
             WaterView water = WaterView.Create(boardRig.transform, store.State.WaterLevel);
             TrayView tray = TrayView.Create(boardRig.transform);

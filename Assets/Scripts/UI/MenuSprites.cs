@@ -192,6 +192,10 @@ namespace Riptide.UI
                     CutLine(a, 70f, 22f, 106f, 3f);
                     Cut(a, c, 52f, 7f);
                     break;
+                case "pause":
+                    RoundedBlock(a, 42f, 34f, 58f, 94f, 7f);
+                    RoundedBlock(a, 70f, 34f, 86f, 94f, 7f);
+                    break;
                 default:
                     Disc(a, c, c, 40f);
                     break;

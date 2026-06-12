@@ -33,7 +33,7 @@ namespace Riptide.UI
                     cellGo.transform.localPosition = BoardLayout.CellToWorld(col, row);
                     cellGo.transform.localScale = Vector3.one * 0.94f;
                     var sr = cellGo.AddComponent<SpriteRenderer>();
-                    sr.sprite = SpriteFactory.Cell();
+                    sr.sprite = SpriteFactory.CellWell();
                     sr.color = Palette.EmptyCell;
                     sr.sortingOrder = 10;
                     renderers[BoardSpec.IndexOf(col, row)] = sr;
@@ -68,7 +68,8 @@ namespace Riptide.UI
                             sr.color = Palette.CreatureColor(cell.Id);
                             break;
                         default:
-                            sr.sprite = SpriteFactory.Cell();
+                            // Visual pass: empties are subtle wells; pieces pop.
+                            sr.sprite = SpriteFactory.CellWell();
                             sr.color = Palette.EmptyCell;
                             break;
                     }

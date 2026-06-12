@@ -52,7 +52,24 @@ namespace Riptide.UI
         {
             var rt = (RectTransform)button.transform;
             rt.sizeDelta = sizeRefPx;
+            StyleChrome(button, 20f);
             WorldAnchor.Pin(rt, new Vector3(worldX, worldY, 0f));
+        }
+
+        /// <summary>Visual pass: HUD buttons join the themed rounded language
+        /// instead of the legacy gray panels.</summary>
+        private static void StyleChrome(Button button, float cornerRefPx)
+        {
+            var image = button.GetComponent<UnityEngine.UI.Image>();
+            if (image != null)
+            {
+                image.sprite = SpriteFactory.RoundedFill();
+                image.type = UnityEngine.UI.Image.Type.Sliced;
+                image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / Mathf.Max(8f, cornerRefPx);
+                ThemedElement.Bind(button.gameObject, "bg.raised");
+            }
+
+            UiComponents.RoundedStrokeImage((RectTransform)button.transform, "stroke.subtle", cornerRefPx);
         }
 
         public static HudOverlay Create(RectTransform canvasRoot, GameFlow flow, System.Action? onPause = null)
@@ -74,12 +91,14 @@ namespace Riptide.UI
             hud.goals = UiKit.Label(safe, "goals", "", 36, UiKit.TextColor, TextAnchor.UpperLeft);
             UiKit.Place(hud.goals.rectTransform, new Vector2(0.05f, 0.97f), new Vector2(560f, 220f), new Vector2(280f, -110f));
 
-            hud.score = UiKit.Label(safe, "score", "", 44, UiKit.TextColor, TextAnchor.UpperCenter);
-            UiKit.Place(hud.score.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(400f, 80f), new Vector2(0f, -40f));
+            // Visual pass: the score is the headline number — big, bold, tabular.
+            hud.score = UiKit.Label(safe, "score", "", 58, UiKit.TextColor, TextAnchor.UpperCenter);
+            hud.score.fontStyle = FontStyle.Bold;
+            UiKit.Place(hud.score.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(440f, 90f), new Vector2(0f, -45f));
 
             // Spec §4.3: the top-right slot is the pause control; without a pause
             // sheet wired (CreateGame test rigs) it falls back to Home.
-            Button menu = UiKit.TextButton(safe, "menu", flow.Strings.Get("hud.back"), 30,
+            Button menu = UiKit.TextButton(safe, "menu", "", 30,
                 () =>
                 {
                     if (onPause != null)
@@ -91,7 +110,16 @@ namespace Riptide.UI
                         flow.GoTo(FlowScreen.Home);
                     }
                 });
-            UiKit.Place((RectTransform)menu.transform, new Vector2(0.92f, 0.97f), new Vector2(170f, 64f), new Vector2(0f, -32f));
+            UiKit.Place((RectTransform)menu.transform, new Vector2(0.92f, 0.97f), new Vector2(96f, 96f), new Vector2(0f, -48f));
+            StyleChrome(menu, 24f);
+            var pauseIconGo = new GameObject("pauseIcon", typeof(RectTransform));
+            pauseIconGo.transform.SetParent(menu.transform, false);
+            var pauseIconRt = (RectTransform)pauseIconGo.transform;
+            pauseIconRt.sizeDelta = new Vector2(44f, 44f);
+            var pauseIcon = pauseIconGo.AddComponent<UnityEngine.UI.Image>();
+            pauseIcon.sprite = MenuSprites.Icon("pause");
+            pauseIcon.raycastTarget = false;
+            ThemedElement.Bind(pauseIconGo, "text.secondary");
 
             // Coins live by the rail — that's where they're spent (gate feedback:
             // the old 0.925-height label landed inside the board frame).

@@ -203,6 +203,33 @@ namespace Riptide.UI
                 SpriteRenderer sr = board.RendererAt(pos.Col, pos.Row);
                 sr.sprite = SpriteFactory.Cell();
                 sr.color = Palette.BlockColor(colorId);
+
+                // Juice (research: amplified, eased feedback per input): a tiny
+                // settle-pop on every placed cell — the thunk made visible.
+                if (!InstantMode)
+                {
+                    StartCoroutine(PlaceSettle(sr));
+                }
+            }
+        }
+
+        private IEnumerator PlaceSettle(SpriteRenderer sr)
+        {
+            float life = Mathf.Max(0.01f, ThemeRuntime.MotionSeconds("t.instant") * 2f);
+            float t = 0f;
+            Vector3 baseScale = Vector3.one * 0.94f;
+            while (t < life && sr != null)
+            {
+                t += Time.deltaTime;
+                float u = Mathf.Clamp01(t / life);
+                float ease = 1f - (1f - u) * (1f - u);
+                sr.transform.localScale = baseScale * Mathf.Lerp(1.16f, 1f, ease);
+                yield return null;
+            }
+
+            if (sr != null)
+            {
+                sr.transform.localScale = baseScale;
             }
         }
 

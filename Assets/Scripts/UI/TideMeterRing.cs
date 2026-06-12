@@ -44,6 +44,17 @@ namespace Riptide.UI
         private void Build()
         {
             radius = ThemeRuntime.WorldFromRefPx(DiameterRefPx) * 0.5f;
+
+            // Visual pass: the flagship element gets presence — a soft inner glow
+            // disc behind the ring so it reads as the instrument it is (§5.2).
+            var glowGo = new GameObject("innerGlow");
+            glowGo.transform.SetParent(transform, false);
+            glowGo.transform.localScale = Vector3.one * (radius * 2.6f / 2f);
+            var glow = glowGo.AddComponent<SpriteRenderer>();
+            glow.sprite = MenuSprites.SoftGlow();
+            glow.color = ThemeRuntime.Color("glow.primary");
+            glow.sortingOrder = 33;
+
             float segLength = 2f * Mathf.PI * radius / Segments;
             for (int i = 0; i < Segments; i++)
             {

@@ -240,25 +240,34 @@ namespace Riptide.UI
 
         private static Sprite BuildRounded(int size, int corner, bool glow)
         {
+            // Visual pass (research: the genre's blocks are glossy beveled tiles):
+            // bright top bevel, vertical falloff, darker bottom shade, luminous
+            // edge — grayscale, so block hues stay tint/theme-sourced.
             var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
-            float half = (size - 1) * 0.5f;
             for (int y = 0; y < size; y++)
             {
+                float t = (float)y / (size - 1); // 0 bottom → 1 top
                 for (int x = 0; x < size; x++)
                 {
                     float alpha = RoundedAlpha(x, y, size, corner);
                     float brightness = 1f;
                     if (glow && alpha > 0f)
                     {
-                        float dist = Mathf.Sqrt((x - half) * (x - half) + (y - half) * (y - half)) / half;
-                        brightness = 1f - 0.22f * Mathf.Clamp01(dist);
+                        brightness = Mathf.Lerp(0.68f, 0.97f, t);
+                        if (t > 0.70f)
+                        {
+                            brightness += 0.28f * ((t - 0.70f) / 0.30f); // top bevel
+                        }
+
                         bool nearEdge = x <= 2 || y <= 2 || x >= size - 3 || y >= size - 3
                             || RoundedAlpha(x + 2, y, size, corner) <= 0f || RoundedAlpha(x - 2, y, size, corner) <= 0f
                             || RoundedAlpha(x, y + 2, size, corner) <= 0f || RoundedAlpha(x, y - 2, size, corner) <= 0f;
                         if (nearEdge)
                         {
-                            brightness = 1.18f;
+                            brightness = Mathf.Max(brightness, 1.15f); // luminous rim
                         }
+
+                        brightness = Mathf.Min(1.25f, brightness);
                     }
 
                     tex.SetPixel(x, y, new Color(brightness, brightness, brightness, alpha));
@@ -267,6 +276,46 @@ namespace Riptide.UI
 
             tex.Apply();
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+        }
+
+        private static Sprite? cellWell;
+
+        /// <summary>
+        /// Empty board cell as a subtle inset WELL (visual pass): dark interior,
+        /// shadowed top lip, faint lit bottom lip — the board recedes, pieces pop.
+        /// </summary>
+        public static Sprite CellWell()
+        {
+            if (cellWell == null)
+            {
+                const int size = 64;
+                const int corner = 12;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+                for (int y = 0; y < size; y++)
+                {
+                    float t = (float)y / (size - 1);
+                    for (int x = 0; x < size; x++)
+                    {
+                        float alpha = RoundedAlpha(x, y, size, corner);
+                        float lum = 0.85f;
+                        if (t > 0.82f)
+                        {
+                            lum = 0.45f; // inner shadow under the top lip
+                        }
+                        else if (t < 0.10f)
+                        {
+                            lum = 1.0f; // light catches the bottom lip
+                        }
+
+                        tex.SetPixel(x, y, new Color(lum, lum, lum, alpha));
+                    }
+                }
+
+                tex.Apply();
+                cellWell = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+            }
+
+            return cellWell;
         }
 
         private static float RoundedAlpha(int x, int y, int size, int corner)

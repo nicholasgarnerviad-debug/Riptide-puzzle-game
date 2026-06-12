@@ -210,6 +210,14 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-12 · shared menu backdrop gains the water column: surface-glow gradient band, 3 angled god rays, bokeh marine snow (SoftGlow sprites, ice tint, varied size/alpha) · "we're underwater" was a flat navy void before.
 - 2026-06-12 · Home recomposed: glow-echo wordmark with ice→cyan vertex gradient (104pt), coin pill, voyage HERO (compass badge + left-aligned title + zone NAME line + pips + big lit Continue), Daily/Endless as a two-up card row with icon identities (amber sun / violet waves), bottom bar = 4 square icon buttons with micro labels (fish/chest/bag/gear) · kills the empty-slab layout; zones.1–10 names enter strings.json (spec §4.2 finally has them), `home.zoneNamed`/`home.endlessHint` keys added.
 
+## Game-screen visual & feel pass (Nick: "make the actual game look and feel amazing", 2026-06-12)
+
+- 2026-06-12 · blocks re-baked as GLOSSY beveled tiles (bright top bevel, vertical falloff, luminous rim — grayscale, hue still theme-tinted; research: the genre's tiles are glossy 3D) and empty cells became inset WELLS (new CellWell sprite + board.emptyCell retuned FFFFFF@0.05 → 1E2A3D@0.85) · the board recedes, pieces pop; the flat gray grid was the screen's biggest "placeholder" tell.
+- 2026-06-12 · water surface 18 → 44 columns with the phase step scaled to preserve the §5.1 wave shape · the surface read as a choppy bar chart; amplitudes/periods stay spec-locked.
+- 2026-06-12 · `GameSceneDressing`: world-space atmosphere behind the board (surface-glow column, 3 god rays, soft elevation shadow under the frame) — research model: Tetris Effect's "The Deep", atmosphere that never blocks play; everything sorts behind the board · the game scene was a flat void while the menus got the water column.
+- 2026-06-12 · place-settle juice: every placed cell pops 1.16→1 over 2×t.instant (eased, skipped in InstantMode) — the §7 "thunk" made visible (research: amplified eased feedback per input) · the place beat had SFX+haptic but zero motion.
+- 2026-06-12 · TideMeterRing gains a soft inner glow disc (glow.primary) — §5.2 calls it the most important element; it looked like a thin gray circle · HUD: score 58pt bold, pause control is now an icon button (new "pause" glyph), booster rail + free-ad chips join the themed rounded language (StyleChrome) instead of legacy gray panels.
+
 ## Mid-run save & resume (SAVE_RESUME_DESIGN.md approved via "resume aswell", 2026-06-12)
 
 - 2026-06-12 · run record = inputs only (mode identity, seed, move list, post-move StateHash), own atomic file `riptide_run.json`, written EVERY move in the same frame; ulong seed/hash serialize as strings (FNV-1a 64 daily seeds exceed the JSON parser's signed-long range — caught at design time) · design §2–4.
