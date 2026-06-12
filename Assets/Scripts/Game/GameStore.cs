@@ -28,11 +28,15 @@ namespace Riptide.Game
             GameReset?.Invoke(State);
         }
 
-        /// <summary>Dispatches a move; returns false when the game is already over.</summary>
+        /// <summary>
+        /// Dispatches a move; returns false when the game is already over — except
+        /// the continue, which is exactly the move that re-enters a drowned game
+        /// (SimEngine validates the specifics).
+        /// </summary>
         public bool TryDispatch(Move move)
         {
             if (move == null) throw new ArgumentNullException(nameof(move));
-            if (State.Status.IsTerminal())
+            if (State.Status.IsTerminal() && !(move is ContinueMove))
             {
                 return false;
             }

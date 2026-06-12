@@ -14,6 +14,21 @@ namespace Riptide.Core
                 + coins.LevelCompletePerStar * (stars - 1);
         }
 
+        /// <summary>
+        /// Endless milestones (ROADMAP ruling 2026-06-11): every N tides survived
+        /// banks a fixed award, summed and paid at run end through the outcome.
+        /// </summary>
+        public static int EndlessMilestoneAward(CoinsConfig coins, int tidesSurvived)
+        {
+            if (tidesSurvived < 0) throw new ArgumentOutOfRangeException(nameof(tidesSurvived));
+            if (coins.EndlessMilestoneEvery <= 0)
+            {
+                return 0;
+            }
+
+            return (tidesSurvived / coins.EndlessMilestoneEvery) * coins.EndlessMilestoneCoins;
+        }
+
         /// <summary>GDD 5.2: streak milestone payouts (7/30/100 days); 0 when the streak is no milestone.</summary>
         public static int StreakMilestoneAward(CoinsConfig coins, int streak)
         {

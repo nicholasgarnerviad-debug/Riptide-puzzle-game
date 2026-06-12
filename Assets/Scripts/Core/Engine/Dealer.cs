@@ -80,6 +80,13 @@ namespace Riptide.Core
                 config.PieceWeightsView, config.TotalPieceWeight);
         }
 
+        /// <summary>One weighted draw (Piece Swap booster) — no guarantee, mid-deal rules.</summary>
+        internal static DeterministicRng DrawSingle(DeterministicRng rng, LevelConfig config,
+            int[] weights, int totalWeight, out TrayPiece piece)
+        {
+            return DrawOne(rng, weights, totalWeight, config.DealColorCount, out piece);
+        }
+
         /// <summary>Effective-weight variant: the engine passes GDD 3.2 escalated weights here.</summary>
         internal static TrayDeal DealTrayWithGuaranteeRaw(DeterministicRng rng, LevelConfig config,
             Cell[] cells, int waterLevel, int[] weights, int totalWeight)

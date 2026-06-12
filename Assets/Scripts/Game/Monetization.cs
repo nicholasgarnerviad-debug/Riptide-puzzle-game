@@ -129,6 +129,9 @@ namespace Riptide.Game
                     meta.Voyage.CompletedCount, meta.Save.RemoveAds, afterDaily);
         }
 
+        /// <summary>ROADMAP M9: session count drives the remove-ads upsell moment.</summary>
+        public int InterstitialsShownThisSession { get; private set; }
+
         /// <summary>Shows when the GDD 6 caps allow; records the show into the save.</summary>
         public bool TryShowInterstitial(bool afterDaily, string placement, Action? onClosed = null)
         {
@@ -136,6 +139,8 @@ namespace Riptide.Game
             {
                 return false;
             }
+
+            InterstitialsShownThisSession++;
 
             var state = new InterstitialCapState(
                 meta.Save.LastInterstitialUnixSeconds,

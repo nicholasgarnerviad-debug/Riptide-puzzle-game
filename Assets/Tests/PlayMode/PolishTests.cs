@@ -49,6 +49,29 @@ namespace Riptide.PlayMode.Tests
         }
 
         [Test]
+        public void NotificationPlanner_ProtectsStreaks_AndAlwaysAnnouncesTheDaily()
+        {
+            var scheduler = new Riptide.Game.FakeNotificationScheduler();
+
+            scheduler.CancelAll();
+            foreach (var n in Riptide.Game.NotificationPlanner.Plan(attemptedToday: false, streak: 3))
+            {
+                scheduler.Schedule(n);
+            }
+
+            Assert.That(scheduler.Scheduled.Count, Is.EqualTo(2), "daily ping + streak risk");
+            Assert.That(scheduler.Scheduled[1].Kind, Is.EqualTo(Riptide.Game.NotificationKind.StreakRisk));
+            Assert.That(scheduler.Scheduled[1].HourLocal, Is.EqualTo(Riptide.Game.NotificationPlanner.StreakRiskHour));
+
+            var done = Riptide.Game.NotificationPlanner.Plan(attemptedToday: true, streak: 3);
+            Assert.That(done.Count, Is.EqualTo(1), "no nag once today's daily is played");
+            Assert.That(done[0].Kind, Is.EqualTo(Riptide.Game.NotificationKind.NewDaily));
+
+            var noStreak = Riptide.Game.NotificationPlanner.Plan(attemptedToday: false, streak: 0);
+            Assert.That(noStreak.Count, Is.EqualTo(1), "nothing to protect without a streak");
+        }
+
+        [Test]
         public void ReducedMotion_HalvesDurations_AndKillsStaggers()
         {
             int before = PlayerPrefs.GetInt("settings.reducedMotion.on", 0);

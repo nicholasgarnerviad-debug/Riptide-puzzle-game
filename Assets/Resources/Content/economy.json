@@ -1,4 +1,4 @@
-{
+﻿{
   "scoring": {
     "pointsPerCell": 1,
     "rowClearBase": 80,
@@ -63,12 +63,16 @@
     "rewardedChest": 50,
     "rewardedChestCapPerDay": 3,
     "dailyRetryCost": 100,
+    "continueCost": 150,
+    "endlessMilestoneEvery": 5,
+    "endlessMilestoneCoins": 15,
     "streakFreezeCost": 300
   },
   "boosters": {
     "drainPump": 150,
     "bubblePop": 100,
-    "newTide": 120
+    "newTide": 120,
+    "pieceSwap": 40
   },
   "ads": {
     "minLevelCompletions": 8,

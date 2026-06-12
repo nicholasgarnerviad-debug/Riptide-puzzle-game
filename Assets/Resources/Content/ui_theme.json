@@ -3,7 +3,7 @@
     "bg.abyss":        { "hex": "0A0E14" },
     "bg.deep":         { "hex": "0E141D" },
     "bg.surface":      { "hex": "131B27" },
-    "bg.raised":       { "hex": "1A2433" },
+    "bg.raised":       { "hex": "22304A" },
     "stroke.subtle":   { "hex": "243140" },
     "stroke.bright":   { "hex": "3A4D63" },
     "accent.primary":  { "hex": "3EE6E0" },

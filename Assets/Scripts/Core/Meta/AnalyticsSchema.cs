@@ -1,4 +1,4 @@
-namespace Riptide.Core
+﻿namespace Riptide.Core
 {
     /// <summary>
     /// GDD 8.5 event schema, verbatim. The Game-layer analytics service emits
@@ -16,6 +16,9 @@ namespace Riptide.Core
         public const string IapPurchase = "iap_purchase";
         public const string TidepoolPurchase = "tidepool_purchase";
         public const string TutorialStep = "tutorial_step";
+        public const string ContinueOffered = "continue_offered";
+        public const string ContinueUsed = "continue_used";
+        public const string ContinueDeclined = "continue_declined";
 
         public static readonly string[] LevelEndParams = { "zone", "level", "result", "moves", "stars", "maxWater", "rescues" };
         public static readonly string[] EndlessEndParams = { "placements", "tides", "score", "deathType" };

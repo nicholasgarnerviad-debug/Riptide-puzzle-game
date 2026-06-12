@@ -20,6 +20,57 @@ namespace Riptide.UI
 
         public const float PixelsPerUnit = 64f;
 
+        private static Sprite? vignette;
+        private static Sprite? verticalFade;
+
+        /// <summary>Soft radial edge-darkening overlay for menu depth (8-UI ambience).</summary>
+        public static Sprite Vignette()
+        {
+            if (vignette == null)
+            {
+                const int size = 128;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+                float half = (size - 1) * 0.5f;
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dist = Mathf.Sqrt((x - half) * (x - half) + (y - half) * (y - half)) / half;
+                        float alpha = Mathf.Clamp01((dist - 0.55f) / 0.6f);
+                        tex.SetPixel(x, y, new Color(0f, 0f, 0f, alpha * alpha));
+                    }
+                }
+
+                tex.Apply();
+                vignette = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+            }
+
+            return vignette;
+        }
+
+        /// <summary>White→transparent vertical fade; tint it for water bands and glows.</summary>
+        public static Sprite VerticalFade()
+        {
+            if (verticalFade == null)
+            {
+                const int h = 64;
+                var tex = new Texture2D(4, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+                for (int y = 0; y < h; y++)
+                {
+                    float a = 1f - (float)y / (h - 1);
+                    for (int x = 0; x < 4; x++)
+                    {
+                        tex.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+                    }
+                }
+
+                tex.Apply();
+                verticalFade = Sprite.Create(tex, new Rect(0, 0, 4, h), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+            }
+
+            return verticalFade;
+        }
+
         /// <summary>9-sliced rounded-rect fill for the board frame (spec §4.3 r.s corners).</summary>
         public static Sprite RoundedFill()
         {

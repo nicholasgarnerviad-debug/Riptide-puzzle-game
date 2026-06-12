@@ -7,16 +7,20 @@ using UnityEngine.UI;
 namespace Riptide.UI
 {
     /// <summary>
-    /// Spec §4.1 Home: type-based wordmark (until branded art), voyage continue as
-    /// the primary action, Endless, the Daily card with streak flame, Tidepool and
-    /// a settings ghost, coin counter + rewarded chest.
+    /// Spec §4.1 Home, hero-ified (ROADMAP M6): animated water band under the
+    /// wordmark, Voyage as a hero card with zone progress, the Daily card with
+    /// streak + readiness, Endless, and a slim utility row. Sections cascade in
+    /// per the §1.4 stagger grammar.
     /// </summary>
     public sealed class HomeScreen : MonoBehaviour, IScreenRefresh
     {
         private GameFlow flow = null!;
-        private Button voyage = null!;
-        private StreakFlame streak = null!;
         private CoinCounter coins = null!;
+        private StreakFlame streak = null!;
+        private TextMeshProUGUI voyageProgress = null!;
+        private ProgressPips zonePips = null!;
+        private TextMeshProUGUI dailyState = null!;
+        private RectTransform[] sections = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -24,40 +28,82 @@ namespace Riptide.UI
             var screen = root.gameObject.AddComponent<HomeScreen>();
             screen.flow = flow;
 
+            // Hero band: tinted fade + wordmark + bobbing foam strip.
+            RectTransform band = UiComponents.Rect(root, "band", Vector2.zero);
+            band.anchorMin = new Vector2(0f, 0.80f);
+            band.anchorMax = new Vector2(1f, 1f);
+            band.offsetMin = Vector2.zero;
+            band.offsetMax = Vector2.zero;
+            var bandImage = band.gameObject.AddComponent<Image>();
+            bandImage.sprite = SpriteFactory.VerticalFade();
+            bandImage.raycastTarget = false;
+            ThemedElement.Bind(band.gameObject, "water.calm.btm");
+            band.gameObject.AddComponent<HomeWaterBand>();
+
             TextMeshProUGUI wordmark = UiText.Create(root, "wordmark", flow.Strings.Get("app.title"),
                 "display", "accent.primary");
-            UiComponents.Place(wordmark.rectTransform, new Vector2(0.5f, 0.87f), new Vector2(900f, 140f));
+            wordmark.characterSpacing = 18f;
+            UiComponents.Place(wordmark.rectTransform, new Vector2(0.5f, 0.885f), new Vector2(900f, 130f));
 
             screen.coins = UiComponents.CoinCounterComponent(root);
-            UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.5f, 0.795f), new Vector2(300f, 72f));
+            UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.80f, 0.955f), new Vector2(300f, 64f));
 
-            screen.voyage = UiComponents.ButtonPrimary(root, "voyage", flow.Strings.Get("home.voyage"),
-                () => flow.GoTo(FlowScreen.ZoneMap));
-            UiComponents.Place((RectTransform)screen.voyage.transform, new Vector2(0.5f, 0.645f), new Vector2(680f, 140f));
+            // Voyage hero card.
+            RectTransform voyageCard = UiComponents.Card(root, "voyage", new Vector2(940f, 300f));
+            UiComponents.Place(voyageCard, new Vector2(0.5f, 0.665f), new Vector2(940f, 300f));
+            UiComponents.RoundedStrokeImage(voyageCard, "accent.deep", 32f);
+            TextMeshProUGUI voyageTitle = UiText.Create(voyageCard, "title",
+                flow.Strings.Get("home.voyage"), "title", "accent.primary");
+            UiComponents.Place(voyageTitle.rectTransform, new Vector2(0.5f, 0.74f), new Vector2(860f, 80f));
+            screen.voyageProgress = UiText.Create(voyageCard, "progress", "", "body", "text.secondary");
+            UiComponents.Place(screen.voyageProgress.rectTransform, new Vector2(0.5f, 0.46f), new Vector2(860f, 60f));
+            screen.zonePips = UiComponents.ProgressPipsComponent(voyageCard, 20);
+            UiComponents.Place((RectTransform)screen.zonePips.transform, new Vector2(0.5f, 0.20f), new Vector2(820f, 36f));
+            var voyageButton = voyageCard.gameObject.AddComponent<Button>();
+            voyageButton.onClick.AddListener(() => flow.GoTo(FlowScreen.ZoneMap));
+            voyageCard.gameObject.AddComponent<PressEffect>();
+
+            // Daily card.
+            RectTransform dailyCard = UiComponents.Card(root, "daily", new Vector2(940f, 220f));
+            UiComponents.Place(dailyCard, new Vector2(0.5f, 0.475f), new Vector2(940f, 220f));
+            TextMeshProUGUI dailyTitle = UiText.Create(dailyCard, "title",
+                flow.Strings.Get("home.daily"), "heading", "text.primary");
+            UiComponents.Place(dailyTitle.rectTransform, new Vector2(0.40f, 0.66f), new Vector2(620f, 70f));
+            screen.dailyState = UiText.Create(dailyCard, "state", "", "caption", "text.secondary");
+            UiComponents.Place(screen.dailyState.rectTransform, new Vector2(0.40f, 0.28f), new Vector2(620f, 50f));
+            screen.streak = UiComponents.StreakFlameComponent(dailyCard);
+            UiComponents.Place((RectTransform)screen.streak.transform, new Vector2(0.85f, 0.5f), new Vector2(200f, 64f));
+            var dailyButton = dailyCard.gameObject.AddComponent<Button>();
+            dailyButton.onClick.AddListener(() => flow.GoTo(FlowScreen.DailyIntro));
+            dailyCard.gameObject.AddComponent<PressEffect>();
 
             Button endless = UiComponents.ButtonSecondary(root, "endless", flow.Strings.Get("home.endless"),
                 flow.StartEndless);
-            UiComponents.Place((RectTransform)endless.transform, new Vector2(0.5f, 0.525f), new Vector2(680f, 130f));
-
-            Button daily = UiComponents.ButtonSecondary(root, "daily", flow.Strings.Get("home.daily"),
-                () => flow.GoTo(FlowScreen.DailyIntro));
-            UiComponents.Place((RectTransform)daily.transform, new Vector2(0.5f, 0.405f), new Vector2(680f, 130f));
-
-            screen.streak = UiComponents.StreakFlameComponent(root);
-            UiComponents.Place((RectTransform)screen.streak.transform, new Vector2(0.5f, 0.325f), new Vector2(240f, 64f));
+            UiComponents.Place((RectTransform)endless.transform, new Vector2(0.5f, 0.335f), new Vector2(940f, 120f));
 
             Button tidepool = UiComponents.ButtonSecondary(root, "tidepool", flow.Strings.Get("home.tidepool"),
                 () => flow.GoTo(FlowScreen.Tidepool));
-            UiComponents.Place((RectTransform)tidepool.transform, new Vector2(0.5f, 0.235f), new Vector2(680f, 120f));
+            UiComponents.Place((RectTransform)tidepool.transform, new Vector2(0.30f, 0.225f), new Vector2(520f, 110f));
+
+            Button chest = UiComponents.ButtonReward(root, "chest", flow.Strings.Get("home.chest"),
+                () => { flow.TryClaimChestViaAd(); screen.Refresh(); });
+            UiComponents.Place((RectTransform)chest.transform, new Vector2(0.745f, 0.225f), new Vector2(380f, 110f));
+
+            Button shop = UiComponents.ButtonGhost(root, "shop", flow.Strings.Get("shop.title"),
+                () => flow.GoTo(FlowScreen.Shop));
+            UiComponents.Place((RectTransform)shop.transform, new Vector2(0.30f, 0.125f), new Vector2(420f, 88f));
 
             Button settings = UiComponents.ButtonGhost(root, "settings", flow.Strings.Get("home.settings"),
                 () => flow.GoTo(FlowScreen.Settings));
-            UiComponents.Place((RectTransform)settings.transform, new Vector2(0.32f, 0.115f), new Vector2(420f, 92f));
+            UiComponents.Place((RectTransform)settings.transform, new Vector2(0.70f, 0.125f), new Vector2(420f, 88f));
 
-            // GDD 6: rewarded coin chest, capped 3/day by the save.
-            Button chest = UiComponents.ButtonReward(root, "chest", flow.Strings.Get("home.chest"),
-                () => { flow.TryClaimChestViaAd(); screen.Refresh(); });
-            UiComponents.Place((RectTransform)chest.transform, new Vector2(0.70f, 0.115f), new Vector2(430f, 105f));
+            screen.sections = new[]
+            {
+                wordmark.rectTransform, voyageCard, dailyCard,
+                (RectTransform)endless.transform, (RectTransform)tidepool.transform,
+                (RectTransform)chest.transform, (RectTransform)shop.transform,
+                (RectTransform)settings.transform,
+            };
 
             screen.Refresh();
             return root;
@@ -66,14 +112,61 @@ namespace Riptide.UI
         public void Refresh()
         {
             (int zone, int index) = flow.Meta.Voyage.NextLevel();
-            voyage.GetComponentInChildren<TextMeshProUGUI>().text = flow.Meta.Voyage.TotalStars == 0
+            voyageProgress.text = flow.Meta.Voyage.TotalStars == 0
                 ? flow.Strings.Get("home.voyage")
-                : string.Format(flow.Strings.Get("home.voyageContinue"), zone, index);
+                : string.Format(flow.Strings.Get("home.zoneProgress"), zone, index);
+
+            int completedInZone = Mathf.Clamp(index - 1, 0, 20);
+            zonePips.SetFilled(completedInZone);
+
+            dailyState.text = flow.Meta.CanAttemptDailyToday()
+                ? flow.Strings.Get("home.dailyReady")
+                : flow.Strings.Get("daily.attempted");
 
             int current = flow.Meta.Streak.Current;
             streak.gameObject.SetActive(current > 0);
             streak.Set(current, pulse: false);
             coins.SetInstant(flow.Meta.Coins);
+
+            if (isActiveAndEnabled && sections != null)
+            {
+                UiCascade.Run(this, sections);
+            }
+        }
+    }
+
+    /// <summary>The hero band's bobbing foam strip — pure ambience, parked when reduced.</summary>
+    internal sealed class HomeWaterBand : MonoBehaviour
+    {
+        private RectTransform foam = null!;
+        private float baseY;
+        private float time;
+
+        private void Start()
+        {
+            var foamGo = new GameObject("foam", typeof(RectTransform));
+            foamGo.transform.SetParent(transform, false);
+            foam = (RectTransform)foamGo.transform;
+            foam.anchorMin = new Vector2(0f, 0f);
+            foam.anchorMax = new Vector2(1f, 0f);
+            foam.sizeDelta = new Vector2(0f, 5f);
+            foam.anchoredPosition = new Vector2(0f, 8f);
+            baseY = 8f;
+            var image = foamGo.AddComponent<UnityEngine.UI.Image>();
+            image.sprite = SpriteFactory.Solid();
+            image.raycastTarget = false;
+            ThemedElement.Bind(foamGo, "water.foamLine");
+        }
+
+        private void Update()
+        {
+            if (ThemeRuntime.ReducedMotion || foam == null)
+            {
+                return;
+            }
+
+            time += Time.deltaTime;
+            foam.anchoredPosition = new Vector2(0f, baseY + Mathf.Sin(time * 0.9f) * 5f);
         }
     }
 

@@ -77,15 +77,34 @@ namespace Riptide.UI
             }
         }
 
+        private ContinueSheet? continueSheet;
+
         private void Update()
         {
-            // Run ended and the animation settled — hand over to results.
-            if (flow.Screen == FlowScreen.Playing
+            bool settled = flow.Screen == FlowScreen.Playing
                 && flow.Store != null
                 && flow.Store.State.Status.IsTerminal()
-                && (driver == null || !driver.IsAnimating)
-                && flow.LastOutcome != null)
+                && (driver == null || !driver.IsAnimating);
+
+            // ROADMAP M2: the continue offer intercepts results. Headless test
+            // boots (instantAnimations) auto-decline so bot flows never stall.
+            if (settled && flow.ContinueOfferPending)
             {
+                if (instantAnimations)
+                {
+                    flow.DeclineContinue();
+                }
+                else if (continueSheet == null || !continueSheet.Shown)
+                {
+                    continueSheet ??= ContinueSheet.Build(canvas.GetComponent<RectTransform>(), flow);
+                    continueSheet.Show();
+                }
+            }
+            else if (settled && !flow.ContinueOfferPending && flow.LastOutcome != null)
+            {
+                // Run ended and the animation settled — hand over to results.
+                // (LastOutcome may be stale from a previous run while an offer is
+                // pending — the pending check above is what makes this safe.)
                 flow.ShowOutcomeScreen();
             }
 
@@ -130,10 +149,27 @@ namespace Riptide.UI
             return Enum.TryParse(ids[ids.Count - 2], out FlowScreen parsed) ? parsed : null;
         }
 
-        /// <summary>§6.2: resuming mid-run never drops you straight back into the water.</summary>
+        private NotificationService? notifications;
+
+        /// <summary>§6.2: resuming mid-run never drops you straight back into the water.
+        /// Backgrounding also recomputes the local-notification plan (ROADMAP M8).</summary>
         private void OnApplicationPause(bool paused)
         {
-            if (!paused && flow != null && flow.Screen == FlowScreen.Playing)
+            if (flow == null)
+            {
+                return;
+            }
+
+            if (paused)
+            {
+#if RIPTIDE_NOTIFICATIONS
+                notifications ??= new NotificationService(new MobileNotificationScheduler());
+#else
+                notifications ??= new NotificationService(new FakeNotificationScheduler());
+#endif
+                notifications.Refresh(flow.Meta);
+            }
+            else if (flow.Screen == FlowScreen.Playing)
             {
                 ShowPause();
             }
@@ -250,6 +286,17 @@ namespace Riptide.UI
             if (screens.TryGetValue(screen, out RectTransform? root))
             {
                 root.gameObject.SetActive(true);
+
+                // A deactivation mid-transition kills the tween before its
+                // onComplete re-arms the group (e.g. the age gate diving into L1
+                // frames after boot) — a refreshed top is fully present, always.
+                var group = root.GetComponent<CanvasGroup>();
+                if (group != null)
+                {
+                    group.alpha = 1f;
+                    group.interactable = true;
+                }
+
                 Refresh(root);
             }
         }

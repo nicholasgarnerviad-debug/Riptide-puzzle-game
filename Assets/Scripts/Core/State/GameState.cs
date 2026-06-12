@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Riptide.Core
@@ -30,6 +30,13 @@ namespace Riptide.Core
         public GoalState Goals { get; }
         public GameStatus Status { get; }
 
+        /// <summary>
+        /// Continue ruling (DECISIONS 2026-06-11): set once the run's single
+        /// continue is spent. Deliberately EXCLUDED from StateHash — it only
+        /// gates ContinueMove legality, and replays carry the move itself.
+        /// </summary>
+        public bool ContinueUsed { get; }
+
         private GameState(
             LevelConfig config,
             Cell[] cells,
@@ -43,7 +50,8 @@ namespace Riptide.Core
             int traysDealt,
             DeterministicRng rng,
             GoalState goals,
-            GameStatus status)
+            GameStatus status,
+            bool continueUsed)
         {
             Config = config;
             this.cells = cells;
@@ -58,6 +66,7 @@ namespace Riptide.Core
             Rng = rng;
             Goals = goals;
             Status = status;
+            ContinueUsed = continueUsed;
         }
 
         /// <summary>Engine-only constructor: takes ownership of the arrays, trusts invariants.</summary>
@@ -74,10 +83,11 @@ namespace Riptide.Core
             int traysDealt,
             DeterministicRng rng,
             GoalState goals,
-            GameStatus status)
+            GameStatus status,
+            bool continueUsed = false)
         {
             return new GameState(config, cells, tray, waterLevel, tideCounter, score, comboChain,
-                rescueStreak, moveCount, traysDealt, rng, goals, status);
+                rescueStreak, moveCount, traysDealt, rng, goals, status, continueUsed);
         }
 
         /// <summary>GDD 2.6 step 0: start a new game (preset, initial deal, initial stuck check).</summary>
@@ -100,7 +110,8 @@ namespace Riptide.Core
             int traysDealt,
             DeterministicRng rng,
             GoalState goals,
-            GameStatus status)
+            GameStatus status,
+            bool continueUsed = false)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (cells == null) throw new ArgumentNullException(nameof(cells));
@@ -157,7 +168,7 @@ namespace Riptide.Core
             }
 
             return new GameState(config, cellCopy, trayCopy, waterLevel, tideCounter, score, comboChain,
-                rescueStreak, moveCount, traysDealt, rng, goals, status);
+                rescueStreak, moveCount, traysDealt, rng, goals, status, continueUsed);
         }
 
         public Cell CellAt(int col, int row)

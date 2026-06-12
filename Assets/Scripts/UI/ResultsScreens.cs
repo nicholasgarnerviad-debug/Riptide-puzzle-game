@@ -28,6 +28,7 @@ namespace Riptide.UI
         private Button next = null!;
         private Button retry = null!;
         private Button doubleCoins = null!;
+        private Button upsell = null!;
         private Image intro = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
@@ -64,7 +65,13 @@ namespace Riptide.UI
             UiComponents.Place((RectTransform)screen.retry.transform, new Vector2(0.5f, 0.075f), new Vector2(620f, 110f));
 
             Button home = UiComponents.ButtonGhost(root, "home", flow.Strings.Get("results.map"), screen.OnMap);
-            UiComponents.Place((RectTransform)home.transform, new Vector2(0.5f, 0.035f), new Vector2(420f, 84f));
+            UiComponents.Place((RectTransform)home.transform, new Vector2(0.5f, 0.03f), new Vector2(420f, 84f));
+
+            // ROADMAP M9: convert the annoyance moment — after the session's 2nd
+            // interstitial, one tap to never see them again.
+            screen.upsell = UiComponents.ButtonGhost(root, "upsell",
+                flow.Strings.Get("upsell.removeAds"), () => flow.GoTo(FlowScreen.Shop));
+            UiComponents.Place((RectTransform)screen.upsell.transform, new Vector2(0.5f, 0.085f), new Vector2(720f, 76f));
 
             // Full-screen intro overlay for the two lose moods (§4.4).
             RectTransform introRect = UiComponents.Rect(root, "intro", Vector2.zero);
@@ -185,6 +192,10 @@ namespace Riptide.UI
 
             doubleCoins.gameObject.SetActive(win && outcome.CoinsAwarded > 0 && !outcome.DoubledClaimed);
             doubleCoins.interactable = flow.Ads != null && flow.Ads.RewardedAvailable && !outcome.DoubledClaimed;
+
+            upsell.gameObject.SetActive(flow.Ads != null
+                && flow.Ads.InterstitialsShownThisSession >= 2
+                && (flow.Iap == null || !flow.Iap.RemoveAdsOwned));
 
             PlayIntro(outcome);
         }
@@ -312,7 +323,7 @@ namespace Riptide.UI
         private TextMeshProUGUI result = null!;
         private TextMeshProUGUI tides = null!;
         private ProgressPips pips = null!;
-        private TextMeshProUGUI card = null!;
+        private RectTransform cardPanel = null!;
         private TextMeshProUGUI streak = null!;
         private Button share = null!;
         private Button retry = null!;
@@ -320,9 +331,11 @@ namespace Riptide.UI
         private Button freeze = null!;
         private ScreenManager? manager;
         private RunOutcome? juicedOutcome;
+        private string previewRaw = "";
 
-        /// <summary>The preview text — tests assert it equals the Core golden verbatim.</summary>
-        public string PreviewText => card.text;
+        /// <summary>The share PAYLOAD — tests assert it equals the Core golden verbatim.
+        /// (The card renders it visually: square rows for the bar, bullets for emoji.)</summary>
+        public string PreviewText => previewRaw;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -342,10 +355,8 @@ namespace Riptide.UI
             screen.pips = UiComponents.ProgressPipsComponent(root, flow.Economy.Daily.SurviveTides);
             UiComponents.Place((RectTransform)screen.pips.transform, new Vector2(0.5f, 0.765f), new Vector2(820f, 40f));
 
-            RectTransform cardPanel = UiComponents.Card(root, "cardPanel", new Vector2(860f, 460f));
-            UiComponents.Place(cardPanel, new Vector2(0.5f, 0.585f), new Vector2(860f, 460f));
-            screen.card = UiText.Create(cardPanel, "card", "", "caption", "text.primary");
-            UiComponents.Stretch(screen.card.rectTransform);
+            screen.cardPanel = UiComponents.Card(root, "cardPanel", new Vector2(860f, 460f));
+            UiComponents.Place(screen.cardPanel, new Vector2(0.5f, 0.585f), new Vector2(860f, 460f));
 
             screen.streak = UiText.Create(root, "streak", "", "body", "text.secondary");
             UiComponents.Place(screen.streak.rectTransform, new Vector2(0.5f, 0.385f), new Vector2(800f, 60f));
@@ -398,6 +409,94 @@ namespace Riptide.UI
 
         private void OnRetryWithCoins() => flow.StartDailyRetryWithCoins();
 
+        /// <summary>
+        /// ROADMAP M7: render the share string as a composition — the 🟦/⬛ water
+        /// bar becomes colored squares, other emoji become bullets — so the
+        /// preview shows no tofu boxes while the PAYLOAD stays byte-identical.
+        /// </summary>
+        private void RenderPreview(string text)
+        {
+            foreach (Transform child in cardPanel)
+            {
+                if (child.name != "stroke")
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            string[] lines = text.Split('\n');
+            float y = 0.86f;
+            foreach (string line in lines)
+            {
+                if (line.Contains("\U0001F7E6") || line.IndexOf('⬛') >= 0)
+                {
+                    RenderBarRow(line, y);
+                }
+                else
+                {
+                    var sb = new System.Text.StringBuilder(line.Length);
+                    for (int i = 0; i < line.Length; i++)
+                    {
+                        if (char.IsSurrogate(line[i]))
+                        {
+                            if (!char.IsLowSurrogate(line[i]))
+                            {
+                                sb.Append('•');
+                            }
+                        }
+                        else if (line[i] > 0x2000 && line[i] != '·')
+                        {
+                            sb.Append('•');
+                        }
+                        else
+                        {
+                            sb.Append(line[i]);
+                        }
+                    }
+
+                    TextMeshProUGUI row = UiText.Create(cardPanel, "line", sb.ToString().Trim(),
+                        "caption", "text.primary");
+                    UiComponents.Place(row.rectTransform, new Vector2(0.5f, y), new Vector2(800f, 50f));
+                }
+
+                y -= 0.155f;
+            }
+        }
+
+        private void RenderBarRow(string line, float y)
+        {
+            var cells = new System.Collections.Generic.List<bool>(); // true = water
+            for (int i = 0; i < line.Length; i++)
+            {
+                if (char.IsHighSurrogate(line[i]) && i + 1 < line.Length)
+                {
+                    cells.Add(char.ConvertToUtf32(line[i], line[i + 1]) == 0x1F7E6);
+                    i++;
+                }
+                else if (line[i] == '⬛')
+                {
+                    cells.Add(false);
+                }
+            }
+
+            const float size = 44f;
+            float startX = -(cells.Count - 1) * 0.5f * (size + 8f);
+            for (int i = 0; i < cells.Count; i++)
+            {
+                var go = new GameObject($"bar{i}", typeof(RectTransform));
+                go.transform.SetParent(cardPanel, false);
+                var rt = (RectTransform)go.transform;
+                UiComponents.Place(rt, new Vector2(0.5f, y), new Vector2(size, size));
+                rt.anchoredPosition = new Vector2(startX + i * (size + 8f), rt.anchoredPosition.y);
+                var image = go.AddComponent<Image>();
+                image.sprite = SpriteFactory.RoundedFill();
+                image.type = Image.Type.Sliced;
+                image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 10f;
+                image.raycastTarget = false;
+                ThemedElement.Bind(go, cells[i] ? "water.calm.top" : "bg.raised");
+            }
+        }
+
         private void OnBuyFreeze()
         {
             if (flow.Meta.TryBuyStreakFreeze(flow.Economy.Coins.StreakFreezeCost))
@@ -420,7 +519,8 @@ namespace Riptide.UI
             tides.text = string.Format(flow.Strings.Get("daily.tides"),
                 Mathf.Min(outcome.TidesSurvived, target), target);
             pips.SetFilled(Mathf.Min(outcome.TidesSurvived, target));
-            card.text = outcome.ShareCardText;
+            previewRaw = outcome.ShareCardText;
+            RenderPreview(previewRaw);
             streak.text = string.Format(flow.Strings.Get("daily.streak"),
                 flow.Meta.Streak.Current, flow.Meta.Streak.Best);
 

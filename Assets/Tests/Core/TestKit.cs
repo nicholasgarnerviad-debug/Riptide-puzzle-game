@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Riptide.Core;
 
@@ -206,9 +206,10 @@ namespace Riptide.Core.Tests
       { ""days"": 7, ""award"": 200 }, { ""days"": 30, ""award"": 750 }, { ""days"": 100, ""award"": 2000 }
     ],
     ""endlessPersonalBest"": 50, ""rewardedChest"": 50, ""rewardedChestCapPerDay"": 3,
-    ""dailyRetryCost"": 100, ""streakFreezeCost"": 300
+    ""dailyRetryCost"": 100, ""streakFreezeCost"": 300,
+    ""continueCost"": 150, ""endlessMilestoneEvery"": 5, ""endlessMilestoneCoins"": 15
   },
-  ""boosters"": { ""drainPump"": 150, ""bubblePop"": 100, ""newTide"": 120 },
+  ""boosters"": { ""drainPump"": 150, ""bubblePop"": 100, ""newTide"": 120, ""pieceSwap"": 40 },
   ""ads"": { ""minLevelCompletions"": 8, ""minGapSeconds"": 150, ""maxPerDay"": 6 },
   ""bot"": {
     ""greedyHeuristic"": {

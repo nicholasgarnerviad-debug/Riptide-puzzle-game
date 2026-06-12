@@ -19,9 +19,28 @@ namespace Riptide.PlayMode.Tests
     /// </summary>
     public sealed class UiClickTests
     {
-        [UnityTest]
-        public IEnumerator InputModule_IsArmed_AndButtonsRespondToRaycastClicks()
+        private static void WipeMeta()
         {
+            foreach (string key in new[]
+            {
+                "riptide.voyage", "riptide.streak", "riptide.endless.best",
+                "riptide.daily.attemptDay", "riptide.daily.retryUsed",
+            })
+            {
+                PlayerPrefs.DeleteKey(key);
+            }
+
+            string savePath = System.IO.Path.Combine(Application.persistentDataPath, "riptide_save.json");
+            if (System.IO.File.Exists(savePath))
+            {
+                System.IO.File.Delete(savePath);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator InputModule_IsArmed_GateDivesIntoL1_AndHomeButtonsClick()
+        {
+            WipeMeta(); // virgin profile: the gate's Continue must dive into L1
             PlayerPrefs.DeleteKey(ConsentAgeGate.BirthYearKey); // force the gate
             (GameFlow flow, ScreenManager screens) = GameBootstrap.CreateApp(instantAnimations: true);
             yield return null;
@@ -33,13 +52,18 @@ namespace Riptide.PlayMode.Tests
             Assert.That(module!.actionsAsset, Is.Not.Null, "module has actions (AssignDefaultActions)");
             Assert.That(module.point?.action?.enabled, Is.True, "pointer action enabled");
 
-            // Age gate: Continue must be reachable by raycast and close the gate.
+            // Age gate: Continue must be reachable by raycast, close the gate, and
+            // (ROADMAP M1) launch a virgin profile straight into z1-l1.
             Assert.That(screens.AgeGateOpen, Is.True, "first-run gate up");
             Click("confirm");
             Assert.That(screens.AgeGateOpen, Is.False, "Continue closes the gate");
+            yield return null;
+            Assert.That(flow.Screen, Is.EqualTo(FlowScreen.Playing), "M1: virgin profile dives into L1");
+            Assert.That(flow.Mode, Is.EqualTo(GameMode.Voyage));
 
-            // Home: wait out the t.screen entrance (CanvasGroup is non-interactable
-            // mid-transition by design), then Voyage must navigate.
+            // Back out to Home, wait out the entrance transition, then the voyage
+            // hero card must navigate on a raycast click.
+            flow.GoTo(FlowScreen.Home);
             float wait = ThemeRuntime.Seconds("t.screen") + 0.25f;
             float until = Time.realtimeSinceStartup + wait;
             while (Time.realtimeSinceStartup < until)
@@ -48,9 +72,10 @@ namespace Riptide.PlayMode.Tests
             }
 
             Click("voyage");
-            Assert.That(flow.Screen, Is.EqualTo(FlowScreen.ZoneMap), "Voyage click navigates to the map");
+            Assert.That(flow.Screen, Is.EqualTo(FlowScreen.ZoneMap), "voyage card navigates to the map");
 
             PlayerPrefs.DeleteKey(ConsentAgeGate.BirthYearKey);
+            WipeMeta();
             Object.Destroy(screens.transform.parent != null ? screens.transform.parent.gameObject : screens.gameObject);
         }
 

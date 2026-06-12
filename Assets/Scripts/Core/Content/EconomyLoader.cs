@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Riptide.Core
@@ -86,12 +86,14 @@ namespace Riptide.Core
         public int DrainPump { get; }
         public int BubblePop { get; }
         public int NewTide { get; }
+        public int PieceSwap { get; }
 
-        public BoosterPrices(int drainPump, int bubblePop, int newTide)
+        public BoosterPrices(int drainPump, int bubblePop, int newTide, int pieceSwap)
         {
             DrainPump = drainPump;
             BubblePop = bubblePop;
             NewTide = newTide;
+            PieceSwap = pieceSwap;
         }
     }
 
@@ -108,10 +110,14 @@ namespace Riptide.Core
         public int RewardedChestCapPerDay { get; }
         public int DailyRetryCost { get; }
         public int StreakFreezeCost { get; }
+        public int ContinueCost { get; }
+        public int EndlessMilestoneEvery { get; }
+        public int EndlessMilestoneCoins { get; }
 
         public CoinsConfig(int levelCompleteBase, int levelCompletePerBand, int levelCompletePerStar,
             int dailyComplete, IReadOnlyList<(int, int)> streakMilestones, int endlessPersonalBest,
-            int rewardedChest, int rewardedChestCapPerDay, int dailyRetryCost, int streakFreezeCost)
+            int rewardedChest, int rewardedChestCapPerDay, int dailyRetryCost, int streakFreezeCost,
+            int continueCost, int endlessMilestoneEvery, int endlessMilestoneCoins)
         {
             LevelCompleteBase = levelCompleteBase;
             LevelCompletePerBand = levelCompletePerBand;
@@ -123,6 +129,9 @@ namespace Riptide.Core
             RewardedChestCapPerDay = rewardedChestCapPerDay;
             DailyRetryCost = dailyRetryCost;
             StreakFreezeCost = streakFreezeCost;
+            ContinueCost = continueCost;
+            EndlessMilestoneEvery = endlessMilestoneEvery;
+            EndlessMilestoneCoins = endlessMilestoneCoins;
         }
     }
 
@@ -291,7 +300,8 @@ namespace Riptide.Core
                 var boosterPrices = new BoosterPrices(
                     RequirePositive(boosters, "drainPump"),
                     RequirePositive(boosters, "bubblePop"),
-                    RequirePositive(boosters, "newTide"));
+                    RequirePositive(boosters, "newTide"),
+                    RequirePositive(boosters, "pieceSwap"));
 
                 JsonObject ads = root.Require("ads").AsObject();
                 var adsConfig = new AdsConfig(
@@ -309,7 +319,10 @@ namespace Riptide.Core
                     RequireNonNegative(coins, "rewardedChest"),
                     RequireNonNegative(coins, "rewardedChestCapPerDay"),
                     RequirePositive(coins, "dailyRetryCost"),
-                    RequirePositive(coins, "streakFreezeCost"));
+                    RequirePositive(coins, "streakFreezeCost"),
+                    RequirePositive(coins, "continueCost"),
+                    RequirePositive(coins, "endlessMilestoneEvery"),
+                    RequireNonNegative(coins, "endlessMilestoneCoins"));
 
                 var heuristicWeights = new GreedyHeuristicWeights(
                     RequireNonNegative(heuristic, "clears"),

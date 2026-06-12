@@ -83,6 +83,7 @@ namespace Riptide.Core
         FreeNewTide,
         CoinChest,
         DoubleCoins,
+        ContinueRun,
     }
 
     /// <summary>

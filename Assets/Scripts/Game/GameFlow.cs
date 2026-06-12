@@ -30,6 +30,7 @@ namespace Riptide.Game
         DrainPump,
         BubblePop,
         NewTide,
+        PieceSwap,
     }
 
     /// <summary>Everything the results screens need, computed once when a run ends.</summary>
@@ -81,6 +82,15 @@ namespace Riptide.Game
         public event Action<FlowScreen>? ScreenChanged;
         public event Action? RunStarted;
 
+        /// <summary>Endless milestone crossed (ROADMAP M4): tides survived, for the HUD pop.</summary>
+        public event Action<int>? MilestoneReached;
+
+        /// <summary>
+        /// Continue ruling (ROADMAP M2): a drowned board is holding for the offer —
+        /// results are deferred until the player resolves or declines it.
+        /// </summary>
+        public bool ContinueOfferPending { get; private set; }
+
         public AnalyticsService Analytics { get; private set; } = new AnalyticsService();
         public AdService? Ads { get; private set; }
         public IapService? Iap { get; private set; }
@@ -121,6 +131,7 @@ namespace Riptide.Game
         {
             BoosterKind.DrainPump => Economy.Boosters.DrainPump,
             BoosterKind.BubblePop => Economy.Boosters.BubblePop,
+            BoosterKind.PieceSwap => Economy.Boosters.PieceSwap,
             _ => Economy.Boosters.NewTide,
         };
 
@@ -154,7 +165,7 @@ namespace Riptide.Game
                 return false;
             }
 
-            if (kind == BoosterKind.BubblePop && !target.HasValue)
+            if ((kind == BoosterKind.BubblePop || kind == BoosterKind.PieceSwap) && !target.HasValue)
             {
                 return false;
             }
@@ -163,6 +174,7 @@ namespace Riptide.Game
             {
                 BoosterKind.DrainPump => new DrainPumpMove(),
                 BoosterKind.BubblePop => new BubblePopMove(target ?? default),
+                BoosterKind.PieceSwap => new PieceSwapMove(target?.Col ?? 0),
                 _ => new NewTideMove(),
             };
 
@@ -384,6 +396,7 @@ namespace Riptide.Game
             runRescues = 0;
             freeDrainUsedThisRun = false;
             freeNewTideUsedThisRun = false;
+            ContinueOfferPending = false;
 
             if (Mode == GameMode.Voyage && CurrentLevel != null)
             {
@@ -419,10 +432,91 @@ namespace Riptide.Game
                 }
             }
 
+            // ROADMAP M4: endless milestone pops as the tide is survived.
+            if (Mode == GameMode.Endless && result.Events.TideRose
+                && Economy.Coins.EndlessMilestoneEvery > 0
+                && result.Next.Goals.TidesSurvived > 0
+                && result.Next.Goals.TidesSurvived % Economy.Coins.EndlessMilestoneEvery == 0)
+            {
+                MilestoneReached?.Invoke(result.Next.Goals.TidesSurvived);
+            }
+
             if (result.Next.Status.IsTerminal())
             {
-                FinishRun(result.Next);
+                if (CanOfferContinue(result.Next))
+                {
+                    // ROADMAP M2: hold the results — the player gets one offer.
+                    ContinueOfferPending = true;
+                    Analytics.Log(AnalyticsSchema.ContinueOffered, ("mode", Mode.ToString()));
+                }
+                else
+                {
+                    FinishRun(result.Next);
+                }
             }
+        }
+
+        /// <summary>Continue ruling: drowned, unspent, boosters-allowed mode, and payable.</summary>
+        private bool CanOfferContinue(GameState final) =>
+            final.Status == GameStatus.LostDrowned
+            && !final.ContinueUsed
+            && Mode != GameMode.Daily
+            && final.Config.BoostersAllowed
+            && (ContinueAdAvailable || Meta.CanAfford(Economy.Coins.ContinueCost));
+
+        public bool ContinueAdAvailable => Ads != null && Ads.RewardedAvailable;
+
+        public bool TryContinueViaAd()
+        {
+            if (!ContinueOfferPending || Ads == null || !Ads.RewardedAvailable)
+            {
+                return false;
+            }
+
+            return Ads.ShowRewarded(RewardedPlacementId.ContinueRun, onPaid: () => DispatchContinue("ad"));
+        }
+
+        public bool TryContinueWithCoins()
+        {
+            if (!ContinueOfferPending || !Meta.TrySpendCoins(Economy.Coins.ContinueCost))
+            {
+                return false;
+            }
+
+            Meta.SaveNow();
+            DispatchContinue("coins");
+            return true;
+        }
+
+        public void DeclineContinue()
+        {
+            if (!ContinueOfferPending)
+            {
+                return;
+            }
+
+            ContinueOfferPending = false;
+            Analytics.Log(AnalyticsSchema.ContinueDeclined, ("mode", Mode.ToString()));
+            FinishRun(Store!.State);
+        }
+
+        private void DispatchContinue(string method)
+        {
+            ContinueOfferPending = false;
+            try
+            {
+                if (Store!.TryDispatch(new ContinueMove()))
+                {
+                    Analytics.Log(AnalyticsSchema.ContinueUsed, ("method", method), ("mode", Mode.ToString()));
+                    return;
+                }
+            }
+            catch (InvalidMoveException)
+            {
+            }
+
+            // The sim refused (already used / not drowned) — fall through to results.
+            FinishRun(Store!.State);
         }
 
         private void FinishRun(GameState final)
@@ -446,11 +540,10 @@ namespace Riptide.Game
                     break;
                 case GameMode.Endless:
                     outcome.NewEndlessBest = Meta.RecordEndlessScore(final.Score);
-                    if (outcome.NewEndlessBest)
-                    {
-                        outcome.CoinsAwarded = Economy.Coins.EndlessPersonalBest;
-                    }
-
+                    // ROADMAP M4: banked milestones pay out with the run.
+                    outcome.CoinsAwarded =
+                        CoinRules.EndlessMilestoneAward(Economy.Coins, final.Goals.TidesSurvived)
+                        + (outcome.NewEndlessBest ? Economy.Coins.EndlessPersonalBest : 0);
                     break;
                 case GameMode.Daily:
                     FinishDaily(outcome);

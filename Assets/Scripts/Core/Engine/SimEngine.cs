@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Riptide.Core
@@ -78,6 +78,14 @@ namespace Riptide.Core
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
             if (move == null) throw new ArgumentNullException(nameof(move));
+
+            // The continue is the one move that legally enters a terminal state —
+            // its own validation insists that state is LostDrowned (ruling 2026-06-11).
+            if (move is ContinueMove)
+            {
+                return ApplyContinue(state);
+            }
+
             if (state.Status.IsTerminal())
             {
                 throw new InvalidMoveException($"Game is over ({state.Status}).");
@@ -89,6 +97,7 @@ namespace Riptide.Core
                 DrainPumpMove => ApplyDrainPump(state),
                 BubblePopMove pop => ApplyBubblePop(state, pop),
                 NewTideMove => ApplyNewTide(state),
+                PieceSwapMove swap => ApplyPieceSwap(state, swap),
                 _ => throw new InvalidMoveException($"Unsupported move type {move.GetType().Name}."),
             };
         }
@@ -111,7 +120,7 @@ namespace Riptide.Core
             return BuildResult(s.Config, s.CopyCells(), s.CopyTray(), water, s.TideCounter, s.Score,
                 s.ComboChain, s.RescueStreak, s.MoveCount, s.TraysDealt, s.Rng, s.Goals, s.Status,
                 s.WaterLevel, NoPos, new int[0], NoPos, NoPos, NoCreatures, NoCreatures, NoCreatures,
-                drained, false, NoTray, 0, 0, 0, 0, 0, 0);
+                drained, false, NoTray, 0, 0, 0, 0, 0, 0, s.ContinueUsed);
         }
 
         /// <summary>GDD 5.3 Bubble Pop: deletes one Block or Coral cell anywhere (never a creature).</summary>
@@ -129,7 +138,7 @@ namespace Riptide.Core
             return BuildResult(s.Config, cells, s.CopyTray(), s.WaterLevel, s.TideCounter, s.Score,
                 s.ComboChain, s.RescueStreak, s.MoveCount, s.TraysDealt, s.Rng, s.Goals, s.Status,
                 s.WaterLevel, NoPos, new int[0], NoPos, new[] { move.Target }, NoCreatures, NoCreatures, NoCreatures,
-                0, false, NoTray, 0, 0, 0, 0, 0, 0);
+                0, false, NoTray, 0, 0, 0, 0, 0, 0, s.ContinueUsed);
         }
 
         /// <summary>
@@ -171,7 +180,97 @@ namespace Riptide.Core
             return BuildResult(s.Config, cells, tray, s.WaterLevel, s.TideCounter, s.Score,
                 s.ComboChain, s.RescueStreak, s.MoveCount, traysDealt, rng, s.Goals, status,
                 s.WaterLevel, NoPos, new int[0], NoPos, NoPos, NoCreatures, NoCreatures, spawnedCreatures,
-                0, false, deal.Pieces, 0, 0, 0, 0, 0, 0);
+                0, false, deal.Pieces, 0, 0, 0, 0, 0, 0, s.ContinueUsed);
+        }
+
+        /// <summary>
+        /// Continue ruling (DECISIONS 2026-06-11): from LostDrowned only, once per
+        /// run — water −3 floored at minWaterLevel, fresh guaranteed tray at
+        /// current escalation weights (a dealt tray: spawn cadence applies),
+        /// tide counter reset, combo broken. Score and MoveCount untouched.
+        /// BoostersAllowed gates it so the Daily's purity stays locked (GDD 5.3
+        /// is the one config bit that marks the Daily, and the ruling says never
+        /// Daily). The fresh tray can still leave the board stuck — a fair loss.
+        /// </summary>
+        private static MoveResult ApplyContinue(GameState s)
+        {
+            if (s.Status != GameStatus.LostDrowned)
+            {
+                throw new InvalidMoveException($"Continue requires a drowned board, not {s.Status}.");
+            }
+
+            if (s.ContinueUsed)
+            {
+                throw new InvalidMoveException("The run's single continue is already spent.");
+            }
+
+            RequireBoosters(s);
+
+            int waterBefore = s.WaterLevel;
+            int water = Math.Max(waterBefore - 3, s.Config.MinWaterLevel);
+            int drained = waterBefore - water;
+
+            Cell[] cells = s.CopyCells();
+            var tray = new TrayPiece?[BoardSpec.TraySize];
+            DeterministicRng rng = s.Rng;
+            int traysDealt = s.TraysDealt;
+
+            int[] weights = EscalationRules.EffectiveWeights(s.Config, s.MoveCount, out int totalWeight);
+            TrayDeal deal = Dealer.DealTrayWithGuaranteeRaw(rng, s.Config, cells, water, weights, totalWeight);
+            rng = deal.Rng;
+            for (int i = 0; i < BoardSpec.TraySize; i++)
+            {
+                tray[i] = deal.Pieces[i];
+            }
+
+            traysDealt += 1;
+            CreatureEvent? spawned = null;
+            if (ShouldSpawn(s.Config, traysDealt))
+            {
+                rng = TrySpawnCreature(cells, water, s.Config, rng, out spawned);
+            }
+
+            GameStatus status = PlacementValidator.AnyTrayPlacementExistsRaw(cells, water, tray)
+                ? GameStatus.InProgress
+                : GameStatus.LostStuck;
+
+            IReadOnlyList<CreatureEvent> spawnedCreatures = spawned.HasValue
+                ? new[] { spawned.Value }
+                : NoCreatures;
+
+            return BuildResult(s.Config, cells, tray, water, 0, s.Score,
+                0, s.RescueStreak, s.MoveCount, traysDealt, rng, s.Goals, status,
+                waterBefore, NoPos, new int[0], NoPos, NoPos, NoCreatures, NoCreatures, spawnedCreatures,
+                drained, false, deal.Pieces, 0, 0, 0, 0, 0, 0, continueUsed: true);
+        }
+
+        /// <summary>
+        /// Piece Swap ruling (DECISIONS 2026-06-11): one occupied slot, one fresh
+        /// deterministic draw at current escalation weights. Not a placement; the
+        /// swap can remove the only fitting piece — stuck is checked like a deal.
+        /// </summary>
+        private static MoveResult ApplyPieceSwap(GameState s, PieceSwapMove move)
+        {
+            RequireBoosters(s);
+            if (!s.TrayAt(move.TraySlot).HasValue)
+            {
+                throw new InvalidMoveException($"Piece Swap needs an occupied slot; slot {move.TraySlot} is empty.");
+            }
+
+            Cell[] cells = s.CopyCells();
+            TrayPiece?[] tray = s.CopyTray();
+            int[] weights = EscalationRules.EffectiveWeights(s.Config, s.MoveCount, out int totalWeight);
+            DeterministicRng rng = Dealer.DrawSingle(s.Rng, s.Config, weights, totalWeight, out TrayPiece fresh);
+            tray[move.TraySlot] = fresh;
+
+            GameStatus status = PlacementValidator.AnyTrayPlacementExistsRaw(cells, s.WaterLevel, tray)
+                ? GameStatus.InProgress
+                : GameStatus.LostStuck;
+
+            return BuildResult(s.Config, cells, tray, s.WaterLevel, s.TideCounter, s.Score,
+                s.ComboChain, s.RescueStreak, s.MoveCount, s.TraysDealt, rng, s.Goals, status,
+                s.WaterLevel, NoPos, new int[0], NoPos, NoPos, NoCreatures, NoCreatures, NoCreatures,
+                0, false, new[] { fresh }, 0, 0, 0, 0, 0, 0, s.ContinueUsed);
         }
 
         private static MoveResult ApplyPlace(GameState s, PlaceMove move)
@@ -289,7 +388,7 @@ namespace Riptide.Core
                     moveCount, traysDealt, rng, goals, GameStatus.Won, waterBefore,
                     placed, clearedRows, NoPos, NoPos, rescuedCreatures, NoCreatures, NoCreatures,
                     drainAmount, false, NoTray,
-                    placementPoints, clearPoints, rescuePoints, 0, 0, comboHalves);
+                    placementPoints, clearPoints, rescuePoints, 0, 0, comboHalves, s.ContinueUsed);
             }
 
             // ---------------- GDD 2.6 STEP 3: tide tick (drain already resolved in step 2) ----------------
@@ -353,7 +452,7 @@ namespace Riptide.Core
                     moveCount, traysDealt, rng, goals, GameStatus.LostCreature, waterBefore,
                     placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                     drainAmount, tideRose, NoTray,
-                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves);
+                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves, s.ContinueUsed);
             }
 
             // ---------------- GDD 2.6 STEP 4: drown check ----------------
@@ -364,7 +463,7 @@ namespace Riptide.Core
                     moveCount, traysDealt, rng, goals, GameStatus.LostDrowned, waterBefore,
                     placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                     drainAmount, tideRose, NoTray,
-                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves);
+                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves, s.ContinueUsed);
             }
 
             int tideSurvivalPoints = 0;
@@ -386,7 +485,7 @@ namespace Riptide.Core
                         moveCount, traysDealt, rng, goals, GameStatus.Won, waterBefore,
                         placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                         drainAmount, true, NoTray,
-                        placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves);
+                        placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves, s.ContinueUsed);
                 }
             }
 
@@ -427,7 +526,7 @@ namespace Riptide.Core
                 moveCount, traysDealt, rng, goals, status, waterBefore,
                 placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, spawnedCreatures,
                 drainAmount, tideRose, dealtPieces,
-                placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves);
+                placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves, s.ContinueUsed);
         }
 
         private static bool ShouldSpawn(LevelConfig config, int traysDealt) =>
@@ -508,10 +607,11 @@ namespace Riptide.Core
             int rescuePoints,
             int tideSurvivalPoints,
             int penaltyPoints,
-            int comboHalves)
+            int comboHalves,
+            bool continueUsed)
         {
             GameState next = GameState.CreateOwned(cfg, cells, tray, water, tideCounter, score, comboChain,
-                rescueStreak, moveCount, traysDealt, rng, goals, status);
+                rescueStreak, moveCount, traysDealt, rng, goals, status, continueUsed);
 
             var scoring = new ScoreBreakdown(placementPoints, clearPoints, rescuePoints, tideSurvivalPoints,
                 penaltyPoints, comboHalves);

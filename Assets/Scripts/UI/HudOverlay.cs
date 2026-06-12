@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Riptide.Core;
 using Riptide.Game;
 using UnityEngine;
@@ -18,13 +18,17 @@ namespace Riptide.UI
         private Text score = null!;
         private Text coins = null!;
         private Text popHint = null!;
+        private Text milestoneLabel = null!;
         private Button drainButton = null!;
         private Button popButton = null!;
         private Button rerollButton = null!;
+        private Button swapButton = null!;
         private Button freeDrain = null!;
         private Button freeReroll = null!;
         private bool popArmed;
+        private bool swapArmed;
         private bool pointerWasDown;
+        private float milestoneUntil;
 
         public static HudOverlay Create(RectTransform canvasRoot, GameFlow flow, System.Action? onPause = null)
         {
@@ -61,19 +65,27 @@ namespace Riptide.UI
 
             // Spec §4.3 item 4: booster rail right-aligned ABOVE the tray strip.
             hud.drainButton = UiKit.TextButton(root, "drain", "", 28, () => hud.UseSimpleBooster(BoosterKind.DrainPump));
-            UiKit.Place((RectTransform)hud.drainButton.transform, new Vector2(0.86f, 0.345f), new Vector2(250f, 80f), Vector2.zero);
+            UiKit.Place((RectTransform)hud.drainButton.transform, new Vector2(0.86f, 0.385f), new Vector2(250f, 80f), Vector2.zero);
             hud.popButton = UiKit.TextButton(root, "pop", "", 28, hud.TogglePopMode);
-            UiKit.Place((RectTransform)hud.popButton.transform, new Vector2(0.86f, 0.290f), new Vector2(250f, 80f), Vector2.zero);
+            UiKit.Place((RectTransform)hud.popButton.transform, new Vector2(0.86f, 0.335f), new Vector2(250f, 80f), Vector2.zero);
             hud.rerollButton = UiKit.TextButton(root, "reroll", "", 28, () => hud.UseSimpleBooster(BoosterKind.NewTide));
-            UiKit.Place((RectTransform)hud.rerollButton.transform, new Vector2(0.86f, 0.235f), new Vector2(250f, 80f), Vector2.zero);
+            UiKit.Place((RectTransform)hud.rerollButton.transform, new Vector2(0.86f, 0.285f), new Vector2(250f, 80f), Vector2.zero);
+            hud.swapButton = UiKit.TextButton(root, "swap", "", 28, hud.ToggleSwapMode);
+            UiKit.Place((RectTransform)hud.swapButton.transform, new Vector2(0.86f, 0.235f), new Vector2(250f, 80f), Vector2.zero);
+
+            // ROADMAP M4: endless milestone pop.
+            hud.milestoneLabel = UiKit.Label(root, "milestone", "", 34, Palette.MeterFilled);
+            UiKit.Place(hud.milestoneLabel.rectTransform, new Vector2(0.5f, 0.30f), new Vector2(800f, 60f), Vector2.zero);
+            hud.milestoneLabel.gameObject.SetActive(false);
+            flow.MilestoneReached += hud.OnMilestone;
 
             // GDD 5.3: one free Drain Pump and one free New Tide per game via rewarded ad.
             hud.freeDrain = UiKit.TextButton(root, "freeDrain", "▶ ad", 24,
                 () => { flow.TryFreeBoosterViaAd(BoosterKind.DrainPump); hud.RefreshFromState(); });
-            UiKit.Place((RectTransform)hud.freeDrain.transform, new Vector2(0.965f, 0.345f), new Vector2(90f, 80f), Vector2.zero);
+            UiKit.Place((RectTransform)hud.freeDrain.transform, new Vector2(0.965f, 0.385f), new Vector2(90f, 80f), Vector2.zero);
             hud.freeReroll = UiKit.TextButton(root, "freeReroll", "▶ ad", 24,
                 () => { flow.TryFreeBoosterViaAd(BoosterKind.NewTide); hud.RefreshFromState(); });
-            UiKit.Place((RectTransform)hud.freeReroll.transform, new Vector2(0.965f, 0.235f), new Vector2(90f, 80f), Vector2.zero);
+            UiKit.Place((RectTransform)hud.freeReroll.transform, new Vector2(0.965f, 0.285f), new Vector2(90f, 80f), Vector2.zero);
 
             hud.popHint = UiKit.Label(root, "popHint", flow.Strings.Get("booster.popHint"), 32, Palette.MeterDanger);
             UiKit.Place(hud.popHint.rectTransform, new Vector2(0.5f, 0.91f), new Vector2(800f, 60f), Vector2.zero);
@@ -101,7 +113,30 @@ namespace Riptide.UI
             if (flow != null)
             {
                 flow.RunStarted -= RefreshFromState;
+                flow.MilestoneReached -= OnMilestone;
             }
+        }
+
+        private void OnMilestone(int tides)
+        {
+            milestoneLabel.text = string.Format(flow.Strings.Get("hud.milestone"),
+                tides, flow.Economy.Coins.EndlessMilestoneCoins);
+            milestoneLabel.gameObject.SetActive(true);
+            milestoneUntil = Time.realtimeSinceStartup + 2.4f;
+            UiJuice.Play("streak");
+        }
+
+        private void ToggleSwapMode()
+        {
+            if (!flow.CanUseBooster(BoosterKind.PieceSwap))
+            {
+                return;
+            }
+
+            swapArmed = !swapArmed;
+            popArmed = false;
+            popHint.text = flow.Strings.Get(swapArmed ? "booster.swapHint" : "booster.popHint");
+            popHint.gameObject.SetActive(swapArmed);
         }
 
         private void OnMove(Move move, MoveResult result) => RefreshFromState();
@@ -109,6 +144,7 @@ namespace Riptide.UI
         private void OnReset(GameState state)
         {
             popArmed = false;
+            swapArmed = false;
             popHint.gameObject.SetActive(false);
             RefreshFromState();
         }
@@ -116,6 +152,7 @@ namespace Riptide.UI
         private void UseSimpleBooster(BoosterKind kind)
         {
             popArmed = false;
+            swapArmed = false;
             popHint.gameObject.SetActive(false);
             flow.TryUseBooster(kind);
             RefreshFromState();
@@ -129,12 +166,19 @@ namespace Riptide.UI
             }
 
             popArmed = !popArmed;
+            swapArmed = false;
+            popHint.text = flow.Strings.Get("booster.popHint");
             popHint.gameObject.SetActive(popArmed);
         }
 
         private void Update()
         {
-            if (!popArmed)
+            if (milestoneLabel.gameObject.activeSelf && Time.realtimeSinceStartup > milestoneUntil)
+            {
+                milestoneLabel.gameObject.SetActive(false);
+            }
+
+            if (!popArmed && !swapArmed)
             {
                 return;
             }
@@ -151,13 +195,31 @@ namespace Riptide.UI
                 Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
                 Vector2 screen = pointer.position.ReadValue();
                 Vector3 world = cam.ScreenToWorldPoint(new Vector3(screen.x, screen.y, -cam.transform.position.z));
-                if (BoardLayout.TrySnap(world, 0.5f, out int col, out int row))
+                if (popArmed && BoardLayout.TrySnap(world, 0.5f, out int col, out int row))
                 {
                     if (flow.TryUseBooster(BoosterKind.BubblePop, new GridPos(col, row)))
                     {
                         popArmed = false;
                         popHint.gameObject.SetActive(false);
                         RefreshFromState();
+                    }
+                }
+                else if (swapArmed)
+                {
+                    // ROADMAP M3: armed-tap a tray slot to swap that piece.
+                    for (int slot = 0; slot < BoardSpec.TraySize; slot++)
+                    {
+                        if (Vector2.Distance(world, BoardLayout.TraySlotCenter(slot)) <= 1.1f)
+                        {
+                            if (flow.TryUseBooster(BoosterKind.PieceSwap, new GridPos(slot, 0)))
+                            {
+                                swapArmed = false;
+                                popHint.gameObject.SetActive(false);
+                                RefreshFromState();
+                            }
+
+                            break;
+                        }
                     }
                 }
             }
@@ -180,6 +242,7 @@ namespace Riptide.UI
             drainButton.gameObject.SetActive(boosters);
             popButton.gameObject.SetActive(boosters);
             rerollButton.gameObject.SetActive(boosters);
+            swapButton.gameObject.SetActive(boosters);
             if (boosters)
             {
                 drainButton.GetComponentInChildren<Text>().text =
@@ -188,9 +251,12 @@ namespace Riptide.UI
                     string.Format(flow.Strings.Get("booster.bubblePop"), flow.BoosterCost(BoosterKind.BubblePop));
                 rerollButton.GetComponentInChildren<Text>().text =
                     string.Format(flow.Strings.Get("booster.newTide"), flow.BoosterCost(BoosterKind.NewTide));
+                swapButton.GetComponentInChildren<Text>().text =
+                    string.Format(flow.Strings.Get("booster.pieceSwap"), flow.BoosterCost(BoosterKind.PieceSwap));
                 drainButton.interactable = flow.CanUseBooster(BoosterKind.DrainPump);
                 popButton.interactable = flow.CanUseBooster(BoosterKind.BubblePop);
                 rerollButton.interactable = flow.CanUseBooster(BoosterKind.NewTide);
+                swapButton.interactable = flow.CanUseBooster(BoosterKind.PieceSwap);
             }
 
             freeDrain.gameObject.SetActive(boosters && flow.FreeBoosterAvailable(BoosterKind.DrainPump));

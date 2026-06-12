@@ -58,6 +58,37 @@ namespace Riptide.Core
         public override string ToString() => "Booster[NewTide]";
     }
 
+    /// <summary>
+    /// Piece Swap booster (ROADMAP ruling 2026-06-11): replaces ONE occupied tray
+    /// slot with a fresh deterministic draw at current escalation weights.
+    /// </summary>
+    public sealed class PieceSwapMove : Move
+    {
+        public int TraySlot { get; }
+
+        public PieceSwapMove(int traySlot)
+        {
+            if (traySlot < 0 || traySlot >= BoardSpec.TraySize)
+            {
+                throw new ArgumentOutOfRangeException(nameof(traySlot));
+            }
+
+            TraySlot = traySlot;
+        }
+
+        public override string ToString() => $"Booster[PieceSwap slot {TraySlot}]";
+    }
+
+    /// <summary>
+    /// Continue (ROADMAP ruling 2026-06-11): the once-per-run revive from a drowned
+    /// board — water −3 (floored), fresh tray, tide counter reset. The ONLY move
+    /// legal in a terminal state, and only when that state is LostDrowned.
+    /// </summary>
+    public sealed class ContinueMove : Move
+    {
+        public override string ToString() => "Continue";
+    }
+
     /// <summary>Thrown when a move is illegal in the given state. Replays must never see this.</summary>
     public sealed class InvalidMoveException : InvalidOperationException
     {

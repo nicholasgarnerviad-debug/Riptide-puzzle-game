@@ -1,4 +1,4 @@
-# Riptide — Decision Log
+﻿# Riptide — Decision Log
 
 One line per judgment call not literally specified in `RIPTIDE_GDD.md` (master prompt rule 9).
 Format: date · decision · rationale. Reviewed by Nick at every visual gate.
@@ -173,3 +173,13 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-11 · **RULED — daily retry is for FAILED dailies only** (spec §4.5 "if failed" wins over the GDD's silence): `RecordDailyCompletion` now consumes the retry hook, so a won daily can't be re-rolled for a better share — the day's result is the one honest result · persisted via the existing DailyRetryUsed field (no schema bump); flow tests assert it deterministically.
 - 2026-06-11 · §6.3 gap closed: the L1 drag hint now has the 4s-idle ghost-hand replay (tray → board, 2s loop, any touch cancels) · the meter/rescue hints stay caption-only — a gesture replay demonstrates nothing for them.
 - 2026-06-11 · NOT self-certifiable, still Nick's: visual gates 1–5/A/B/C (the no-claiming-visuals rule outlives any delegation — I have no device or eyes), Rungo TTFs + iconography, SDK installs/defines + FileProvider manifest, device perf session, Play signing/target-API.
+
+## Product roadmap rulings (lead-dev delegation, 2026-06-11 — see docs/ROADMAP.md)
+
+- 2026-06-11 · **RULED — continue offer enters the GDD** (supersedes the earlier cut, under the same delegation): drown-only (a stuck board is a solved-position problem, not a tide problem), once per run, Voyage+Endless, NEVER Daily (§3.3 one-honest-attempt holds); price = rewarded ad OR 150 coins (DrainPump parity); effect = water −3 rows (floored at minWater), fresh 3-piece tray, tide counter reset; MoveCount/score untouched (not a placement) · implemented as a first-class `ContinueMove` through SimEngine so replay determinism holds with continues in the move list.
+- 2026-06-11 · `GameState.ContinueUsed` is EXCLUDED from StateHash: the hash pins board/tray/rng/score evolution for the golden sweeps, which predate the flag; the flag only gates ContinueMove legality, and replays carry the move itself · documented here precisely because two states differing only in ContinueUsed hash identically — accepted, deliberate, golden files preserved.
+- 2026-06-11 · **RULED — Piece Swap booster** (4th booster): swaps ONE occupied tray slot for a fresh deterministic deal, 40 coins, BoostersAllowed-gated like the rest (so Daily refuses it by state) · cheap-frequent spend tier under NewTide's 120; armed-tap UX mirroring Bubble Pop.
+- 2026-06-11 · **RULED — Endless milestones**: every 5 tides survived banks +15 coins (economy.json `coins.endlessMilestoneEvery/endlessMilestoneCoins` — coin economy lives in the coins block), announced mid-run, PAID at run end through the normal outcome path · keeps the wallet write-points unchanged (FinishRun) and the sim pure.
+- 2026-06-11 · **RULED — first-run flow**: confirming the age gate on a virgin profile (zero voyage stars, zero completions) launches z1-l1 directly; Home is first seen after the first outcome · menu-first onboarding loses players the GDD funnel target can't afford.
+- 2026-06-11 · notifications ship as a SEAM (interface + fake + real adapter inert behind `RIPTIDE_NOTIFICATIONS`), same pattern as SdkAdapters: scheduling LOGIC (which pings, what local times, cancel rules) is testable now; the com.unity.mobile.notifications package install + POST_NOTIFICATIONS runtime permission ride the SDK pass.
+- 2026-06-11 · Remove-Ads upsell card appears on results screens after the 2nd interstitial of the SESSION (cap state already persisted in save v2 fields; session counter in flow) · converting irritation at its source; one tap to the shop hero.

@@ -292,6 +292,61 @@ namespace Riptide.UI
         }
     }
 
+    /// <summary>
+    /// §1.4 stagger grammar: items cascade in 40ms apart (max 6 staggered), each
+    /// fading up over t.base. Staggers off under reduced motion.
+    /// </summary>
+    public static class UiCascade
+    {
+        public static void Run(MonoBehaviour host, params RectTransform[] items)
+        {
+            if (host == null || !host.isActiveAndEnabled)
+            {
+                return;
+            }
+
+            float stagger = ThemeRuntime.ReducedMotion ? 0f : 0.04f;
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i] == null || !items[i].gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                var group = items[i].GetComponent<CanvasGroup>();
+                if (group == null)
+                {
+                    group = items[i].gameObject.AddComponent<CanvasGroup>();
+                }
+
+                group.alpha = 0f;
+                host.StartCoroutine(CascadeOne(host, items[i], group, Mathf.Min(i, 6) * stagger));
+            }
+        }
+
+        private static IEnumerator CascadeOne(MonoBehaviour host, RectTransform item, CanvasGroup group, float delay)
+        {
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            Vector2 home = item.anchoredPosition;
+            bool done = false;
+            Tween.Run(host, "t.base", "easeOutQuart", u =>
+            {
+                group.alpha = u;
+                item.anchoredPosition = home + new Vector2(0f, -18f * (1f - u));
+            }, () => done = true);
+            while (!done)
+            {
+                yield return null;
+            }
+
+            item.anchoredPosition = home;
+        }
+    }
+
     /// <summary>§3.16 creature roundel: silhouette / normal / rescued-sparkle.</summary>
     public sealed class CreatureChip : MonoBehaviour
     {

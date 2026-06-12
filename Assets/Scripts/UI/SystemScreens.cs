@@ -19,12 +19,33 @@ namespace Riptide.UI
 
             TextMeshProUGUI title = UiText.Create(root, "title", flow.Strings.Get("settings.title"),
                 "title", "text.primary");
-            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.92f), new Vector2(700f, 100f));
+            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.945f), new Vector2(700f, 90f));
 
-            screen.AddToggle(root, 0.80f, "settings.audio.on", flow.Strings.Get("settings.audio"));
-            screen.AddToggle(root, 0.71f, "settings.music.on", flow.Strings.Get("settings.music"));
-            screen.AddToggle(root, 0.62f, "settings.haptics.on", flow.Strings.Get("settings.haptics"));
-            screen.AddToggle(root, 0.53f, "settings.reducedMotion.on", flow.Strings.Get("settings.reducedMotion"));
+            // ROADMAP M5: identity stats from data the save already holds.
+            TextMeshProUGUI statsHeader = UiText.Create(root, "statsHeader",
+                flow.Strings.Get("stats.title"), "micro", "text.muted");
+            UiComponents.Place(statsHeader.rectTransform, new Vector2(0.5f, 0.895f), new Vector2(700f, 40f));
+            long rescued = 0;
+            foreach (int count in flow.Meta.Save.SpeciesRescues)
+            {
+                rescued += count;
+            }
+
+            TextMeshProUGUI stats1 = UiText.Create(root, "stats1",
+                string.Format(flow.Strings.Get("stats.line1"), rescued, flow.Meta.Voyage.TotalStars,
+                    Riptide.Core.ShareCard.GroupThousands(flow.Meta.EndlessBest)),
+                "caption", "text.secondary");
+            UiComponents.Place(stats1.rectTransform, new Vector2(0.5f, 0.865f), new Vector2(960f, 44f));
+            TextMeshProUGUI stats2 = UiText.Create(root, "stats2",
+                string.Format(flow.Strings.Get("stats.line2"), flow.Meta.Streak.Best,
+                    flow.Meta.Save.DecorationsOwned.Count),
+                "caption", "text.secondary");
+            UiComponents.Place(stats2.rectTransform, new Vector2(0.5f, 0.835f), new Vector2(960f, 44f));
+
+            screen.AddToggle(root, 0.77f, "settings.audio.on", flow.Strings.Get("settings.audio"));
+            screen.AddToggle(root, 0.685f, "settings.music.on", flow.Strings.Get("settings.music"));
+            screen.AddToggle(root, 0.60f, "settings.haptics.on", flow.Strings.Get("settings.haptics"));
+            screen.AddToggle(root, 0.515f, "settings.reducedMotion.on", flow.Strings.Get("settings.reducedMotion"));
 
             Ghost(root, 0.42f, flow.Strings.Get("settings.consent"), () => flow.Consent?.Reopen());
             Ghost(root, 0.35f, flow.Strings.Get("settings.restore"), () => flow.Iap?.Restore());
@@ -212,6 +233,115 @@ namespace Riptide.UI
     }
 
     /// <summary>
+    /// ROADMAP M2: the continue offer — a pre-results interstitial sheet over the
+    /// drowned board. Five-second pip countdown; rewarded ad or coins revives,
+    /// "Let go" (or the timer) concedes to results. Once per run, never Daily —
+    /// the flow and the sim both enforce the rules; this is just the face.
+    /// </summary>
+    public sealed class ContinueSheet : MonoBehaviour
+    {
+        private const int CountdownSeconds = 5;
+
+        private Sheet sheet = null!;
+        private GameFlow flow = null!;
+        private TextMeshProUGUI body = null!;
+        private ProgressPips pips = null!;
+        private Button adButton = null!;
+        private Button coinButton = null!;
+        private float deadline;
+        private bool resolved;
+
+        public bool Shown => sheet != null && sheet.Shown;
+
+        public static ContinueSheet Build(RectTransform canvasRoot, GameFlow flow)
+        {
+            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "ContinueSheet", 860f);
+            var offer = sheet.gameObject.AddComponent<ContinueSheet>();
+            offer.sheet = sheet;
+            offer.flow = flow;
+
+            RectTransform bodyRt = sheet.Body;
+            TextMeshProUGUI title = UiText.Create(bodyRt, "title", flow.Strings.Get("continue.title"),
+                "title", "text.primary");
+            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.88f), new Vector2(800f, 90f));
+
+            offer.body = UiText.Create(bodyRt, "body", "", "body", "text.secondary");
+            UiComponents.Place(offer.body.rectTransform, new Vector2(0.5f, 0.74f), new Vector2(820f, 60f));
+
+            offer.pips = UiComponents.ProgressPipsComponent(bodyRt, CountdownSeconds);
+            UiComponents.Place((RectTransform)offer.pips.transform, new Vector2(0.5f, 0.64f), new Vector2(260f, 40f));
+
+            offer.adButton = UiComponents.ButtonReward(bodyRt, "continueAd",
+                flow.Strings.Get("continue.ad"), offer.OnAd);
+            UiComponents.Place((RectTransform)offer.adButton.transform, new Vector2(0.5f, 0.47f), new Vector2(660f, 124f));
+
+            offer.coinButton = UiComponents.ButtonSecondary(bodyRt, "continueCoins",
+                string.Format(flow.Strings.Get("continue.coins"), flow.Economy.Coins.ContinueCost), offer.OnCoins);
+            UiComponents.Place((RectTransform)offer.coinButton.transform, new Vector2(0.5f, 0.28f), new Vector2(660f, 110f));
+
+            Button decline = UiComponents.ButtonGhost(bodyRt, "decline",
+                flow.Strings.Get("continue.decline"), offer.OnDecline);
+            UiComponents.Place((RectTransform)decline.transform, new Vector2(0.5f, 0.10f), new Vector2(420f, 88f));
+
+            return offer;
+        }
+
+        public void Show()
+        {
+            resolved = false;
+            deadline = Time.realtimeSinceStartup + CountdownSeconds;
+            adButton.interactable = flow.ContinueAdAvailable;
+            coinButton.interactable = flow.Meta.CanAfford(flow.Economy.Coins.ContinueCost);
+            sheet.Show();
+        }
+
+        private void Update()
+        {
+            if (!Shown || resolved)
+            {
+                return;
+            }
+
+            float remaining = deadline - Time.realtimeSinceStartup;
+            int seconds = Mathf.Max(0, Mathf.CeilToInt(remaining));
+            body.text = string.Format(flow.Strings.Get("continue.body"), seconds);
+            pips.SetFilled(seconds);
+            if (remaining <= 0f)
+            {
+                OnDecline();
+            }
+        }
+
+        private void OnAd()
+        {
+            if (flow.TryContinueViaAd())
+            {
+                Resolve();
+            }
+        }
+
+        private void OnCoins()
+        {
+            if (flow.TryContinueWithCoins())
+            {
+                Resolve();
+            }
+        }
+
+        private void OnDecline()
+        {
+            flow.DeclineContinue();
+            Resolve();
+        }
+
+        private void Resolve()
+        {
+            resolved = true;
+            sheet.Dismiss();
+        }
+    }
+
+    /// <summary>
     /// Spec §4.7 first-run age gate: neutral year picker on bg.abyss, no game art
     /// that skews child-directed. The stored year feeds ad configuration when the
     /// real SDKs land; the (fake) consent flow itself is requested at boot.
@@ -221,6 +351,7 @@ namespace Riptide.UI
         public const string BirthYearKey = "consent.birthYear";
         private int year = 2000;
         private TextMeshProUGUI yearLabel = null!;
+        private GameFlow flow = null!;
 
         public bool IsOpen => gameObject.activeSelf;
 
@@ -234,6 +365,7 @@ namespace Riptide.UI
             bg.sprite = SpriteFactory.Solid();
             ThemedElement.Bind(root.gameObject, "bg.abyss");
             var gate = root.gameObject.AddComponent<ConsentAgeGate>();
+            gate.flow = flow;
 
             // One composed card instead of elements adrift on the void.
             RectTransform card = UiComponents.Card(root, "card", new Vector2(880f, 820f));
@@ -277,10 +409,17 @@ namespace Riptide.UI
             PlayerPrefs.SetInt(BirthYearKey, year);
             PlayerPrefs.Save();
             gameObject.SetActive(false);
+
+            // ROADMAP M1: a virgin profile dives straight into the tutorial board —
+            // the funnel is decided in the first 30 seconds, not on a menu.
+            if (flow.Meta.Voyage.CompletedCount == 0 && flow.Screen == FlowScreen.Home)
+            {
+                flow.StartVoyageLevel(1, 1);
+            }
         }
     }
 
-    /// <summary>Shared screen scaffolding: full-bleed themed background root.</summary>
+    /// <summary>Shared screen scaffolding: themed background + ambience (snow, vignette).</summary>
     internal static class ScreenChrome
     {
         public static RectTransform Root(RectTransform parent, string name)
@@ -291,6 +430,15 @@ namespace Riptide.UI
             bg.sprite = SpriteFactory.Solid();
             ThemedElement.Bind(root.gameObject, "bg.deep");
             root.gameObject.AddComponent<SafeArea>();
+
+            // 8-UI ambience: we're underwater everywhere, menus included.
+            CanvasSnow.Create(root);
+            RectTransform vignetteRt = UiComponents.Rect(root, "vignette", Vector2.zero);
+            UiComponents.Stretch(vignetteRt);
+            var vignette = vignetteRt.gameObject.AddComponent<Image>();
+            vignette.sprite = SpriteFactory.Vignette();
+            vignette.color = new Color(0f, 0f, 0f, 0.55f);
+            vignette.raycastTarget = false;
             return root;
         }
     }

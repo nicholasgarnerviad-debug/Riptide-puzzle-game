@@ -243,3 +243,50 @@ namespace Riptide.Game
     }
 }
 #endif
+
+#if RIPTIDE_NOTIFICATIONS
+// Requires com.unity.mobile.notifications (the SDK pass installs it) and the
+// POST_NOTIFICATIONS runtime permission flow on API 33+.
+namespace Riptide.Game
+{
+    using Unity.Notifications.Android;
+
+    /// <summary>ROADMAP M8: the real Android scheduler behind the seam.</summary>
+    public sealed class MobileNotificationScheduler : INotificationScheduler
+    {
+        private const string ChannelId = "riptide_daily";
+
+        public MobileNotificationScheduler()
+        {
+            var channel = new AndroidNotificationChannel(ChannelId, "Daily Riptide",
+                "Daily board and streak reminders", Importance.Default);
+            AndroidNotificationCenter.RegisterNotificationChannel(channel);
+        }
+
+        public void CancelAll() => AndroidNotificationCenter.CancelAllScheduledNotifications();
+
+        public void Schedule(PlannedNotification planned)
+        {
+            System.DateTime now = System.DateTime.Now;
+            System.DateTime fireAt = new System.DateTime(now.Year, now.Month, now.Day,
+                planned.HourLocal, 0, 0);
+            if (fireAt <= now)
+            {
+                fireAt = fireAt.AddDays(1);
+            }
+
+            var notification = new AndroidNotification
+            {
+                Title = planned.Kind == NotificationKind.StreakRisk
+                    ? "Your streak is about to break"
+                    : "A new Daily Riptide is live",
+                Text = planned.Kind == NotificationKind.StreakRisk
+                    ? "One dive keeps it alive — the tide resets at midnight."
+                    : "One board, one try. Everyone gets the same ocean today.",
+                FireTime = fireAt,
+            };
+            AndroidNotificationCenter.SendNotification(notification, ChannelId);
+        }
+    }
+}
+#endif
