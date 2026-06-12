@@ -45,7 +45,7 @@ namespace Riptide.UI
             "shop.benefit1", "shop.benefit2", "shop.price.removeAds", "shop.owned", "shop.bestValue",
             "shop.pack.smallAmount", "shop.pack.mediumAmount", "shop.pack.largeAmount",
             "shop.price.small", "shop.price.medium", "shop.price.large",
-            "pause.title", "pause.resume", "pause.home",
+            "pause.title", "pause.resume", "pause.home", "pause.map", "home.map",
             "consent.age.title", "consent.age.body", "consent.age.confirm",
             "errors.ad_unavailable", "errors.purchase_failed",
             "tidepool.title", "tidepool.rescued", "tidepool.never",

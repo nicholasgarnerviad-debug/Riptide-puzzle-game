@@ -94,6 +94,12 @@ namespace Riptide.UI
                 flow.Strings.Get("home.voyage"), "title", "accent.primary");
             voyageTitle.alignment = TextAlignmentOptions.Left;
             UiComponents.Place(voyageTitle.rectTransform, new Vector2(0.62f, 0.84f), new Vector2(560f, 80f));
+
+            // Gate feedback: Continue dominated and nothing SAID "map" — an
+            // explicit affordance beats relying on the card-body tap.
+            Button mapLink = UiComponents.ButtonGhost(voyageCard, "mapLink",
+                flow.Strings.Get("home.map"), () => flow.GoTo(FlowScreen.ZoneMap));
+            UiComponents.Place((RectTransform)mapLink.transform, new Vector2(0.86f, 0.84f), new Vector2(200f, 80f));
             screen.voyageProgress = UiText.Create(voyageCard, "progress", "", "body", "text.secondary");
             screen.voyageProgress.alignment = TextAlignmentOptions.Left;
             UiComponents.Place(screen.voyageProgress.rectTransform, new Vector2(0.62f, 0.69f), new Vector2(560f, 56f));

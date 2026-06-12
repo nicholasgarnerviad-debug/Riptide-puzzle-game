@@ -328,9 +328,11 @@ namespace Riptide.Game
 
         public void GoTo(FlowScreen screen)
         {
-            // Quit-to-home keeps abandon semantics (design §4): a live run left
-            // for Home is over — no resume-after-quit in the GDD.
-            if (Screen == FlowScreen.Playing && screen == FlowScreen.Home
+            // Quitting a live run to ANY menu keeps abandon semantics (design §4):
+            // home or the level map, a deliberately-left run is over — no
+            // resume-after-quit in the GDD. (Terminal states are untouched: the
+            // results path and a pending continue offer clear/keep the record.)
+            if (Screen == FlowScreen.Playing && screen != FlowScreen.Playing
                 && Store != null && !Store.State.Status.IsTerminal())
             {
                 Recorder.Finish();

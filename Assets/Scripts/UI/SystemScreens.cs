@@ -363,17 +363,26 @@ namespace Riptide.UI
 
             Button resume = UiComponents.ButtonPrimary(body, "resume", flow.Strings.Get("pause.resume"),
                 pause.Dismiss);
-            UiComponents.Place((RectTransform)resume.transform, new Vector2(0.5f, 0.62f), new Vector2(640f, 124f));
+            UiComponents.Place((RectTransform)resume.transform, new Vector2(0.5f, 0.66f), new Vector2(640f, 124f));
+
+            // Gate feedback: in-game had NO route to the level map — pause now
+            // exits to it (same abandon semantics as quit-to-home).
+            Button map = UiComponents.ButtonSecondary(body, "map", flow.Strings.Get("pause.map"), () =>
+            {
+                pause.Dismiss();
+                flow.GoTo(FlowScreen.ZoneMap);
+            });
+            UiComponents.Place((RectTransform)map.transform, new Vector2(0.5f, 0.47f), new Vector2(640f, 110f));
 
             pause.sound = UiComponents.ButtonSecondary(body, "sound", "", pause.ToggleSound);
-            UiComponents.Place((RectTransform)pause.sound.transform, new Vector2(0.5f, 0.40f), new Vector2(640f, 110f));
+            UiComponents.Place((RectTransform)pause.sound.transform, new Vector2(0.5f, 0.30f), new Vector2(640f, 110f));
 
             Button home = UiComponents.ButtonGhost(body, "home", flow.Strings.Get("pause.home"), () =>
             {
                 pause.Dismiss();
                 flow.GoTo(FlowScreen.Home);
             });
-            UiComponents.Place((RectTransform)home.transform, new Vector2(0.5f, 0.18f), new Vector2(640f, 90f));
+            UiComponents.Place((RectTransform)home.transform, new Vector2(0.5f, 0.13f), new Vector2(640f, 90f));
 
             return pause;
         }

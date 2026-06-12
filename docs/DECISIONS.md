@@ -234,6 +234,11 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-12 · ZoneMap modernized: zone headers become gradient cards carrying the zone NAME (zones.* keys now on the map, spec §4.2) + a live "{n}/60 stars" counter (new zone.stars key); square nodes become circular ring nodes with §4.2 state colors (locked subtle · unlocked raised · complete bright · CURRENT cyan + soft glow) · grid layout kept over the spec's S-path — denser and it already reads.
 - 2026-06-12 · DailyIntro gets its ritual identity: glowing amber sun mark above the date headline · the rest already inherits the global capsule/card language.
 
+## Map reachability (Nick: "no way to get to the zone and level screens … while in game or it always only lets you hit continue", 2026-06-12)
+
+- 2026-06-12 · the level map was practically unreachable: in-game the Pause sheet offered only resume/sound/home, and on Home the hero's big Continue dominated while map access was the undiscoverable card-body tap · Pause gains a "Level map" button; the hero gains an explicit "Map ›" ghost beside the title; the card-body tap stays (UiClickTests pins it).
+- 2026-06-12 · quit-a-live-run abandon semantics generalized in `GameFlow.GoTo`: leaving Playing for ANY menu (home or map) finishes the run recorder · the resume design's no-resume-after-quit rule applies to every deliberate exit, not just Home; terminal states (results path, pending continue offer) remain untouched.
+
 ## Mid-run save & resume (SAVE_RESUME_DESIGN.md approved via "resume aswell", 2026-06-12)
 
 - 2026-06-12 · run record = inputs only (mode identity, seed, move list, post-move StateHash), own atomic file `riptide_run.json`, written EVERY move in the same frame; ulong seed/hash serialize as strings (FNV-1a 64 daily seeds exceed the JSON parser's signed-long range — caught at design time) · design §2–4.
