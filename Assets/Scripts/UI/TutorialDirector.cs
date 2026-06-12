@@ -38,6 +38,7 @@ namespace Riptide.UI
             panel.gameObject.SetActive(false);
 
             flow.RunStarted += director.OnRunStarted;
+            flow.ScreenChanged += director.OnScreenChanged;
             if (flow.Store != null)
             {
                 flow.Store.MoveApplied += director.OnMove;
@@ -47,11 +48,22 @@ namespace Riptide.UI
             return director;
         }
 
+        /// <summary>Gate feedback (huh.png): a hint bled onto the Tidepool — hints
+        /// belong to play and hide the moment the player leaves the board.</summary>
+        private void OnScreenChanged(FlowScreen screen)
+        {
+            if (screen != FlowScreen.Playing)
+            {
+                Hide();
+            }
+        }
+
         private void OnDestroy()
         {
             if (flow != null)
             {
                 flow.RunStarted -= OnRunStarted;
+                flow.ScreenChanged -= OnScreenChanged;
             }
 
             if (flow?.Store != null)

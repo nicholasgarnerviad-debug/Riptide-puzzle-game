@@ -222,6 +222,12 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 
 - 2026-06-12 · shop recomposed per IAP-merchandising research (Turbine playbook / Balancy 5-shop teardown / Game UI Database): hero = no-ads icon roundel + benefit bullets + price ON THE CTA ONLY (was duplicated in title and button); coin packs get scaling coin-pile icons, prominent amounts (1,200/3,500/8,000 — the GDD §6 numbers), disabled price capsules ($1.99/$4.99/$9.99 anchor pricing) and a BEST VALUE badge on the chest; ONE shared coming-soon caption (the per-card caption was overflowing across neighbors — real bug); coin balance pill top-right; owned state = "Owned" on the CTA · new icons noAds/coins1-3; 11 new shop string keys; packs stay non-interactable until the IAP SDK pass.
 
+## Tidepool visual pass (Nick's huh.png, "now same to this page", 2026-06-12)
+
+- 2026-06-12 · **BUG (huh.png): tutorial hints bled onto other screens** — TutorialDirector never reacted to screen changes, so a live hint banner stayed visible after quitting to Home/Tidepool · it now hides on any ScreenChanged ≠ Playing.
+- 2026-06-12 · diorama rebuilt as a SCENE: the two solid-rect "parallax layers" became silhouette layers (new tileable `Dunes` sprite + kelp/rocks icon props on the near layer, accent.deep tint), with a water-column gradient and two sunbeams inside the viewport; parallax tracking unchanged · stacked flat rectangles were the screen's whole problem.
+- 2026-06-12 · creatures sit in circular two-tone wells (surface ring + raised inner) that carry the idle bob; info-card portrait gets a matching well; an empty info card now invites with `tidepool.tapHint` instead of staring blankly; header joins the Home/Shop language (centered title, coin pill left, Edit right).
+
 ## Mid-run save & resume (SAVE_RESUME_DESIGN.md approved via "resume aswell", 2026-06-12)
 
 - 2026-06-12 · run record = inputs only (mode identity, seed, move list, post-move StateHash), own atomic file `riptide_run.json`, written EVERY move in the same frame; ulong seed/hash serialize as strings (FNV-1a 64 daily seeds exceed the JSON parser's signed-long range — caught at design time) · design §2–4.

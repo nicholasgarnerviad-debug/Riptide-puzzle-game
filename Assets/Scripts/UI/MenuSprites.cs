@@ -96,8 +96,42 @@ namespace Riptide.UI
             return lightRay;
         }
 
+        private static Sprite? dunes;
+
+        /// <summary>
+        /// Horizontally tileable seabed silhouette: filled below a layered sine
+        /// horizon. Tint dark for far dunes, lighter for near (Tidepool diorama).
+        /// </summary>
+        public static Sprite Dunes()
+        {
+            if (dunes == null)
+            {
+                const int w = 512;
+                const int h = 128;
+                Texture2D tex = NewTex(w, h);
+                tex.wrapMode = TextureWrapMode.Repeat;
+                for (int x = 0; x < w; x++)
+                {
+                    float horizon = 46f
+                        + 22f * Mathf.Sin(2f * Mathf.PI * x / w * 3f + 1.3f)
+                        + 11f * Mathf.Sin(2f * Mathf.PI * x / w * 7f);
+                    for (int y = 0; y < h; y++)
+                    {
+                        float a = Mathf.Clamp01(horizon - y + 0.5f);
+                        tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                    }
+                }
+
+                tex.Apply();
+                dunes = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), PixelsPerUnit);
+            }
+
+            return dunes;
+        }
+
         /// <summary>Geometric white icon marks, tinted by theme tokens at use site.
-        /// Ids: compass · sun · waves · fish · bag · gear · chest.</summary>
+        /// Ids: compass · sun · waves · fish · bag · gear · chest · pause · noAds
+        /// · coins1-3 · kelp · rocks.</summary>
         public static Sprite Icon(string id)
         {
             if (!icons.TryGetValue(id, out Sprite sprite))
@@ -212,6 +246,16 @@ namespace Riptide.UI
                     Coin(a, c + 22f, c - 16f, 24f);
                     Coin(a, c, c + 20f, 24f);
                     break;
+                case "kelp":
+                    Strand(a, c - 28f, 86f);
+                    Strand(a, c, 118f);
+                    Strand(a, c + 28f, 64f);
+                    break;
+                case "rocks":
+                    Disc(a, c - 24f, 30f, 28f);
+                    Disc(a, c + 22f, 26f, 22f);
+                    Disc(a, c - 2f, 44f, 17f);
+                    break;
                 default:
                     Disc(a, c, c, 40f);
                     break;
@@ -316,6 +360,23 @@ namespace Riptide.UI
                     float dist = Vector2.Distance(p, p1 + d * t);
                     Blend(a, x, y, Mathf.Clamp01(w * 0.5f - dist + 0.5f));
                 }
+            }
+        }
+
+        /// <summary>A wavy kelp strand rising from the icon's base.</summary>
+        private static void Strand(float[,] a, float baseX, float height)
+        {
+            float prevX = baseX;
+            float prevY = 6f;
+            const int steps = 14;
+            for (int i = 1; i <= steps; i++)
+            {
+                float t = (float)i / steps;
+                float y = 6f + t * height;
+                float x = baseX + Mathf.Sin(t * Mathf.PI * 2.2f) * 9f;
+                Seg(a, prevX, prevY, x, y, Mathf.Lerp(6.5f, 3.5f, t));
+                prevX = x;
+                prevY = y;
             }
         }
 

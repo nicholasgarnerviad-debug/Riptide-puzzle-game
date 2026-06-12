@@ -54,13 +54,21 @@ namespace Riptide.UI
 
             TextMeshProUGUI title = UiText.Create(root, "title", flow.Strings.Get("tidepool.title"),
                 "title", "text.primary");
-            UiComponents.Place(title.rectTransform, new Vector2(0.40f, 0.945f), new Vector2(600f, 90f));
-            screen.coins = UiComponents.CoinCounterComponent(root);
-            UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.40f, 0.895f), new Vector2(300f, 60f));
+            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.945f), new Vector2(600f, 90f));
+
+            // Header consistency with Home/Shop: balance pill left, action right.
+            RectTransform coinPill = UiComponents.Rect(root, "coinPill", new Vector2(250f, 78f));
+            UiComponents.Place(coinPill, new Vector2(0.155f, 0.94f), new Vector2(250f, 78f));
+            Image pillImage = UiComponents.RoundedImage(coinPill.gameObject, 39f);
+            pillImage.raycastTarget = false;
+            ThemedElement.Bind(coinPill.gameObject, "bg.surface");
+            UiComponents.RoundedStrokeImage(coinPill, "stroke.subtle", 39f);
+            screen.coins = UiComponents.CoinCounterComponent(coinPill);
+            UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.5f, 0.5f), new Vector2(230f, 64f));
 
             screen.editToggle = UiComponents.ButtonSecondary(root, "edit", flow.Strings.Get("tidepool.edit"),
                 screen.ToggleEdit);
-            UiComponents.Place((RectTransform)screen.editToggle.transform, new Vector2(0.84f, 0.93f), new Vector2(260f, 100f));
+            UiComponents.Place((RectTransform)screen.editToggle.transform, new Vector2(0.85f, 0.94f), new Vector2(230f, 92f));
 
             screen.BuildDiorama(root);
             screen.BuildInfoCard(root);
@@ -90,9 +98,36 @@ namespace Riptide.UI
             ThemedElement.Bind(viewport.gameObject, "bg.abyss");
             viewport.gameObject.AddComponent<RectMask2D>();
 
-            // §4.6 parallax: two background layers tracked against the scroll.
-            parallaxFar = ParallaxLayer(viewport, "far", "bg.deep", 220f, -160f);
-            parallaxNear = ParallaxLayer(viewport, "near", "bg.raised", 130f, -260f);
+            // Visual pass: the diorama is a SCENE, not stacked rectangles —
+            // water column light, sunbeams, then dune/kelp silhouette layers.
+            RectTransform waterGrad = UiComponents.Rect(viewport, "waterGrad", Vector2.zero);
+            waterGrad.anchorMin = new Vector2(0f, 0.35f);
+            waterGrad.anchorMax = new Vector2(1f, 1f);
+            waterGrad.offsetMin = Vector2.zero;
+            waterGrad.offsetMax = Vector2.zero;
+            waterGrad.localScale = new Vector3(1f, -1f, 1f);
+            var gradImage = waterGrad.gameObject.AddComponent<Image>();
+            gradImage.sprite = SpriteFactory.VerticalFade();
+            gradImage.raycastTarget = false;
+            ThemedElement.Bind(waterGrad.gameObject, "bg.oceanTop");
+
+            for (int r = 0; r < 2; r++)
+            {
+                RectTransform ray = UiComponents.Rect(viewport, "ray", new Vector2(190f - r * 60f, 1100f));
+                ray.anchorMin = new Vector2(0.25f + r * 0.42f, 1f);
+                ray.anchorMax = new Vector2(0.25f + r * 0.42f, 1f);
+                ray.pivot = new Vector2(0.5f, 1f);
+                ray.anchoredPosition = new Vector2(0f, 60f);
+                ray.localRotation = Quaternion.Euler(0f, 0f, r == 0 ? 11f : -8f);
+                var rayImage = ray.gameObject.AddComponent<Image>();
+                rayImage.sprite = MenuSprites.LightRay();
+                rayImage.raycastTarget = false;
+                ThemedElement.Bind(ray.gameObject, "ray.light");
+            }
+
+            // §4.6 parallax: two silhouette layers tracked against the scroll.
+            parallaxFar = SilhouetteLayer(viewport, "far", "bg.deep", 300f, kelp: false);
+            parallaxNear = SilhouetteLayer(viewport, "near", "bg.raised", 230f, kelp: true);
 
             scroll = viewport.gameObject.AddComponent<ScrollRect>();
             content = UiComponents.Rect(viewport, "content", Vector2.zero);
@@ -112,18 +147,33 @@ namespace Riptide.UI
                 float x = 260f + i * (ContentWidth - 480f) / Mathf.Max(1, flow.Roster.Count - 1);
                 float y = (i % 2 == 0) ? 110f : -10f;
 
-                CreatureChip chip = UiComponents.CreatureChipComponent(content, (byte)speciesId);
+                // Visual pass: each creature sits in a circular well so it reads
+                // as an inhabitant, not a blob adrift in the void.
+                RectTransform well = UiComponents.Rect(content, $"well{speciesId}", new Vector2(132f, 132f));
+                UiComponents.Place(well, new Vector2(0f, 0.5f), new Vector2(132f, 132f));
+                well.anchoredPosition = new Vector2(x, y);
+                var wellBg = well.gameObject.AddComponent<Image>();
+                wellBg.sprite = SpriteFactory.Dot();
+                wellBg.raycastTarget = false;
+                ThemedElement.Bind(well.gameObject, "bg.surface");
+                RectTransform wellInner = UiComponents.Rect(well, "inner", new Vector2(118f, 118f));
+                UiComponents.Place(wellInner, new Vector2(0.5f, 0.5f), new Vector2(118f, 118f));
+                var wellInnerImage = wellInner.gameObject.AddComponent<Image>();
+                wellInnerImage.sprite = SpriteFactory.Dot();
+                wellInnerImage.raycastTarget = false;
+                ThemedElement.Bind(wellInner.gameObject, "bg.raised");
+
+                CreatureChip chip = UiComponents.CreatureChipComponent(well, (byte)speciesId);
                 var chipRt = (RectTransform)chip.transform;
-                UiComponents.Place(chipRt, new Vector2(0f, 0.5f), new Vector2(88f, 88f));
-                chipRt.anchoredPosition = new Vector2(x, y);
+                UiComponents.Place(chipRt, new Vector2(0.5f, 0.5f), new Vector2(88f, 88f));
                 var button = chip.gameObject.AddComponent<Button>();
                 button.onClick.AddListener(() => OnSpeciesTapped(speciesId));
 
                 TextMeshProUGUI name = UiText.Create(content, $"name{speciesId}", "", "micro", "text.secondary");
                 UiComponents.Place(name.rectTransform, new Vector2(0f, 0.5f), new Vector2(220f, 40f));
-                name.rectTransform.anchoredPosition = new Vector2(x, y - 80f);
+                name.rectTransform.anchoredPosition = new Vector2(x, y - 100f);
 
-                chips.Add((speciesId, chip, name, chipRt, y));
+                chips.Add((speciesId, chip, name, well, y));
             }
 
             // §4.6 decoration slot points along the floor.
@@ -150,19 +200,51 @@ namespace Riptide.UI
             }
         }
 
-        private static RectTransform ParallaxLayer(RectTransform viewport, string name, string colorToken,
-            float height, float y)
+        /// <summary>A scrolling seabed silhouette: tiled dunes, optional kelp and rocks.</summary>
+        private static RectTransform SilhouetteLayer(RectTransform viewport, string name, string colorToken,
+            float height, bool kelp)
         {
             RectTransform layer = UiComponents.Rect(viewport, name, Vector2.zero);
-            layer.anchorMin = new Vector2(0f, 0.5f);
-            layer.anchorMax = new Vector2(0f, 0.5f);
-            layer.pivot = new Vector2(0f, 0.5f);
-            layer.sizeDelta = new Vector2(ContentWidth, height);
-            layer.anchoredPosition = new Vector2(0f, y);
-            var image = layer.gameObject.AddComponent<Image>();
-            image.sprite = SpriteFactory.Solid();
-            image.raycastTarget = false;
-            ThemedElement.Bind(layer.gameObject, colorToken);
+            layer.anchorMin = new Vector2(0f, 0f);
+            layer.anchorMax = new Vector2(0f, 0f);
+            layer.pivot = new Vector2(0f, 0f);
+            layer.sizeDelta = new Vector2(ContentWidth + 600f, height);
+            layer.anchoredPosition = Vector2.zero;
+
+            // Tiled dune strips across the layer width.
+            const float duneTile = 760f;
+            for (float x = 0f; x < ContentWidth + 600f; x += duneTile)
+            {
+                RectTransform dune = UiComponents.Rect(layer, "dune", new Vector2(duneTile + 4f, height));
+                dune.anchorMin = new Vector2(0f, 0f);
+                dune.anchorMax = new Vector2(0f, 0f);
+                dune.pivot = new Vector2(0f, 0f);
+                dune.anchoredPosition = new Vector2(x, 0f);
+                var image = dune.gameObject.AddComponent<Image>();
+                image.sprite = MenuSprites.Dunes();
+                image.raycastTarget = false;
+                ThemedElement.Bind(dune.gameObject, colorToken);
+            }
+
+            if (kelp)
+            {
+                float[] kelpXs = { 180f, 740f, 1260f, 1840f, 2420f, 2980f };
+                for (int i = 0; i < kelpXs.Length; i++)
+                {
+                    string id = i % 3 == 2 ? "rocks" : "kelp";
+                    float size = id == "kelp" ? 230f + (i % 2) * 70f : 170f;
+                    RectTransform prop = UiComponents.Rect(layer, id, new Vector2(size, size));
+                    prop.anchorMin = new Vector2(0f, 0f);
+                    prop.anchorMax = new Vector2(0f, 0f);
+                    prop.pivot = new Vector2(0.5f, 0f);
+                    prop.anchoredPosition = new Vector2(kelpXs[i], 26f);
+                    var propImage = prop.gameObject.AddComponent<Image>();
+                    propImage.sprite = MenuSprites.Icon(id);
+                    propImage.raycastTarget = false;
+                    ThemedElement.Bind(prop.gameObject, "accent.deep");
+                }
+            }
+
             return layer;
         }
 
@@ -171,11 +253,18 @@ namespace Riptide.UI
             infoCard = UiComponents.Card(root, "infoCard", new Vector2(980f, 520f));
             UiComponents.Place(infoCard, new Vector2(0.5f, 0.225f), new Vector2(980f, 520f));
 
+            RectTransform portraitWell = UiComponents.Rect(infoCard, "portraitWell", new Vector2(220f, 220f));
+            UiComponents.Place(portraitWell, new Vector2(0.16f, 0.62f), new Vector2(220f, 220f));
+            var wellImage = portraitWell.gameObject.AddComponent<Image>();
+            wellImage.sprite = SpriteFactory.Dot();
+            wellImage.raycastTarget = false;
+            ThemedElement.Bind(portraitWell.gameObject, "bg.raised");
+
             var portraitGo = new GameObject("portrait", typeof(RectTransform));
-            portraitGo.transform.SetParent(infoCard, false);
+            portraitGo.transform.SetParent(portraitWell, false);
             infoPortrait = portraitGo.AddComponent<Image>();
             infoPortrait.sprite = SpriteFactory.Creature();
-            UiComponents.Place((RectTransform)portraitGo.transform, new Vector2(0.16f, 0.62f), new Vector2(180f, 180f));
+            UiComponents.Place((RectTransform)portraitGo.transform, new Vector2(0.5f, 0.5f), new Vector2(170f, 170f));
 
             infoName = UiText.Create(infoCard, "name", "", "heading", "text.primary");
             UiComponents.Place(infoName.rectTransform, new Vector2(0.62f, 0.78f), new Vector2(560f, 70f));
@@ -332,8 +421,9 @@ namespace Riptide.UI
             {
                 infoName.text = "";
                 infoCount.text = "";
-                infoFlavor.text = "";
-                infoPortrait.color = ThemeRuntime.Color("bg.raised");
+                // An empty card is a dead card — invite the tap instead.
+                infoFlavor.text = flow.Strings.Get("tidepool.tapHint");
+                infoPortrait.color = ThemeRuntime.Color("bg.surface");
             }
         }
 
