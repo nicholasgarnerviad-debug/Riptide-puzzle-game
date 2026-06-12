@@ -37,6 +37,7 @@ namespace Riptide.Core.Tests
     ""reducedMotionScale"": 0.5
   }},
   ""juice"": {{ ""place"": {{ ""sfx"": ""Place"", ""haptic"": ""light"", ""anim"": ""none"" }} }},
+  ""layout"": {{ ""canvasRefWidth"": 1080, ""canvasRefHeight"": 2347, ""hudBandRefPx"": 140, ""boardTopGapRefPx"": 24, ""trayBottomInsetRefPx"": 48, ""boardSideAllowanceRefPx"": 104 }},
   ""accessibility"": {{ ""minTouchTargetRefPx"": 120, ""minBodyContrast"": 4.5, ""minLargeContrast"": 3.0, ""minOnAccentContrast"": 7.0, ""minBlockLuminanceStepRatio"": 1.15 }}
 }}";
         }
@@ -63,6 +64,12 @@ namespace Riptide.Core.Tests
 
             Assert.That(theme.Easing("linear").Count, Is.EqualTo(2));
             Assert.That(theme.MinTouchTargetRefPx, Is.EqualTo(120), "spec §3/§8");
+
+            // Universal-fit amendment: canvas basis is the iPhone 16 Pro Max
+            // aspect (19.5:9) at 1080 token width, matched on width.
+            Assert.That(theme.Layout.CanvasRefWidth, Is.EqualTo(1080));
+            Assert.That(theme.Layout.CanvasRefHeight, Is.EqualTo(2347));
+            Assert.That(theme.Layout.BoardSideAllowanceRefPx, Is.GreaterThan(0));
         }
 
         [Test]

@@ -46,6 +46,14 @@
     "score":   { "size": 44, "line": 48, "weight": "Bold",     "tracking": 0,    "tabular": true,  "allCaps": false }
   },
   "spacing": { "scale": [4, 8, 12, 16, 24, 32, 48, 64], "gutter": 48, "cardPadding": 32 },
+  "layout": {
+    "canvasRefWidth": 1080,
+    "canvasRefHeight": 2347,
+    "hudBandRefPx": 140,
+    "boardTopGapRefPx": 24,
+    "trayBottomInsetRefPx": 48,
+    "boardSideAllowanceRefPx": 104
+  },
   "radius": { "r.s": 12, "r.m": 20, "r.l": 32, "block": 8 },
   "motion": {
     "durationsMs": {

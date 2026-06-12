@@ -91,6 +91,32 @@ namespace Riptide.Core
     }
 
     /// <summary>
+    /// Screen-fit layout tokens (spec §2 as amended for the universal-fit pass):
+    /// canvas reference resolution (iPhone 16 Pro Max basis, 19.5:9, match width)
+    /// and the ref-px bands the world camera must reserve around the board.
+    /// </summary>
+    public sealed class LayoutSpec
+    {
+        public int CanvasRefWidth { get; }
+        public int CanvasRefHeight { get; }
+        public int HudBandRefPx { get; }
+        public int BoardTopGapRefPx { get; }
+        public int TrayBottomInsetRefPx { get; }
+        public int BoardSideAllowanceRefPx { get; }
+
+        public LayoutSpec(int canvasRefWidth, int canvasRefHeight, int hudBandRefPx,
+            int boardTopGapRefPx, int trayBottomInsetRefPx, int boardSideAllowanceRefPx)
+        {
+            CanvasRefWidth = canvasRefWidth;
+            CanvasRefHeight = canvasRefHeight;
+            HudBandRefPx = hudBandRefPx;
+            BoardTopGapRefPx = boardTopGapRefPx;
+            TrayBottomInsetRefPx = trayBottomInsetRefPx;
+            BoardSideAllowanceRefPx = boardSideAllowanceRefPx;
+        }
+    }
+
+    /// <summary>
     /// UI spec §1: the immutable design-token set. No color, duration, or radius
     /// literal may appear in UI code — everything resolves through here.
     /// </summary>
@@ -107,6 +133,7 @@ namespace Riptide.Core
         public IReadOnlyDictionary<string, JuiceEntry> Juice { get; }
         public float ReducedMotionScale { get; }
         public int MinTouchTargetRefPx { get; }
+        public LayoutSpec Layout { get; }
 
         public UiTheme(
             IReadOnlyDictionary<string, ThemeColor> colors,
@@ -119,7 +146,8 @@ namespace Riptide.Core
             IReadOnlyDictionary<string, IReadOnlyList<EasingKey>> easings,
             IReadOnlyDictionary<string, JuiceEntry> juice,
             float reducedMotionScale,
-            int minTouchTargetRefPx)
+            int minTouchTargetRefPx,
+            LayoutSpec layout)
         {
             Colors = colors;
             Type = type;
@@ -132,6 +160,7 @@ namespace Riptide.Core
             Juice = juice;
             ReducedMotionScale = reducedMotionScale;
             MinTouchTargetRefPx = minTouchTargetRefPx;
+            Layout = layout;
         }
 
         /// <summary>Missing tokens throw — a typo'd key must never silently render magenta.</summary>
@@ -310,6 +339,15 @@ namespace Riptide.Core
 
                 JsonObject accessibility = root.Require("accessibility").AsObject();
 
+                JsonObject layoutObj = root.Require("layout").AsObject();
+                var layout = new LayoutSpec(
+                    layoutObj.Require("canvasRefWidth").AsInt(),
+                    layoutObj.Require("canvasRefHeight").AsInt(),
+                    layoutObj.Require("hudBandRefPx").AsInt(),
+                    layoutObj.Require("boardTopGapRefPx").AsInt(),
+                    layoutObj.Require("trayBottomInsetRefPx").AsInt(),
+                    layoutObj.Require("boardSideAllowanceRefPx").AsInt());
+
                 return new UiTheme(
                     colors,
                     type,
@@ -321,7 +359,8 @@ namespace Riptide.Core
                     easings,
                     juice,
                     (float)motion.Require("reducedMotionScale").AsDouble(),
-                    accessibility.Require("minTouchTargetRefPx").AsInt());
+                    accessibility.Require("minTouchTargetRefPx").AsInt(),
+                    layout);
             }
             catch (JsonParseException ex)
             {
