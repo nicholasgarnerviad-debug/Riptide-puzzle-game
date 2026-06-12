@@ -114,13 +114,37 @@ namespace Riptide.PlayMode.Tests
             Assert.That(flow.Meta.CanAttemptDailyToday(), Is.False, "GDD 3.3: one attempt per day");
             Assert.That(flow.StartDaily(), Is.False, "second fresh attempt refused");
 
-            Assert.That(flow.Meta.DailyRetryAvailable(), Is.True);
-            Assert.That(flow.StartDaily(isRetry: true), Is.True, "the (stubbed-ad) retry hook grants one rerun");
-            Assert.That(flow.Screen, Is.EqualTo(FlowScreen.Playing));
-            Assert.That(flow.Meta.DailyRetryAvailable(), Is.False, "retry is single-use");
+            if (outcome.Won)
+            {
+                // Spec §4.5 ruling: a win consumes the retry — the result stands.
+                Assert.That(flow.Meta.DailyRetryAvailable(), Is.False, "won dailies offer no retry");
+                Assert.That(flow.StartDaily(isRetry: true), Is.False);
+            }
+            else
+            {
+                Assert.That(flow.Meta.DailyRetryAvailable(), Is.True, "failed daily offers ONE retry");
+                Assert.That(flow.StartDaily(isRetry: true), Is.True, "the (stubbed-ad) retry hook grants one rerun");
+                Assert.That(flow.Screen, Is.EqualTo(FlowScreen.Playing));
+                Assert.That(flow.Meta.DailyRetryAvailable(), Is.False, "retry is single-use");
 
-            yield return PlayToTerminal(flow);
-            Assert.That(flow.StartDaily(isRetry: true), Is.False, "no second retry");
+                yield return PlayToTerminal(flow);
+                Assert.That(flow.StartDaily(isRetry: true), Is.False, "no second retry");
+            }
+
+            // Retry plumbing asserted deterministically, independent of the bot's
+            // outcome above: single-use, and the won-retry ruling.
+            flow.Meta.TodayEpochDay = () => fakeToday + 1;
+            flow.Meta.RecordDailyAttempt();
+            Assert.That(flow.Meta.DailyRetryAvailable(), Is.True, "a fresh attempt holds one retry");
+            flow.Meta.ConsumeDailyRetry();
+            Assert.That(flow.Meta.DailyRetryAvailable(), Is.False, "single-use");
+
+            flow.Meta.TodayEpochDay = () => fakeToday + 2;
+            flow.Meta.RecordDailyAttempt();
+            Assert.That(flow.Meta.DailyRetryAvailable(), Is.True);
+            flow.Meta.RecordDailyCompletion(flow.Economy.Coins);
+            Assert.That(flow.Meta.DailyRetryAvailable(), Is.False,
+                "a WIN consumes the retry hook (spec §4.5 ruling)");
 
             WipeMeta();
             Object.Destroy(screens.transform.parent != null ? screens.transform.parent.gameObject : screens.gameObject);

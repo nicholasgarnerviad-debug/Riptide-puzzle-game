@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Riptide.Core;
 using Riptide.Game;
@@ -28,7 +28,7 @@ namespace Riptide.UI
         private PauseSheet? pause;
         private ConsentAgeGate? ageGate;
         private ToastManager toasts = null!;
-        private AudioDirector? audio;
+        private AudioDirector? music;
         private bool instantAnimations;
 
         public GameFlow Flow => flow;
@@ -54,7 +54,7 @@ namespace Riptide.UI
             manager.toasts = ToastManager.Create(canvasRoot);
 
             // 8-UI: music lives at the app root so menus keep their ambience.
-            manager.audio = AudioDirector.Create(go.transform, flow, null);
+            manager.music = AudioDirector.Create(go.transform, flow, null);
 
             // §4.7 first-run age gate sits above everything until answered.
             if (ConsentAgeGate.Required)
@@ -181,7 +181,7 @@ namespace Riptide.UI
             Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             InputController.Create(boardRig.transform, store, tray, driver, cam, InputTuning.CreateDefault());
             hud = HudOverlay.Create(canvas.GetComponent<RectTransform>(), flow, ShowPause);
-            audio?.SetDriver(driver);
+            music?.SetDriver(driver);
             TutorialDirector.Create(canvas.GetComponent<RectTransform>(), flow);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DebugOverlay.Create(boardRig.transform, store, flow.CurrentSeed, flow.Analytics);

@@ -19,6 +19,11 @@ namespace Riptide.UI
         private bool sawClear;
         private bool pumpHintShown;
 
+        // UI spec §6.3: hand-cursor ghost replays the drag after 4s of idle.
+        private const float IdleReplaySeconds = 4f;
+        private float idleTime;
+        private SpriteRenderer? ghostHand;
+
         public static TutorialDirector Create(RectTransform canvasRoot, GameFlow flow)
         {
             RectTransform root = UiKit.Container(canvasRoot, "TutorialDirector");
@@ -165,6 +170,57 @@ namespace Riptide.UI
             {
                 Hide(); // they used the pump (or cleared their way out) — dismissed by doing
             }
+
+            UpdateGhostReplay();
+        }
+
+        /// <summary>
+        /// §6.3: after 4s idle on the drag hint, a ghost hand replays the gesture
+        /// (tray slot → board) on a 2s loop until the player touches anything.
+        /// </summary>
+        private void UpdateGhostReplay()
+        {
+            bool dragBeat = InTutorial && levelIndex == 1 && !sawPlacement
+                && banner.transform.parent.gameObject.activeSelf;
+            var pointer = UnityEngine.InputSystem.Pointer.current;
+            bool pressing = pointer != null && pointer.press.isPressed;
+
+            if (!dragBeat || pressing)
+            {
+                idleTime = 0f;
+                if (ghostHand != null)
+                {
+                    ghostHand.enabled = false;
+                }
+
+                return;
+            }
+
+            idleTime += Time.deltaTime;
+            if (idleTime < IdleReplaySeconds)
+            {
+                return;
+            }
+
+            if (ghostHand == null)
+            {
+                var go = new GameObject("tutorialGhostHand");
+                go.transform.SetParent(transform, false);
+                ghostHand = go.AddComponent<SpriteRenderer>();
+                ghostHand.sprite = SpriteFactory.Dot();
+                ghostHand.sortingOrder = 96;
+                go.transform.localScale = Vector3.one * 0.55f;
+            }
+
+            float loop = Mathf.Repeat(idleTime - IdleReplaySeconds, 2f);
+            float travel = Mathf.Clamp01(loop / 1.4f);
+            float eased = 1f - (1f - travel) * (1f - travel);
+            Vector3 from = BoardLayout.TraySlotCenter(0);
+            Vector3 to = BoardLayout.CellToWorld(BoardSpec.Width / 2, 4);
+            ghostHand.enabled = true;
+            ghostHand.transform.position = Vector3.Lerp(from, to, eased);
+            Color tint = ThemeRuntime.Color("accent.primary");
+            ghostHand.color = new Color(tint.r, tint.g, tint.b, 0.55f * Mathf.Sin(Mathf.PI * Mathf.Clamp01(loop / 2f)));
         }
 
         private void Show(string key)

@@ -143,21 +143,14 @@ namespace Riptide.Tools.ContentCheck
             for (int i = 1; i < lums.Count; i++)
             {
                 double ratio = (lums[i].lum + 0.05) / (lums[i - 1].lum + 0.05);
-                if (ratio < 1.05)
-                {
-                    Console.Error.WriteLine(
-                        $"ui_theme.json: block luminance step {lums[i - 1].key} -> {lums[i].key} = {ratio:F3} — below the 1.05 floor");
-                    return 1;
-                }
-
                 if (ratio < 1.15)
                 {
-                    // Spec §8 demands >= 1.15; the spec's own palette misses it here.
-                    // Palette changes are Nick's aesthetic ruling (DECISIONS.md) —
-                    // warn loudly, don't block the gate on the spec's self-contradiction.
-                    Console.WriteLine(
-                        $"WARN ui_theme.json: block luminance step {lums[i - 1].key} -> {lums[i].key} = {ratio:F3} " +
-                        "< spec 1.15 — palette ruling pending (DECISIONS.md)");
+                    // Spec §8 floor, gate-blocking since the delegated palette
+                    // ruling (DECISIONS.md 2026-06-11): teal was retuned so the
+                    // whole chain clears 1.15 — keep it that way.
+                    Console.Error.WriteLine(
+                        $"ui_theme.json: block luminance step {lums[i - 1].key} -> {lums[i].key} = {ratio:F3} — below the spec §8 1.15 floor");
+                    return 1;
                 }
             }
 

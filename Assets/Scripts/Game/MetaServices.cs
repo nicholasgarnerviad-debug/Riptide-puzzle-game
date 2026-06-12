@@ -111,6 +111,10 @@ namespace Riptide.Game
         public int RecordDailyCompletion(CoinsConfig coins)
         {
             store.Data.Streak = StreakLogic.CompleteDaily(store.Data.Streak, TodayEpochDay());
+            // UI-spec §4.5 ruling (DECISIONS 2026-06-11, delegated): retries exist
+            // to rescue a FAILED daily — a win consumes the retry hook, so the
+            // shared result stays the day's one honest outcome.
+            store.Data.DailyRetryUsed = true;
             SaveNow();
             return CoinRules.StreakMilestoneAward(coins, store.Data.Streak.Current);
         }
