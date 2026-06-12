@@ -87,3 +87,60 @@ Development is governed by three documents in `docs/` — the **GDD** (game rule
 the **master prompt** (phase plan and acceptance gates), and the **UI spec** (design tokens,
 components, screens). Every deviation, conflict ruling, and judgment call is logged with
 rationale in **`docs/DECISIONS.md`** — if something looks surprising, the explanation is there.
+The product backlog lives in **`docs/ROADMAP.md`**.
+
+## Working on this repo with an AI agent
+
+This game was built by an AI agent operating under the contracts above. These meta-prompts
+keep any future session (Claude Code or otherwise) productive instead of destructive.
+
+### Ground rules — paste at the start of any session
+
+```
+You are working on Riptide. Non-negotiables:
+1. docs/RIPTIDE_GDD.md is law for game rules; docs/RIPTIDE_UI_SPEC.md for UI. If a change
+   conflicts with either, STOP and flag it — log rulings in docs/DECISIONS.md with rationale.
+2. Riptide.Core stays pure: no UnityEngine/UnityEditor/System.Random/DateTime.Now/IO.
+   The purity grep in run_all_tests.sh enforces this; never weaken it.
+3. Determinism is sacred: same seed = same game. Golden-file tests pin the RNG; if a change
+   breaks a golden, STOP and explain instead of regenerating it.
+4. Balance numbers live in Assets/Resources/Content/*.json, never in C#. UI colors,
+   durations and easings come from ui_theme.json tokens.
+5. Before claiming anything works: ./run_all_tests.sh green, then Unity EditMode AND
+   PlayMode green via the Temp/ trigger files. Never claim visuals look right — request a
+   screenshot and let a human judge.
+6. One commit per coherent change, message tagged ([feature]/[fix]/[balance]/…), test
+   counts in the message. No Co-Authored-By trailers.
+```
+
+### Task templates
+
+**New feature** — *"Act as lead dev. Plan `<feature>` first: which contract section covers
+it (cite it), what Core/Game/UI layers it touches, what new tests prove it. If it changes
+game rules, write the ruling into DECISIONS.md before code. Implement Core-first with dotnet
+tests, then flow, then UI. Full gates + both Unity suites green, then commit."*
+
+**Bug fix** — *"Reproduce `<bug>` as a failing test FIRST (the suite that should have
+caught it — if no suite could, say why and add the missing harness). Fix, prove the test
+flips green, run everything, commit with the root cause in the message."*
+
+**Balance change** — *"Touch only Content JSON. Re-run Tools/BalanceRunner and report the
+medians/death-mix against GDD §4 targets before and after. If targets move, that's a GDD
+ruling — flag it."*
+
+**UI / visual pass** — *"All styling through ui_theme.json tokens and the UiComponents
+builders — no literals, 9-sliced corners, ≥120 ref-px touch targets (the audit enforces).
+After compiling, enter play via Temp/riptide_play.txt and send a screenshot for human
+judgment; do not self-certify appearance."*
+
+**Release prep** — *"Run the full matrix: 3 gates, EditMode, PlayMode, AAB build trigger.
+Reconcile docs/DECISIONS.md open flags. Anything requiring human hands (device gates,
+signing, SDK installs) goes in the report, not under the rug."*
+
+### What an agent should read first
+
+`docs/DECISIONS.md` (the why behind everything) → `docs/ROADMAP.md` (what's next) →
+this file's automation table (how to drive the editor). The Unity editor on the dev
+machine has Auto Refresh disabled and its update loop parks when unfocused — drop the
+trigger file, then focus the editor window, and verify compiles by `Library/ScriptAssemblies`
+timestamps rather than trusting silence.
