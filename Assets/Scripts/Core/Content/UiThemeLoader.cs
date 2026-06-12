@@ -102,16 +102,19 @@ namespace Riptide.Core
         public int HudBandRefPx { get; }
         public int BoardTopGapRefPx { get; }
         public int TrayBottomInsetRefPx { get; }
+        public int BoosterRailBandRefPx { get; }
         public int BoardSideAllowanceRefPx { get; }
 
         public LayoutSpec(int canvasRefWidth, int canvasRefHeight, int hudBandRefPx,
-            int boardTopGapRefPx, int trayBottomInsetRefPx, int boardSideAllowanceRefPx)
+            int boardTopGapRefPx, int trayBottomInsetRefPx, int boosterRailBandRefPx,
+            int boardSideAllowanceRefPx)
         {
             CanvasRefWidth = canvasRefWidth;
             CanvasRefHeight = canvasRefHeight;
             HudBandRefPx = hudBandRefPx;
             BoardTopGapRefPx = boardTopGapRefPx;
             TrayBottomInsetRefPx = trayBottomInsetRefPx;
+            BoosterRailBandRefPx = boosterRailBandRefPx;
             BoardSideAllowanceRefPx = boardSideAllowanceRefPx;
         }
     }
@@ -346,6 +349,7 @@ namespace Riptide.Core
                     layoutObj.Require("hudBandRefPx").AsInt(),
                     layoutObj.Require("boardTopGapRefPx").AsInt(),
                     layoutObj.Require("trayBottomInsetRefPx").AsInt(),
+                    layoutObj.Require("boosterRailBandRefPx").AsInt(),
                     layoutObj.Require("boardSideAllowanceRefPx").AsInt());
 
                 return new UiTheme(

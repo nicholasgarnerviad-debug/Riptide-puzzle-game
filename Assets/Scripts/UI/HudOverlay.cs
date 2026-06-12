@@ -38,9 +38,15 @@ namespace Riptide.UI
         private int lastComboChain;
         private bool bestOvertaken;
 
-        /// <summary>Booster rail world X — over the board's right edge (board half-width 4.5).</summary>
-        private const float RailX = 3.1f;
-        private const float FreeAdX = 4.15f;
+        // Booster rail world geometry (gate feedback: the rail must never cover
+        // the board) — a reserved band BELOW the tray card; CameraFit holds the
+        // theme's boosterRailBandRefPx open for it on every device.
+        private const float RailRowY = -9.55f;
+        private const float ChipRowY = -8.85f;
+        private const float DrainX = -3.45f;
+        private const float PopX = -1.15f;
+        private const float RerollX = 1.15f;
+        private const float SwapX = 3.45f;
 
         private static void PinRail(Button button, Vector2 sizeRefPx, float worldX, float worldY)
         {
@@ -87,20 +93,22 @@ namespace Riptide.UI
                 });
             UiKit.Place((RectTransform)menu.transform, new Vector2(0.92f, 0.97f), new Vector2(170f, 64f), new Vector2(0f, -32f));
 
-            hud.coins = UiKit.Label(safe, "coins", "", 38, ThemeRuntime.Color("coin"), TextAnchor.UpperCenter);
-            UiKit.Place(hud.coins.rectTransform, new Vector2(0.5f, 0.925f), new Vector2(400f, 60f), new Vector2(0f, -30f));
+            // Coins live by the rail — that's where they're spent (gate feedback:
+            // the old 0.925-height label landed inside the board frame).
+            hud.coins = UiKit.Label(root, "coins", "", 34, ThemeRuntime.Color("coin"), TextAnchor.MiddleCenter);
+            hud.coins.rectTransform.sizeDelta = new Vector2(280f, 54f);
+            WorldAnchor.Pin(hud.coins.rectTransform, new Vector3(SwapX, ChipRowY, 0f));
 
-            // Spec §4.3 item 4: booster rail right-aligned ABOVE the tray strip —
-            // world-pinned over the board's right edge so it tracks the camera fit
-            // on every aspect (normalized anchors drifted off the board).
+            // Booster rail: one row in the reserved band BELOW the tray (gate
+            // feedback — the old pins covered the board's right edge).
             hud.drainButton = UiKit.TextButton(root, "drain", "", 28, () => hud.UseSimpleBooster(BoosterKind.DrainPump));
-            PinRail(hud.drainButton, new Vector2(250f, 80f), RailX, -2.1f);
+            PinRail(hud.drainButton, new Vector2(230f, 80f), DrainX, RailRowY);
             hud.popButton = UiKit.TextButton(root, "pop", "", 28, hud.TogglePopMode);
-            PinRail(hud.popButton, new Vector2(250f, 80f), RailX, -3.0f);
+            PinRail(hud.popButton, new Vector2(230f, 80f), PopX, RailRowY);
             hud.rerollButton = UiKit.TextButton(root, "reroll", "", 28, () => hud.UseSimpleBooster(BoosterKind.NewTide));
-            PinRail(hud.rerollButton, new Vector2(250f, 80f), RailX, -3.9f);
+            PinRail(hud.rerollButton, new Vector2(230f, 80f), RerollX, RailRowY);
             hud.swapButton = UiKit.TextButton(root, "swap", "", 28, hud.ToggleSwapMode);
-            PinRail(hud.swapButton, new Vector2(250f, 80f), RailX, -4.8f);
+            PinRail(hud.swapButton, new Vector2(230f, 80f), SwapX, RailRowY);
 
             // ROADMAP M4: endless milestone pop — over the board's lower half.
             hud.milestoneLabel = UiKit.Label(root, "milestone", "", 34, Palette.MeterFilled);
@@ -109,16 +117,20 @@ namespace Riptide.UI
             hud.milestoneLabel.gameObject.SetActive(false);
             flow.MilestoneReached += hud.OnMilestone;
 
-            // GDD 5.3: one free Drain Pump and one free New Tide per game via rewarded ad.
+            // GDD 5.3: one free Drain Pump and one free New Tide per game via
+            // rewarded ad — mini chips directly above their boosters.
             hud.freeDrain = UiKit.TextButton(root, "freeDrain", "▶ ad", 24,
                 () => { flow.TryFreeBoosterViaAd(BoosterKind.DrainPump); hud.RefreshFromState(); });
-            PinRail(hud.freeDrain, new Vector2(90f, 80f), FreeAdX, -2.1f);
+            PinRail(hud.freeDrain, new Vector2(90f, 60f), DrainX, ChipRowY);
             hud.freeReroll = UiKit.TextButton(root, "freeReroll", "▶ ad", 24,
                 () => { flow.TryFreeBoosterViaAd(BoosterKind.NewTide); hud.RefreshFromState(); });
-            PinRail(hud.freeReroll, new Vector2(90f, 80f), FreeAdX, -3.9f);
+            PinRail(hud.freeReroll, new Vector2(90f, 60f), RerollX, ChipRowY);
 
-            hud.popHint = UiKit.Label(safe, "popHint", flow.Strings.Get("booster.popHint"), 32, Palette.MeterDanger);
-            UiKit.Place(hud.popHint.rectTransform, new Vector2(0.5f, 0.91f), new Vector2(800f, 60f), Vector2.zero);
+            // Armed-booster instruction floats over the board's top rows —
+            // contextual, transient, and out of the (full) top bar.
+            hud.popHint = UiKit.Label(root, "popHint", flow.Strings.Get("booster.popHint"), 32, Palette.MeterDanger);
+            hud.popHint.rectTransform.sizeDelta = new Vector2(800f, 60f);
+            WorldAnchor.Pin(hud.popHint.rectTransform, new Vector3(0f, 5.4f, 0f));
             hud.popHint.gameObject.SetActive(false);
 
             // Genre pass (spec §12.4, research: Block Blast's praise loop) — type
@@ -130,10 +142,10 @@ namespace Riptide.UI
             WorldAnchor.Pin(hud.praise.rectTransform, new Vector3(0f, 2.4f, 0f));
             hud.praise.gameObject.SetActive(false);
 
-            // Visible combo multiplier beside the score — redundant-codes the
-            // §7 edge-glow so the chain is readable, genre-standard.
+            // Visible combo multiplier beside the score (inside the top band —
+            // gate feedback: nothing static may sit over the board).
             hud.comboChip = UiKit.Label(safe, "combo", "", 30, ThemeRuntime.Color("accent.primary"));
-            UiKit.Place(hud.comboChip.rectTransform, new Vector2(0.5f, 0.885f), new Vector2(360f, 46f), Vector2.zero);
+            UiKit.Place(hud.comboChip.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(220f, 46f), new Vector2(260f, -40f));
             hud.comboChip.gameObject.SetActive(false);
 
             // Endless: the personal best is the run's target (the genre's crown).

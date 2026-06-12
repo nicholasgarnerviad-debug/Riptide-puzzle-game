@@ -20,6 +20,8 @@ namespace Riptide.UI
         private TextMeshProUGUI voyageProgress = null!;
         private ProgressPips zonePips = null!;
         private TextMeshProUGUI dailyState = null!;
+        private Button voyageContinue = null!;
+        private Button endlessButton = null!;
         private RectTransform[] sections = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
@@ -48,24 +50,41 @@ namespace Riptide.UI
             screen.coins = UiComponents.CoinCounterComponent(root);
             UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.80f, 0.955f), new Vector2(300f, 64f));
 
-            // Voyage hero card.
-            RectTransform voyageCard = UiComponents.Card(root, "voyage", new Vector2(940f, 300f));
-            UiComponents.Place(voyageCard, new Vector2(0.5f, 0.665f), new Vector2(940f, 300f));
+            // Voyage hero card — spec §4.1: progress + pips + ButtonPrimary
+            // Continue (gate feedback: the hero had no primary action).
+            RectTransform voyageCard = UiComponents.Card(root, "voyage", new Vector2(940f, 360f));
+            UiComponents.Place(voyageCard, new Vector2(0.5f, 0.655f), new Vector2(940f, 360f));
             UiComponents.RoundedStrokeImage(voyageCard, "accent.deep", 32f);
             TextMeshProUGUI voyageTitle = UiText.Create(voyageCard, "title",
                 flow.Strings.Get("home.voyage"), "title", "accent.primary");
-            UiComponents.Place(voyageTitle.rectTransform, new Vector2(0.5f, 0.74f), new Vector2(860f, 80f));
+            UiComponents.Place(voyageTitle.rectTransform, new Vector2(0.5f, 0.85f), new Vector2(860f, 80f));
             screen.voyageProgress = UiText.Create(voyageCard, "progress", "", "body", "text.secondary");
-            UiComponents.Place(screen.voyageProgress.rectTransform, new Vector2(0.5f, 0.46f), new Vector2(860f, 60f));
+            UiComponents.Place(screen.voyageProgress.rectTransform, new Vector2(0.5f, 0.63f), new Vector2(860f, 60f));
             screen.zonePips = UiComponents.ProgressPipsComponent(voyageCard, 20);
-            UiComponents.Place((RectTransform)screen.zonePips.transform, new Vector2(0.5f, 0.20f), new Vector2(820f, 36f));
+            UiComponents.Place((RectTransform)screen.zonePips.transform, new Vector2(0.5f, 0.45f), new Vector2(820f, 36f));
+            screen.voyageContinue = UiComponents.ButtonPrimary(voyageCard, "continue", "",
+                () =>
+                {
+                    (int z, int i) = flow.Meta.Voyage.NextLevel();
+                    flow.StartVoyageLevel(z, i);
+                });
+            UiComponents.Place((RectTransform)screen.voyageContinue.transform, new Vector2(0.5f, 0.17f), new Vector2(620f, 104f));
             var voyageButton = voyageCard.gameObject.AddComponent<Button>();
             voyageButton.onClick.AddListener(() => flow.GoTo(FlowScreen.ZoneMap));
             voyageCard.gameObject.AddComponent<PressEffect>();
 
-            // Daily card.
+            // Daily card — §4.1: the foam-line top border marks the ritual.
             RectTransform dailyCard = UiComponents.Card(root, "daily", new Vector2(940f, 220f));
             UiComponents.Place(dailyCard, new Vector2(0.5f, 0.475f), new Vector2(940f, 220f));
+            RectTransform foamBorder = UiComponents.Rect(dailyCard, "foamBorder", Vector2.zero);
+            foamBorder.anchorMin = new Vector2(0f, 1f);
+            foamBorder.anchorMax = new Vector2(1f, 1f);
+            foamBorder.offsetMin = new Vector2(28f, -5f);
+            foamBorder.offsetMax = new Vector2(-28f, -1f);
+            var foamImage = foamBorder.gameObject.AddComponent<Image>();
+            foamImage.sprite = SpriteFactory.Solid();
+            foamImage.raycastTarget = false;
+            ThemedElement.Bind(foamBorder.gameObject, "water.foamLine");
             TextMeshProUGUI dailyTitle = UiText.Create(dailyCard, "title",
                 flow.Strings.Get("home.daily"), "heading", "text.primary");
             UiComponents.Place(dailyTitle.rectTransform, new Vector2(0.40f, 0.66f), new Vector2(620f, 70f));
@@ -80,6 +99,7 @@ namespace Riptide.UI
             Button endless = UiComponents.ButtonSecondary(root, "endless", flow.Strings.Get("home.endless"),
                 flow.StartEndless);
             UiComponents.Place((RectTransform)endless.transform, new Vector2(0.5f, 0.335f), new Vector2(940f, 120f));
+            screen.endlessButton = endless;
 
             Button tidepool = UiComponents.ButtonSecondary(root, "tidepool", flow.Strings.Get("home.tidepool"),
                 () => flow.GoTo(FlowScreen.Tidepool));
@@ -112,9 +132,17 @@ namespace Riptide.UI
         public void Refresh()
         {
             (int zone, int index) = flow.Meta.Voyage.NextLevel();
-            voyageProgress.text = flow.Meta.Voyage.TotalStars == 0
-                ? flow.Strings.Get("home.voyage")
-                : string.Format(flow.Strings.Get("home.zoneProgress"), zone, index);
+            // Gate feedback: a fresh profile printed "Voyage" twice — the
+            // progress line always shows where you are, even at Zone 1 · Level 1.
+            voyageProgress.text = string.Format(flow.Strings.Get("home.zoneProgress"), zone, index);
+            voyageContinue.GetComponentInChildren<TextMeshProUGUI>().text =
+                string.Format(flow.Strings.Get("home.voyageContinue"), zone, index);
+
+            // Genre pass: the endless button carries the score to chase.
+            long best = flow.Meta.EndlessBest;
+            endlessButton.GetComponentInChildren<TextMeshProUGUI>().text = best > 0
+                ? string.Format(flow.Strings.Get("home.endlessBest"), Riptide.Core.ShareCard.GroupThousands(best))
+                : flow.Strings.Get("home.endless");
 
             int completedInZone = Mathf.Clamp(index - 1, 0, 20);
             zonePips.SetFilled(completedInZone);

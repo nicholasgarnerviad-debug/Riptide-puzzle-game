@@ -56,7 +56,7 @@ namespace Riptide.UI
                 BoardLayout.ContentTopY,
                 BoardLayout.ContentBottomY,
                 layout.HudBandRefPx + layout.BoardTopGapRefPx,
-                layout.TrayBottomInsetRefPx,
+                layout.TrayBottomInsetRefPx + layout.BoosterRailBandRefPx,
                 layout.CanvasRefWidth));
 
             cam.orthographicSize = fit.OrthoSize;

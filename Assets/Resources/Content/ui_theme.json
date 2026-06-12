@@ -52,6 +52,7 @@
     "hudBandRefPx": 140,
     "boardTopGapRefPx": 24,
     "trayBottomInsetRefPx": 48,
+    "boosterRailBandRefPx": 170,
     "boardSideAllowanceRefPx": 104
   },
   "radius": { "r.s": 12, "r.m": 20, "r.l": 32, "block": 8 },

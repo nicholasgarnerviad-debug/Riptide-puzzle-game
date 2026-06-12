@@ -20,7 +20,7 @@ namespace Riptide.Core.Tests
         private const float ContentTop = 7.45f;      // board frame top (6.9 + 0.55 pad)
         private const float ContentBottom = -8.45f;  // tray card bottom (−7.1 − 1.35)
         private const float TopUiRefPx = 140f + 24f; // HUD band + gap
-        private const float BottomUiRefPx = 48f;
+        private const float BottomUiRefPx = 48f + 170f; // bottom inset + booster rail band
         private const float CanvasRefWidth = 1080f;
 
         private static CameraFitInput Device(float w, float h, float safeTop, float safeBottom) =>

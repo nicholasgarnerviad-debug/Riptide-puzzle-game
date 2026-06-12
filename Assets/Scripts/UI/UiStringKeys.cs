@@ -11,7 +11,7 @@ namespace Riptide.UI
         public static readonly string[] All =
         {
             "app.title",
-            "home.voyage", "home.voyageContinue", "home.endless", "home.daily",
+            "home.voyage", "home.voyageContinue", "home.endless", "home.endlessBest", "home.daily",
             "home.tidepool", "home.settings", "home.chest",
             "zone.title",
             "hud.goal.rescue", "hud.goal.rows", "hud.goal.tides", "hud.goal.score",

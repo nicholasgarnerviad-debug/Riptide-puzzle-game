@@ -37,7 +37,7 @@ namespace Riptide.Core.Tests
     ""reducedMotionScale"": 0.5
   }},
   ""juice"": {{ ""place"": {{ ""sfx"": ""Place"", ""haptic"": ""light"", ""anim"": ""none"" }} }},
-  ""layout"": {{ ""canvasRefWidth"": 1080, ""canvasRefHeight"": 2347, ""hudBandRefPx"": 140, ""boardTopGapRefPx"": 24, ""trayBottomInsetRefPx"": 48, ""boardSideAllowanceRefPx"": 104 }},
+  ""layout"": {{ ""canvasRefWidth"": 1080, ""canvasRefHeight"": 2347, ""hudBandRefPx"": 140, ""boardTopGapRefPx"": 24, ""trayBottomInsetRefPx"": 48, ""boosterRailBandRefPx"": 170, ""boardSideAllowanceRefPx"": 104 }},
   ""accessibility"": {{ ""minTouchTargetRefPx"": 120, ""minBodyContrast"": 4.5, ""minLargeContrast"": 3.0, ""minOnAccentContrast"": 7.0, ""minBlockLuminanceStepRatio"": 1.15 }}
 }}";
         }

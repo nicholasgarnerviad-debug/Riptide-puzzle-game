@@ -76,12 +76,19 @@ namespace Riptide.UI
     public sealed class SafeArea : MonoBehaviour
     {
         private Rect applied;
+        private int appliedWidth;
+        private int appliedHeight;
 
         private void Awake() => Apply();
 
         private void Update()
         {
-            if (Screen.safeArea != applied)
+            // Gate feedback (Device Simulator blank screen): the cache key must
+            // include the SCREEN size — switching Game view ↔ Simulator can change
+            // Screen.width/height while safeArea compares equal, freezing anchors
+            // computed against the wrong basis.
+            if (Screen.safeArea != applied
+                || Screen.width != appliedWidth || Screen.height != appliedHeight)
             {
                 Apply();
             }
@@ -97,12 +104,36 @@ namespace Riptide.UI
 
             Rect safe = Screen.safeArea;
             applied = safe;
-            var min = new Vector2(safe.xMin / Screen.width, safe.yMin / Screen.height);
-            var max = new Vector2(safe.xMax / Screen.width, safe.yMax / Screen.height);
+            appliedWidth = Screen.width;
+            appliedHeight = Screen.height;
+            (Vector2 min, Vector2 max) = Anchors(safe, appliedWidth, appliedHeight);
             rt.anchorMin = min;
             rt.anchorMax = max;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>Pure anchor math — degenerate or mismatched-basis reports
+        /// full-stretch instead of collapsing the screen. Public test surface.</summary>
+        public static (Vector2 min, Vector2 max) Anchors(Rect safe, int width, int height)
+        {
+            if (safe.width <= 1f || safe.height <= 1f || width <= 1 || height <= 1)
+            {
+                return (Vector2.zero, Vector2.one);
+            }
+
+            var min = new Vector2(
+                Mathf.Clamp01(safe.xMin / width), Mathf.Clamp01(safe.yMin / height));
+            var max = new Vector2(
+                Mathf.Clamp01(safe.xMax / width), Mathf.Clamp01(safe.yMax / height));
+            if (max.x - min.x < 0.5f || max.y - min.y < 0.5f)
+            {
+                // A "safe area" under half the screen is not a notch — it's a
+                // wrong-basis artifact; full-stretch beats an invisible screen.
+                return (Vector2.zero, Vector2.one);
+            }
+
+            return (min, max);
         }
     }
 }
