@@ -7,7 +7,13 @@ namespace Riptide.UI
     /// <summary>Renders the 3 dealt pieces below the board as mini silhouettes.</summary>
     public sealed class TrayView : MonoBehaviour
     {
-        private const float MiniScale = 0.3f;
+        /// <summary>
+        /// Genre pass (spec §12.4): tray minis read at a glance like the genre's
+        /// (~0.6 of board scale is the Block Blast/Woodoku norm; 0.42 is our max —
+        /// a 5-cell piece must fit the 2.25-world slot pitch). Single source —
+        /// InputController's fly-back shrinks to this same value.
+        /// </summary>
+        public const float MiniScale = 0.42f;
         private readonly List<GameObject>[] slotSprites = { new List<GameObject>(), new List<GameObject>(), new List<GameObject>() };
         private readonly PieceId?[] shown = new PieceId?[BoardSpec.TraySize];
 

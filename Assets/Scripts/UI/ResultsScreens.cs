@@ -30,6 +30,7 @@ namespace Riptide.UI
         private Button doubleCoins = null!;
         private Button upsell = null!;
         private Image intro = null!;
+        private TextMeshProUGUI newBestBanner = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -42,6 +43,13 @@ namespace Riptide.UI
 
             screen.title = UiText.Create(card, "title", "", "title", "text.primary");
             UiComponents.Place(screen.title.rectTransform, new Vector2(0.5f, 0.90f), new Vector2(860f, 110f));
+
+            // Genre pass (spec §12.4): beating the personal best is a MOMENT, not
+            // a stat-row footnote — one coin-gold banner beat over the headline.
+            screen.newBestBanner = UiText.Create(card, "newBest",
+                flow.Strings.Get("results.newBest"), "heading", "coin");
+            UiComponents.Place(screen.newBestBanner.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(700f, 70f));
+            screen.newBestBanner.gameObject.SetActive(false);
 
             screen.stars = UiComponents.StarTripletComponent(card);
             UiComponents.Place((RectTransform)screen.stars.transform, new Vector2(0.5f, 0.76f), new Vector2(420f, 130f));
@@ -167,9 +175,19 @@ namespace Riptide.UI
                     : string.Format(flow.Strings.Get("endless.best"), ShareCard.GroupThousands(flow.Meta.EndlessBest));
                 next.GetComponentInChildren<TextMeshProUGUI>().text = flow.Strings.Get("common.play");
                 retry.gameObject.SetActive(false);
+                newBestBanner.gameObject.SetActive(outcome.NewEndlessBest);
+                if (outcome.NewEndlessBest && isActiveAndEnabled)
+                {
+                    RectTransform bannerRt = newBestBanner.rectTransform;
+                    Tween.Run(this, "t.fast", "linear",
+                        u => bannerRt.localScale = Vector3.one * (1f + 0.15f * Mathf.Sin(u * Mathf.PI)),
+                        () => bannerRt.localScale = Vector3.one);
+                    UiJuice.Play("streak");
+                }
             }
             else
             {
+                newBestBanner.gameObject.SetActive(false);
                 next.GetComponentInChildren<TextMeshProUGUI>().text = flow.Strings.Get("results.next");
                 retry.gameObject.SetActive(true);
                 title.text = win

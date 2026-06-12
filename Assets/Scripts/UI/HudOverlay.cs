@@ -30,6 +30,14 @@ namespace Riptide.UI
         private bool pointerWasDown;
         private float milestoneUntil;
 
+        // Genre pass (spec §12.4): praise flash, combo chip, endless best chip.
+        private Text praise = null!;
+        private Text comboChip = null!;
+        private Text bestChip = null!;
+        private float praiseUntil;
+        private int lastComboChain;
+        private bool bestOvertaken;
+
         /// <summary>Booster rail world X — over the board's right edge (board half-width 4.5).</summary>
         private const float RailX = 3.1f;
         private const float FreeAdX = 4.15f;
@@ -113,6 +121,26 @@ namespace Riptide.UI
             UiKit.Place(hud.popHint.rectTransform, new Vector2(0.5f, 0.91f), new Vector2(800f, 60f), Vector2.zero);
             hud.popHint.gameObject.SetActive(false);
 
+            // Genre pass (spec §12.4, research: Block Blast's praise loop) — type
+            // only, accent-cyan, over the board's upper half; no particle bursts
+            // (anti-goals hold). Shown for multi-row clears.
+            hud.praise = UiKit.Label(root, "praise", "", 64, ThemeRuntime.Color("accent.primary"));
+            hud.praise.fontStyle = FontStyle.Bold;
+            hud.praise.rectTransform.sizeDelta = new Vector2(900f, 120f);
+            WorldAnchor.Pin(hud.praise.rectTransform, new Vector3(0f, 2.4f, 0f));
+            hud.praise.gameObject.SetActive(false);
+
+            // Visible combo multiplier beside the score — redundant-codes the
+            // §7 edge-glow so the chain is readable, genre-standard.
+            hud.comboChip = UiKit.Label(safe, "combo", "", 30, ThemeRuntime.Color("accent.primary"));
+            UiKit.Place(hud.comboChip.rectTransform, new Vector2(0.5f, 0.885f), new Vector2(360f, 46f), Vector2.zero);
+            hud.comboChip.gameObject.SetActive(false);
+
+            // Endless: the personal best is the run's target (the genre's crown).
+            hud.bestChip = UiKit.Label(safe, "best", "", 28, UiKit.TextDim, TextAnchor.UpperLeft);
+            UiKit.Place(hud.bestChip.rectTransform, new Vector2(0.05f, 0.97f), new Vector2(560f, 60f), new Vector2(280f, -30f));
+            hud.bestChip.gameObject.SetActive(false);
+
             if (flow.Store != null)
             {
                 flow.Store.MoveApplied += hud.OnMove;
@@ -161,13 +189,40 @@ namespace Riptide.UI
             popHint.gameObject.SetActive(swapArmed);
         }
 
-        private void OnMove(Move move, MoveResult result) => RefreshFromState();
+        private void OnMove(Move move, MoveResult result)
+        {
+            int rows = result.Events.RowsCleared.Count;
+            if (rows >= 2)
+            {
+                ShowPraise(rows);
+            }
+
+            RefreshFromState();
+        }
+
+        /// <summary>Spec §12.4 praise beat: scale-in (t.base), hold, then hide.
+        /// Public as test surface (PlayMode asserts copy + activation).</summary>
+        public void ShowPraise(int rows)
+        {
+            praise.text = flow.Strings.Get(rows == 2 ? "praise.double"
+                : rows == 3 ? "praise.triple" : "praise.quad");
+            praise.gameObject.SetActive(true);
+            praiseUntil = Time.realtimeSinceStartup + 1.1f;
+            RectTransform rt = praise.rectTransform;
+            rt.localScale = Vector3.one * 0.7f;
+            Tween.Run(this, "t.base", "easeOutQuart",
+                u => rt.localScale = Vector3.one * (0.7f + 0.3f * u),
+                () => rt.localScale = Vector3.one);
+        }
 
         private void OnReset(GameState state)
         {
             popArmed = false;
             swapArmed = false;
             popHint.gameObject.SetActive(false);
+            praise.gameObject.SetActive(false);
+            lastComboChain = 0;
+            bestOvertaken = false;
             RefreshFromState();
         }
 
@@ -198,6 +253,11 @@ namespace Riptide.UI
             if (milestoneLabel.gameObject.activeSelf && Time.realtimeSinceStartup > milestoneUntil)
             {
                 milestoneLabel.gameObject.SetActive(false);
+            }
+
+            if (praise.gameObject.activeSelf && Time.realtimeSinceStartup > praiseUntil)
+            {
+                praise.gameObject.SetActive(false);
             }
 
             if (!popArmed && !swapArmed)
@@ -260,6 +320,9 @@ namespace Riptide.UI
             score.text = ShareCard.GroupThousands(state.Score);
             coins.text = string.Format(flow.Strings.Get("hud.coins"), ShareCard.GroupThousands(flow.Meta.Coins));
 
+            RefreshComboChip(state);
+            RefreshBestChip(state);
+
             bool boosters = state.Config.BoostersAllowed && !state.Status.IsTerminal();
             drainButton.gameObject.SetActive(boosters);
             popButton.gameObject.SetActive(boosters);
@@ -311,6 +374,64 @@ namespace Riptide.UI
             }
 
             goals.text = sb.ToString();
+        }
+
+        /// <summary>Spec §12.4: the chain multiplier is visible, not just felt.</summary>
+        private void RefreshComboChip(GameState state)
+        {
+            int chain = state.ComboChain;
+            bool show = chain >= 2 && !state.Status.IsTerminal();
+            comboChip.gameObject.SetActive(show);
+            if (show)
+            {
+                ScoringConfig sc = state.Config.Scoring;
+                int halves = System.Math.Min(
+                    sc.ComboStartHalves + (chain - 1) * sc.ComboStepHalves, sc.ComboCapHalves);
+                comboChip.text = string.Format(flow.Strings.Get("hud.combo"), FormatHalves(halves));
+                if (chain > lastComboChain)
+                {
+                    Pulse(comboChip.rectTransform);
+                }
+            }
+
+            lastComboChain = chain;
+        }
+
+        /// <summary>Endless personal best in-run; flips to coin color the moment it's beaten.</summary>
+        private void RefreshBestChip(GameState state)
+        {
+            bool endless = flow.Mode == GameMode.Endless && flow.Meta.EndlessBest > 0;
+            bestChip.gameObject.SetActive(endless);
+            if (!endless)
+            {
+                return;
+            }
+
+            long shown = System.Math.Max(flow.Meta.EndlessBest, state.Score);
+            bestChip.text = string.Format(flow.Strings.Get("hud.best"), ShareCard.GroupThousands(shown));
+            if (state.Score > flow.Meta.EndlessBest && !bestOvertaken)
+            {
+                bestOvertaken = true;
+                bestChip.color = ThemeRuntime.Color("coin");
+                Pulse(bestChip.rectTransform);
+            }
+            else if (!bestOvertaken)
+            {
+                bestChip.color = UiKit.TextDim;
+            }
+        }
+
+        /// <summary>"3 halves" → "1.5" (invariant culture). Public as test surface.</summary>
+        public static string FormatHalves(int halves) =>
+            halves % 2 == 0
+                ? (halves / 2).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : (halves / 2f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+
+        private void Pulse(RectTransform target)
+        {
+            Tween.Run(this, "t.fast", "linear",
+                u => target.localScale = Vector3.one * (1f + 0.15f * Mathf.Sin(u * Mathf.PI)),
+                () => target.localScale = Vector3.one);
         }
     }
 }

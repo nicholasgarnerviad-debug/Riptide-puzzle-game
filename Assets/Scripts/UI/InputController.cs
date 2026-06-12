@@ -319,7 +319,7 @@ namespace Riptide.UI
         }
 
         /// <summary>TrayView's mini silhouette scale — the fly-back shrinks into it.</summary>
-        private const float TrayMiniScale = 0.3f;
+        private const float TrayMiniScale = TrayView.MiniScale;
 
         /// <summary>Mask cells can leave the grid; GridPos refuses out-of-bounds, so clamp for the query.</summary>
         private static GridPos SafePos(int col, int row, IReadOnlyList<PieceCell> mask)
