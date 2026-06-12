@@ -6,7 +6,9 @@
         "UnityEngine.TestRunner",
         "Riptide.UI",
         "Riptide.Core",
-        "UnityEngine.UI"
+        "Riptide.Game",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
