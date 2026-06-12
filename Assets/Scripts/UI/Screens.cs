@@ -21,7 +21,7 @@ namespace Riptide.UI
         private ProgressPips zonePips = null!;
         private TextMeshProUGUI dailyState = null!;
         private Button voyageContinue = null!;
-        private Button endlessButton = null!;
+        private TextMeshProUGUI endlessCaption = null!;
         private RectTransform[] sections = null!;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
@@ -42,107 +42,198 @@ namespace Riptide.UI
             ThemedElement.Bind(band.gameObject, "water.calm.btm");
             band.gameObject.AddComponent<HomeWaterBand>();
 
+            // Wordmark: big expressive type (research: bold display type is the
+            // 2025 menu signature) — ice→cyan vertex gradient + soft glow echo.
+            TextMeshProUGUI wordmarkGlow = UiText.Create(root, "wordmarkGlow",
+                flow.Strings.Get("app.title"), "display", "glow.primary");
+            wordmarkGlow.characterSpacing = 16f;
+            wordmarkGlow.fontSize = 104f;
+            UiComponents.Place(wordmarkGlow.rectTransform, new Vector2(0.5f, 0.915f), new Vector2(940f, 150f));
+            wordmarkGlow.rectTransform.localScale = Vector3.one * 1.035f;
+
             TextMeshProUGUI wordmark = UiText.Create(root, "wordmark", flow.Strings.Get("app.title"),
                 "display", "accent.primary");
-            wordmark.characterSpacing = 18f;
-            UiComponents.Place(wordmark.rectTransform, new Vector2(0.5f, 0.885f), new Vector2(900f, 130f));
+            wordmark.characterSpacing = 16f;
+            wordmark.fontSize = 104f;
+            wordmark.enableVertexGradient = true;
+            wordmark.colorGradient = new VertexGradient(
+                ThemeRuntime.Color("block.ice"), ThemeRuntime.Color("block.ice"),
+                ThemeRuntime.Color("accent.primary"), ThemeRuntime.Color("accent.primary"));
+            UiComponents.Place(wordmark.rectTransform, new Vector2(0.5f, 0.915f), new Vector2(940f, 150f));
 
-            screen.coins = UiComponents.CoinCounterComponent(root);
-            UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.80f, 0.955f), new Vector2(300f, 64f));
+            // Coin pill, top-right.
+            RectTransform coinPill = UiComponents.Rect(root, "coinPill", new Vector2(250f, 78f));
+            UiComponents.Place(coinPill, new Vector2(0.84f, 0.957f), new Vector2(250f, 78f));
+            Image pillImage = UiComponents.RoundedImage(coinPill.gameObject, 39f);
+            pillImage.raycastTarget = false;
+            ThemedElement.Bind(coinPill.gameObject, "bg.surface");
+            UiComponents.RoundedStrokeImage(coinPill, "stroke.subtle", 39f);
+            screen.coins = UiComponents.CoinCounterComponent(coinPill);
+            UiComponents.Place((RectTransform)screen.coins.transform, new Vector2(0.5f, 0.5f), new Vector2(230f, 64f));
 
-            // Voyage hero card — spec §4.1: progress + pips + ButtonPrimary
-            // Continue (gate feedback: the hero had no primary action).
-            RectTransform voyageCard = UiComponents.Card(root, "voyage", new Vector2(940f, 360f));
-            UiComponents.Place(voyageCard, new Vector2(0.5f, 0.655f), new Vector2(940f, 360f));
+            // VOYAGE HERO — the one big thing on the screen (research: a single
+            // dominant play action; everything else recedes).
+            RectTransform voyageCard = UiComponents.Card(root, "voyage", new Vector2(960f, 520f));
+            UiComponents.Place(voyageCard, new Vector2(0.5f, 0.645f), new Vector2(960f, 520f));
             UiComponents.RoundedStrokeImage(voyageCard, "accent.deep", 32f);
+
+            RectTransform badge = UiComponents.Rect(voyageCard, "badge", new Vector2(132f, 132f));
+            UiComponents.Place(badge, new Vector2(0.15f, 0.78f), new Vector2(132f, 132f));
+            var badgeBg = badge.gameObject.AddComponent<Image>();
+            badgeBg.sprite = SpriteFactory.Dot();
+            badgeBg.raycastTarget = false;
+            ThemedElement.Bind(badge.gameObject, "bg.raised");
+            RectTransform badgeIcon = UiComponents.Rect(badge, "icon", new Vector2(84f, 84f));
+            UiComponents.Place(badgeIcon, new Vector2(0.5f, 0.5f), new Vector2(84f, 84f));
+            var badgeIconImage = badgeIcon.gameObject.AddComponent<Image>();
+            badgeIconImage.sprite = MenuSprites.Icon("compass");
+            badgeIconImage.raycastTarget = false;
+            ThemedElement.Bind(badgeIcon.gameObject, "accent.primary");
+
             TextMeshProUGUI voyageTitle = UiText.Create(voyageCard, "title",
                 flow.Strings.Get("home.voyage"), "title", "accent.primary");
-            UiComponents.Place(voyageTitle.rectTransform, new Vector2(0.5f, 0.85f), new Vector2(860f, 80f));
+            voyageTitle.alignment = TextAlignmentOptions.Left;
+            UiComponents.Place(voyageTitle.rectTransform, new Vector2(0.62f, 0.84f), new Vector2(560f, 80f));
             screen.voyageProgress = UiText.Create(voyageCard, "progress", "", "body", "text.secondary");
-            UiComponents.Place(screen.voyageProgress.rectTransform, new Vector2(0.5f, 0.63f), new Vector2(860f, 60f));
+            screen.voyageProgress.alignment = TextAlignmentOptions.Left;
+            UiComponents.Place(screen.voyageProgress.rectTransform, new Vector2(0.62f, 0.69f), new Vector2(560f, 56f));
             screen.zonePips = UiComponents.ProgressPipsComponent(voyageCard, 20);
-            UiComponents.Place((RectTransform)screen.zonePips.transform, new Vector2(0.5f, 0.45f), new Vector2(820f, 36f));
+            UiComponents.Place((RectTransform)screen.zonePips.transform, new Vector2(0.5f, 0.52f), new Vector2(820f, 36f));
             screen.voyageContinue = UiComponents.ButtonPrimary(voyageCard, "continue", "",
                 () =>
                 {
                     (int z, int i) = flow.Meta.Voyage.NextLevel();
                     flow.StartVoyageLevel(z, i);
                 });
-            UiComponents.Place((RectTransform)screen.voyageContinue.transform, new Vector2(0.5f, 0.17f), new Vector2(620f, 104f));
+            UiComponents.Place((RectTransform)screen.voyageContinue.transform, new Vector2(0.5f, 0.21f), new Vector2(680f, 150f));
             var voyageButton = voyageCard.gameObject.AddComponent<Button>();
             voyageButton.onClick.AddListener(() => flow.GoTo(FlowScreen.ZoneMap));
             voyageCard.gameObject.AddComponent<PressEffect>();
 
-            // Daily card — §4.1: the foam-line top border marks the ritual.
-            RectTransform dailyCard = UiComponents.Card(root, "daily", new Vector2(940f, 220f));
-            UiComponents.Place(dailyCard, new Vector2(0.5f, 0.475f), new Vector2(940f, 220f));
+            // DAILY + ENDLESS, two-up: dense, distinct, each with an icon identity.
+            RectTransform dailyCard = UiComponents.Card(root, "daily", new Vector2(462f, 360f));
+            UiComponents.Place(dailyCard, new Vector2(0.262f, 0.388f), new Vector2(462f, 360f));
             RectTransform foamBorder = UiComponents.Rect(dailyCard, "foamBorder", Vector2.zero);
             foamBorder.anchorMin = new Vector2(0f, 1f);
             foamBorder.anchorMax = new Vector2(1f, 1f);
-            foamBorder.offsetMin = new Vector2(28f, -5f);
-            foamBorder.offsetMax = new Vector2(-28f, -1f);
+            foamBorder.offsetMin = new Vector2(24f, -5f);
+            foamBorder.offsetMax = new Vector2(-24f, -1f);
             var foamImage = foamBorder.gameObject.AddComponent<Image>();
             foamImage.sprite = SpriteFactory.Solid();
             foamImage.raycastTarget = false;
             ThemedElement.Bind(foamBorder.gameObject, "water.foamLine");
+            CardIcon(dailyCard, "sun", "warning");
             TextMeshProUGUI dailyTitle = UiText.Create(dailyCard, "title",
                 flow.Strings.Get("home.daily"), "heading", "text.primary");
-            UiComponents.Place(dailyTitle.rectTransform, new Vector2(0.40f, 0.66f), new Vector2(620f, 70f));
+            UiComponents.Place(dailyTitle.rectTransform, new Vector2(0.5f, 0.42f), new Vector2(430f, 60f));
             screen.dailyState = UiText.Create(dailyCard, "state", "", "caption", "text.secondary");
-            UiComponents.Place(screen.dailyState.rectTransform, new Vector2(0.40f, 0.28f), new Vector2(620f, 50f));
+            UiComponents.Place(screen.dailyState.rectTransform, new Vector2(0.5f, 0.21f), new Vector2(430f, 50f));
             screen.streak = UiComponents.StreakFlameComponent(dailyCard);
-            UiComponents.Place((RectTransform)screen.streak.transform, new Vector2(0.85f, 0.5f), new Vector2(200f, 64f));
+            UiComponents.Place((RectTransform)screen.streak.transform, new Vector2(0.84f, 0.85f), new Vector2(160f, 60f));
             var dailyButton = dailyCard.gameObject.AddComponent<Button>();
             dailyButton.onClick.AddListener(() => flow.GoTo(FlowScreen.DailyIntro));
             dailyCard.gameObject.AddComponent<PressEffect>();
 
-            Button endless = UiComponents.ButtonSecondary(root, "endless", flow.Strings.Get("home.endless"),
-                flow.StartEndless);
-            UiComponents.Place((RectTransform)endless.transform, new Vector2(0.5f, 0.335f), new Vector2(940f, 120f));
-            screen.endlessButton = endless;
+            RectTransform endlessCard = UiComponents.Card(root, "endless", new Vector2(462f, 360f));
+            UiComponents.Place(endlessCard, new Vector2(0.738f, 0.388f), new Vector2(462f, 360f));
+            UiComponents.RoundedStrokeImage(endlessCard, "block.violet", 32f);
+            CardIcon(endlessCard, "waves", "block.violet");
+            TextMeshProUGUI endlessTitle = UiText.Create(endlessCard, "title",
+                flow.Strings.Get("home.endless"), "heading", "text.primary");
+            UiComponents.Place(endlessTitle.rectTransform, new Vector2(0.5f, 0.42f), new Vector2(430f, 60f));
+            screen.endlessCaption = UiText.Create(endlessCard, "caption", "", "caption", "text.secondary");
+            UiComponents.Place(screen.endlessCaption.rectTransform, new Vector2(0.5f, 0.21f), new Vector2(430f, 50f));
+            var endlessButton = endlessCard.gameObject.AddComponent<Button>();
+            endlessButton.onClick.AddListener(flow.StartEndless);
+            endlessCard.gameObject.AddComponent<PressEffect>();
 
-            Button tidepool = UiComponents.ButtonSecondary(root, "tidepool", flow.Strings.Get("home.tidepool"),
-                () => flow.GoTo(FlowScreen.Tidepool));
-            UiComponents.Place((RectTransform)tidepool.transform, new Vector2(0.30f, 0.225f), new Vector2(520f, 110f));
-
-            Button chest = UiComponents.ButtonReward(root, "chest", flow.Strings.Get("home.chest"),
-                () => { flow.TryClaimChestViaAd(); screen.Refresh(); });
-            UiComponents.Place((RectTransform)chest.transform, new Vector2(0.745f, 0.225f), new Vector2(380f, 110f));
-
-            Button shop = UiComponents.ButtonGhost(root, "shop", flow.Strings.Get("shop.title"),
-                () => flow.GoTo(FlowScreen.Shop));
-            UiComponents.Place((RectTransform)shop.transform, new Vector2(0.30f, 0.125f), new Vector2(420f, 88f));
-
-            Button settings = UiComponents.ButtonGhost(root, "settings", flow.Strings.Get("home.settings"),
-                () => flow.GoTo(FlowScreen.Settings));
-            UiComponents.Place((RectTransform)settings.transform, new Vector2(0.70f, 0.125f), new Vector2(420f, 88f));
+            // Bottom icon bar: compact, icon-first (research: recognizable icons
+            // in a consistent row, not full-width text slabs).
+            Button tidepool = BarButton(root, 0.14f, "tidepool", "fish", flow.Strings.Get("home.tidepool"),
+                "accent.primary", () => flow.GoTo(FlowScreen.Tidepool));
+            Button chest = BarButton(root, 0.38f, "chest", "chest", flow.Strings.Get("home.chest"),
+                "coin", () => { flow.TryClaimChestViaAd(); screen.Refresh(); });
+            AdBadge(chest);
+            Button shop = BarButton(root, 0.62f, "shop", "bag", flow.Strings.Get("shop.title"),
+                "positive", () => flow.GoTo(FlowScreen.Shop));
+            Button settings = BarButton(root, 0.86f, "settings", "gear", flow.Strings.Get("home.settings"),
+                "text.secondary", () => flow.GoTo(FlowScreen.Settings));
 
             screen.sections = new[]
             {
-                wordmark.rectTransform, voyageCard, dailyCard,
-                (RectTransform)endless.transform, (RectTransform)tidepool.transform,
-                (RectTransform)chest.transform, (RectTransform)shop.transform,
-                (RectTransform)settings.transform,
+                wordmark.rectTransform, voyageCard, dailyCard, endlessCard,
+                (RectTransform)tidepool.transform, (RectTransform)chest.transform,
+                (RectTransform)shop.transform, (RectTransform)settings.transform,
             };
 
             screen.Refresh();
             return root;
         }
 
+        /// <summary>Icon mark in a card's upper half.</summary>
+        private static void CardIcon(RectTransform card, string iconId, string colorToken)
+        {
+            RectTransform icon = UiComponents.Rect(card, "icon", new Vector2(96f, 96f));
+            UiComponents.Place(icon, new Vector2(0.5f, 0.70f), new Vector2(96f, 96f));
+            var image = icon.gameObject.AddComponent<Image>();
+            image.sprite = MenuSprites.Icon(iconId);
+            image.raycastTarget = false;
+            ThemedElement.Bind(icon.gameObject, colorToken);
+        }
+
+        /// <summary>Square icon button for the bottom bar: glyph above a micro label.</summary>
+        private static Button BarButton(RectTransform root, float x, string name, string iconId,
+            string label, string iconToken, System.Action onClick)
+        {
+            RectTransform rt = UiComponents.Rect(root, name, new Vector2(200f, 180f));
+            UiComponents.Place(rt, new Vector2(x, 0.145f), new Vector2(200f, 180f));
+            Image bg = UiComponents.RoundedImage(rt.gameObject, 24f);
+            ThemedElement.Bind(rt.gameObject, "bg.raised");
+            UiComponents.RoundedStrokeImage(rt, "stroke.subtle", 24f);
+            var button = rt.gameObject.AddComponent<Button>();
+            button.targetGraphic = bg;
+            button.onClick.AddListener(() => onClick());
+            rt.gameObject.AddComponent<PressEffect>();
+
+            RectTransform icon = UiComponents.Rect(rt, "icon", new Vector2(76f, 76f));
+            UiComponents.Place(icon, new Vector2(0.5f, 0.64f), new Vector2(76f, 76f));
+            var iconImage = icon.gameObject.AddComponent<Image>();
+            iconImage.sprite = MenuSprites.Icon(iconId);
+            iconImage.raycastTarget = false;
+            ThemedElement.Bind(icon.gameObject, iconToken);
+
+            TextMeshProUGUI text = UiText.Create(rt, "label", label, "micro", "text.secondary");
+            UiComponents.Place(text.rectTransform, new Vector2(0.5f, 0.16f), new Vector2(190f, 36f));
+            return button;
+        }
+
+        /// <summary>Small amber AD corner badge (rewarded affordance).</summary>
+        private static void AdBadge(Button host)
+        {
+            RectTransform badge = UiComponents.Rect((RectTransform)host.transform, "adBadge", new Vector2(58f, 58f));
+            UiComponents.Place(badge, new Vector2(0.88f, 0.88f), new Vector2(58f, 58f));
+            var image = badge.gameObject.AddComponent<Image>();
+            image.sprite = SpriteFactory.Dot();
+            image.raycastTarget = false;
+            ThemedElement.Bind(badge.gameObject, "warning");
+            TextMeshProUGUI ad = UiText.Create(badge, "ad", "AD", "micro", "text.onAccent");
+            UiComponents.Stretch(ad.rectTransform);
+        }
+
         public void Refresh()
         {
             (int zone, int index) = flow.Meta.Voyage.NextLevel();
-            // Gate feedback: a fresh profile printed "Voyage" twice — the
-            // progress line always shows where you are, even at Zone 1 · Level 1.
-            voyageProgress.text = string.Format(flow.Strings.Get("home.zoneProgress"), zone, index);
+            // The zone NAME carries the adventure (spec §4.2 zones.* strings).
+            voyageProgress.text = string.Format(flow.Strings.Get("home.zoneNamed"),
+                zone, index, flow.Strings.Get($"zones.{zone}"));
             voyageContinue.GetComponentInChildren<TextMeshProUGUI>().text =
                 string.Format(flow.Strings.Get("home.voyageContinue"), zone, index);
 
-            // Genre pass: the endless button carries the score to chase.
+            // Genre pass: the endless card carries the score to chase.
             long best = flow.Meta.EndlessBest;
-            endlessButton.GetComponentInChildren<TextMeshProUGUI>().text = best > 0
-                ? string.Format(flow.Strings.Get("home.endlessBest"), Riptide.Core.ShareCard.GroupThousands(best))
-                : flow.Strings.Get("home.endless");
+            endlessCaption.text = best > 0
+                ? string.Format(flow.Strings.Get("endless.best"), Riptide.Core.ShareCard.GroupThousands(best))
+                : flow.Strings.Get("home.endlessHint");
 
             int completedInZone = Mathf.Clamp(index - 1, 0, 20);
             zonePips.SetFilled(completedInZone);

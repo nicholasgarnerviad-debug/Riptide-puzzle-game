@@ -35,17 +35,19 @@ namespace Riptide.UI
 
         private void Build()
         {
-            Color tint = ThemeRuntime.Color("text.muted");
+            // Visual pass: soft bokeh motes instead of hard pixels — suspended
+            // particles in the water column, not screen dirt.
+            Color tint = ThemeRuntime.Color("block.ice");
             for (int i = 0; i < Count; i++)
             {
                 var flakeGo = new GameObject($"flake_{i}", typeof(RectTransform));
                 flakeGo.transform.SetParent(area, false);
                 var image = flakeGo.AddComponent<Image>();
-                image.sprite = SpriteFactory.Dot();
-                image.color = new Color(tint.r, tint.g, tint.b, 0.10f);
+                image.sprite = MenuSprites.SoftGlow();
+                image.color = new Color(tint.r, tint.g, tint.b, Random.Range(0.05f, 0.14f));
                 image.raycastTarget = false;
                 var rt = (RectTransform)flakeGo.transform;
-                rt.sizeDelta = Vector2.one * Random.Range(6f, 16f);
+                rt.sizeDelta = Vector2.one * Random.Range(10f, 34f);
                 rt.anchorMin = rt.anchorMax = new Vector2(Random.value, Random.value);
                 flakes[i] = rt;
                 speeds[i] = Random.Range(12f, 34f);

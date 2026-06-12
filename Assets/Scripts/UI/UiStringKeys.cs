@@ -12,6 +12,9 @@ namespace Riptide.UI
         {
             "app.title",
             "home.voyage", "home.voyageContinue", "home.endless", "home.endlessBest", "home.daily",
+            "home.endlessHint", "home.zoneNamed",
+            "zones.1", "zones.2", "zones.3", "zones.4", "zones.5",
+            "zones.6", "zones.7", "zones.8", "zones.9", "zones.10",
             "home.tidepool", "home.settings", "home.chest",
             "zone.title",
             "hud.goal.rescue", "hud.goal.rows", "hud.goal.tides", "hud.goal.score",

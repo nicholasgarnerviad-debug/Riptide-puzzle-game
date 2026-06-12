@@ -97,8 +97,27 @@ namespace Riptide.UI
         {
             RectTransform root = Rect(parent, name, new Vector2(560f, 130f));
             PadHitTarget(root);
-            Image image = RoundedImage(root.gameObject, 20f); // r.m
-            ThemedElement.Bind(root.gameObject, fillToken);
+
+            Image image;
+            if (glow)
+            {
+                // Visual pass: primaries are lit capsules — baked luminance
+                // gradient tinted by the accent token, soft drop shadow beneath,
+                // rim glow around (research: dynamic shadows + depth read as
+                // "real mobile game"; hue still single-sourced from the theme).
+                AddSoftShadow(root);
+                image = root.gameObject.AddComponent<Image>();
+                image.sprite = MenuSprites.CapsuleGradient();
+                image.type = Image.Type.Sliced;
+                image.pixelsPerUnitMultiplier = 22f * (100f / 64f) / 28f;
+                ThemedElement.Bind(root.gameObject, fillToken);
+            }
+            else
+            {
+                image = RoundedImage(root.gameObject, 20f); // r.m
+                ThemedElement.Bind(root.gameObject, fillToken);
+            }
+
             var button = root.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(() => onClick());
@@ -112,9 +131,27 @@ namespace Riptide.UI
                 RoundedStrokeImage(root, "stroke.bright", 20f);
             }
 
-            TextMeshProUGUI text = UiText.Create(root, "label", label, "body", textToken);
+            TextMeshProUGUI text = UiText.Create(root, "label", label, glow ? "heading" : "body", textToken);
             Stretch(text.rectTransform);
             return button;
+        }
+
+        /// <summary>Soft drop shadow under elevated elements (visual pass).</summary>
+        internal static void AddSoftShadow(RectTransform root)
+        {
+            var shadow = new GameObject("shadow", typeof(RectTransform));
+            shadow.transform.SetParent(root, false);
+            shadow.transform.SetAsFirstSibling();
+            var rt = (RectTransform)shadow.transform;
+            Stretch(rt);
+            rt.offsetMin = new Vector2(-6f, -22f);
+            rt.offsetMax = new Vector2(6f, -6f);
+            var image = shadow.AddComponent<Image>();
+            image.sprite = SpriteFactory.RoundedFill();
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 30f;
+            image.raycastTarget = false;
+            ThemedElement.Bind(shadow, "shadow.soft");
         }
 
         // ---------------- §3.6–3.9 surfaces ----------------
@@ -122,7 +159,12 @@ namespace Riptide.UI
         public static RectTransform Card(RectTransform parent, string name, Vector2 size)
         {
             RectTransform root = Rect(parent, name, size);
-            RoundedImage(root.gameObject, 32f); // r.l
+            // Visual pass: cards carry a subtle top-lit gradient — flat slabs were
+            // the core of the "doesn't look like a mobile game" verdict.
+            var image = root.gameObject.AddComponent<Image>();
+            image.sprite = MenuSprites.PanelGradient();
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 32f; // r.l
             ThemedElement.Bind(root.gameObject, "bg.surface");
             RoundedStrokeImage(root, "stroke.subtle", 32f);
             return root;

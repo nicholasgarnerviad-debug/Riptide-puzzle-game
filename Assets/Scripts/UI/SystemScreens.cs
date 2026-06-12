@@ -503,7 +503,12 @@ namespace Riptide.UI
         }
     }
 
-    /// <summary>The single full-bleed menu backdrop living behind the screen stack.</summary>
+    /// <summary>
+    /// The single full-bleed menu backdrop living behind the screen stack.
+    /// Visual pass: layered depth — base color, brighter water above, god rays
+    /// from the surface, drifting bokeh snow, vignette. We are UNDER the ocean;
+    /// the backdrop finally says so.
+    /// </summary>
     internal static class ScreenBackdrop
     {
         public static RectTransform Create(RectTransform parent)
@@ -514,7 +519,23 @@ namespace Riptide.UI
             bg.sprite = SpriteFactory.Solid();
             ThemedElement.Bind(root.gameObject, "bg.deep");
 
-            // 8-UI ambience: we're underwater everywhere, menus included.
+            // Brighter water toward the surface: a top-down gradient band.
+            RectTransform glowTop = UiComponents.Rect(root, "surfaceGlow", Vector2.zero);
+            glowTop.anchorMin = new Vector2(0f, 0.45f);
+            glowTop.anchorMax = new Vector2(1f, 1f);
+            glowTop.offsetMin = Vector2.zero;
+            glowTop.offsetMax = Vector2.zero;
+            glowTop.localScale = new Vector3(1f, -1f, 1f); // fade points down
+            var glowImage = glowTop.gameObject.AddComponent<Image>();
+            glowImage.sprite = SpriteFactory.VerticalFade();
+            glowImage.raycastTarget = false;
+            ThemedElement.Bind(glowTop.gameObject, "bg.oceanTop");
+
+            // God rays angling in from the surface.
+            BuildRay(root, x: 0.30f, tiltDeg: 14f, widthRefPx: 320f);
+            BuildRay(root, x: 0.58f, tiltDeg: -9f, widthRefPx: 230f);
+            BuildRay(root, x: 0.80f, tiltDeg: 18f, widthRefPx: 170f);
+
             CanvasSnow.Create(root);
             RectTransform vignetteRt = UiComponents.Rect(root, "vignette", Vector2.zero);
             UiComponents.Stretch(vignetteRt);
@@ -525,6 +546,20 @@ namespace Riptide.UI
 
             root.SetAsFirstSibling();
             return root;
+        }
+
+        private static void BuildRay(RectTransform root, float x, float tiltDeg, float widthRefPx)
+        {
+            RectTransform ray = UiComponents.Rect(root, "ray", new Vector2(widthRefPx, 2000f));
+            ray.anchorMin = new Vector2(x, 1f);
+            ray.anchorMax = new Vector2(x, 1f);
+            ray.pivot = new Vector2(0.5f, 1f);
+            ray.anchoredPosition = new Vector2(0f, 80f);
+            ray.localRotation = Quaternion.Euler(0f, 0f, tiltDeg);
+            var image = ray.gameObject.AddComponent<Image>();
+            image.sprite = MenuSprites.LightRay();
+            image.raycastTarget = false;
+            ThemedElement.Bind(ray.gameObject, "ray.light");
         }
     }
 }
