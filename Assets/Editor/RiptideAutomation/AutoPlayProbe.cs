@@ -68,6 +68,14 @@ namespace Riptide.EditorAutomation
                 return;
             }
 
+            // While playing: re-dump state on demand (input debugging).
+            if (File.Exists(StateTriggerPath))
+            {
+                File.Delete(StateTriggerPath);
+                WriteReport();
+                return;
+            }
+
             if (!File.Exists(PendingPath))
             {
                 return;
@@ -88,6 +96,8 @@ namespace Riptide.EditorAutomation
             WriteReport();
         }
 
+        private const string StateTriggerPath = "Temp/riptide_uistate.txt";
+
         /// <summary>
         /// The game is portrait 1080×2400; a Free Aspect landscape Game view shows
         /// it at ~40% scale adrift in space (the "this is ugly" screenshot). Adds
@@ -98,6 +108,18 @@ namespace Riptide.EditorAutomation
         {
             try
             {
+                // The Device Simulator tab renders frames but routes no input
+                // unless activated — with it selected, the game LOOKS dead
+                // (Nick's session). Close simulators; the Game view is the
+                // one honest play target.
+                foreach (EditorWindow window in Resources.FindObjectsOfTypeAll<EditorWindow>())
+                {
+                    if (window != null && window.GetType().FullName!.Contains("SimulatorWindow"))
+                    {
+                        window.Close();
+                    }
+                }
+
                 var sizesType = typeof(Editor).Assembly.GetType("UnityEditor.GameViewSizes");
                 var singletonType = typeof(ScriptableSingleton<>).MakeGenericType(sizesType);
                 object instance = singletonType.GetProperty("instance")!.GetValue(null);
@@ -135,7 +157,20 @@ namespace Riptide.EditorAutomation
                         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
                         | System.Reflection.BindingFlags.NonPublic)!
                     .SetValue(gameView, index);
-                Debug.Log($"AutoPlayProbe: game view set to Riptide Portrait (index {index})");
+
+                // "Play Unfocused" starves the Input System of pointer events in
+                // some Unity 6 configurations — force focused play.
+                var behaviorProp = gameViewType.GetProperty("enterPlayModeBehavior",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.NonPublic);
+                if (behaviorProp != null)
+                {
+                    object focused = System.Enum.Parse(behaviorProp.PropertyType, "PlayFocused");
+                    behaviorProp.SetValue(gameView, focused);
+                }
+
+                gameView.Focus();
+                Debug.Log($"AutoPlayProbe: game view portrait (index {index}), PlayFocused");
             }
             catch (System.Exception ex)
             {
@@ -154,6 +189,26 @@ namespace Riptide.EditorAutomation
             {
                 sb.AppendLine($"flowScreen={manager.Flow.Screen} stackTop={manager.Stack.TopId ?? "(none)"} ageGate={manager.AgeGateOpen}");
             }
+
+            // Input pipeline state — the dead-buttons investigation.
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            sb.AppendLine($"eventSystem={(eventSystem != null ? eventSystem.name : "MISSING")} module={(eventSystem != null && eventSystem.currentInputModule != null ? eventSystem.currentInputModule.GetType().Name : "none-active")}");
+            var module = Object.FindFirstObjectByType<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            if (module != null)
+            {
+                sb.AppendLine($"moduleEnabled={module.isActiveAndEnabled} actions={(module.actionsAsset != null ? module.actionsAsset.name : "NULL")} "
+                    + $"pointEnabled={module.point?.action?.enabled} clickEnabled={module.leftClick?.action?.enabled}");
+            }
+            else
+            {
+                sb.AppendLine("inputModule=MISSING");
+            }
+
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            sb.AppendLine(mouse != null
+                ? $"mouseDevice=OK pos={mouse.position.ReadValue()} press={mouse.leftButton.isPressed}"
+                : "mouseDevice=MISSING");
+            sb.AppendLine($"appFocused={Application.isFocused}");
 
             Camera cam = Camera.main;
             sb.AppendLine(cam != null
