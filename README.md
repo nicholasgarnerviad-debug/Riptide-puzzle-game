@@ -4,7 +4,12 @@ A portrait Android block puzzle where the ocean is the clock: place pieces, clea
 and keep your board above a tide that rises every few moves. Block Blast pacing meets a
 drowning timer — clear rows to drain the water, rescue trapped sea creatures, and survive.
 
-**Status:** all code phases complete (sim, modes, economy, monetization seams, full UI).
+**Status:** all code phases complete (sim, modes, economy, monetization seams, full UI),
+plus the post-gate product passes: universal screen fit (iPhone 16 Pro Max 19.5:9 basis,
+camera + canvas solved for every portrait phone), mid-run save & resume (kill the app,
+resume the exact board), and a full visual overhaul of every screen — glossy beveled
+blocks, god-ray atmosphere, gradient capsule CTAs, icon navigation, real settings
+switches, a merchandised shop, and a Tidepool diorama with an actual seabed.
 On-device visual gates, store SDKs, brand fonts, and Play signing are pending — see
 `docs/DECISIONS.md` for every open item and every judgment call made along the way.
 
@@ -19,8 +24,9 @@ On-device visual gates, store SDKs, brand fonts, and Play signing are pending �
 ## Requirements
 
 - **Unity 6000.4.6f1** (2D URP, Android module) — open the project, open `SampleScene`, press **Play**.
-  The entire game builds itself from code at runtime; the scene file is intentionally empty,
-  and the editor preview wants the **Game** view (not the Device Simulator) on a portrait aspect.
+  The entire game builds itself from code at runtime; the scene file is intentionally empty.
+  Preview in a portrait **Game** view or the **Device Simulator** (layout adapts to any
+  portrait device); note the Simulator only routes input while it is the focused view.
 - **.NET SDK** (net10.0) for the headless test pipeline.
 - No third-party assets: every sprite, sound, and font fallback is generated or OS-stock.
 
@@ -49,16 +55,17 @@ Non-negotiables the codebase is built around:
 ## Testing
 
 ```bash
-./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (180) → content validation
+./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (218) → content validation
 ```
 
 The content gate also runs the accessibility audits: WCAG text contrast, block-palette
 luminance steps (≥1.15), and deuteranopia/protanopia palette-distance simulation.
 
-Unity-side suites (EditMode mirrors the 180; PlayMode adds ~42 integration tests: board
+Unity-side suites (EditMode mirrors the 218; PlayMode adds 57 integration tests: board
 acceptance, flow smoke, monetization threading, monkey runs, event-queue ordering,
-navigation matrix, strings coverage, real-click regression, perf budgets) run from the
-Test Runner window — or headlessly via the trigger files below.
+navigation matrix, strings coverage, real-click regression, perf budgets, kill-and-resume
+round trips, safe-area math) run from the Test Runner window — or headlessly via the
+trigger files below.
 
 ## Editor automation (file triggers)
 
@@ -85,8 +92,10 @@ scripting defines activate the prewired adapters) are release-owner steps.
 
 Development is governed by three documents in `docs/` — the **GDD** (game rules, the law),
 the **master prompt** (phase plan and acceptance gates), and the **UI spec** (design tokens,
-components, screens). Every deviation, conflict ruling, and judgment call is logged with
-rationale in **`docs/DECISIONS.md`** — if something looks surprising, the explanation is there.
+components, screens — §12 holds the universal-fit and genre-pass amendments). Feature
+designs get their own docs (**`docs/SAVE_RESUME_DESIGN.md`** for mid-run resume). Every
+deviation, conflict ruling, and judgment call is logged with rationale in
+**`docs/DECISIONS.md`** — if something looks surprising, the explanation is there.
 The product backlog lives in **`docs/ROADMAP.md`**.
 
 ## Working on this repo with an AI agent
