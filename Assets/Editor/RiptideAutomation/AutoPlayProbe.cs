@@ -63,6 +63,16 @@ namespace Riptide.EditorAutomation
                 File.WriteAllText(PendingPath, "probe");
                 File.WriteAllText(ResultPath, "ENTERING PLAY\n");
                 Errors.Clear();
+
+                // Audit follow-up: an AAB build can leave an empty Untitled scene
+                // open; AutoBoot only fires in SampleScene, so Play showed Unity's
+                // default blue void ("the game is blue screened"). Force the scene.
+                if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "SampleScene")
+                {
+                    UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                        "Assets/Scenes/SampleScene.unity");
+                }
+
                 ForcePortraitGameView();
                 EditorApplication.isPlaying = true;
                 return;

@@ -89,6 +89,15 @@ namespace Riptide.EditorAutomation
                 $"BUILDRESULT {summary.result} size={summary.totalSize} errors={summary.totalErrors} " +
                 $"warnings={summary.totalWarnings} time={summary.totalTime.TotalSeconds:F0}s " +
                 $"output={summary.outputPath}\n");
+
+            // BuildPlayer can leave an empty Untitled scene open; AutoBoot only
+            // fires in SampleScene, so a post-build Play press showed Unity's
+            // default blue void. Always restore the playable scene.
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "SampleScene")
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(
+                    "Assets/Scenes/SampleScene.unity");
+            }
         }
 
         /// <summary>The 8D icon hook: a generated wave glyph until branded art exists.</summary>
