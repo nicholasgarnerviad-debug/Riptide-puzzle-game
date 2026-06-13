@@ -130,8 +130,9 @@ seam contracts; treat step 3 as including a compile-fix budget.
   (`docs/perf/8ui_editor_capture.md`) but the budgets are device measurements.
 - **Real SDK behavior** (ads, consent, IAP, notifications) — fakes only; threading/cap/latch logic
   is tested against the seams, the real callbacks are not.
-- **AAB size/content (E4):** fresh build triggered during this audit — see Builds/ result note in
-  the final commit; the artifact is debug-signed and pre-SDK, so its size is indicative only.
+- **AAB size (E4), measured:** fresh IL2CPP/ARM64 build during this audit =
+  **36.5 MB** (`Builds/riptide-closed-testing.aab`, 2026-06-12 20:40 local) — unremarkable for a
+  Unity 6 URP title with zero external assets; debug-signed and pre-SDK, so indicative only.
 - Long-horizon retention/difficulty feel — bots approximate humans; the §4 targets are proxies.
 
 ---
