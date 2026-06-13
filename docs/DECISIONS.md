@@ -239,6 +239,14 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-12 · the level map was practically unreachable: in-game the Pause sheet offered only resume/sound/home, and on Home the hero's big Continue dominated while map access was the undiscoverable card-body tap · Pause gains a "Level map" button; the hero gains an explicit "Map ›" ghost beside the title; the card-body tap stays (UiClickTests pins it).
 - 2026-06-12 · quit-a-live-run abandon semantics generalized in `GameFlow.GoTo`: leaving Playing for ANY menu (home or map) finishes the run recorder · the resume design's no-resume-after-quit rule applies to every deliberate exit, not just Home; terminal states (results path, pending continue offer) remain untouched.
 
+## v1.0 audit pass (meta-prompt, 2026-06-13 — full record in docs/AUDIT_REPORT.md)
+
+- 2026-06-13 · determinism re-proven from zero trust: Tools/DeterminismFuzz (10,000 chaos games incl. boosters+continues, 318,835 moves, double-replay, 0 divergences) + 32 cross-pipeline pins replayed hash-identically under CoreCLR AND Mono (`FuzzPinTests`) · the dual-compile is now exploited as a standing determinism gate, not just a compile check.
+- 2026-06-13 · **BUG (B5)**: clock rollback re-armed the daily attempt (`!=` day check) — fixed to strictly-greater; failing test first, red 58/1 → green 59/59 · forward clock-stepping streak farming acknowledged and accepted for v1 (local-only; server time is a v1.1 lever).
+- 2026-06-13 · **BUG (C5)**: the place-settle pop allocated coroutines on the steady-state placement path (invisible to the InstantMode alloc test) — replaced with a preallocated 32-slot ticker in AnimationDriver.
+- 2026-06-13 · balance evidence re-validated by STREAM IDENTITY: fresh 10k endless/daily CSVs are bit-identical to the committed tuning CSVs, so the generation-time band-1/band-10 measurements remain valid without regenerating content; 60 further dailies verified.
+- 2026-06-13 · 10 orphaned string keys pruned (incl. the noted stats.line1/2); all eight deferred visual gates consolidated into docs/HUMAN_GATE_CHECKLIST.md — one playthrough retires the debt · define-toggle isolation compiles were NOT run: the adapters reference uninstalled SDKs by design, so that check is meaningless until the SDK pass.
+
 ## Mid-run save & resume (SAVE_RESUME_DESIGN.md approved via "resume aswell", 2026-06-12)
 
 - 2026-06-12 · run record = inputs only (mode identity, seed, move list, post-move StateHash), own atomic file `riptide_run.json`, written EVERY move in the same frame; ulong seed/hash serialize as strings (FNV-1a 64 daily seeds exceed the JSON parser's signed-long range — caught at design time) · design §2–4.
