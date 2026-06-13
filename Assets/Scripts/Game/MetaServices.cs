@@ -90,7 +90,10 @@ namespace Riptide.Game
 
         // ---------------- daily (GDD 3.3) ----------------
 
-        public bool CanAttemptDailyToday() => store.Data.DailyAttemptDay != TodayEpochDay();
+        // Audit B5: strictly-greater, not not-equal — a clock rolled BACKWARD must
+        // never re-arm the one-attempt-per-day lock (GDD 3.3). A fresh save's
+        // attemptDay 0 is in the distant past, so first attempts are unaffected.
+        public bool CanAttemptDailyToday() => TodayEpochDay() > store.Data.DailyAttemptDay;
 
         public bool DailyRetryAvailable() =>
             store.Data.DailyAttemptDay == TodayEpochDay() && !store.Data.DailyRetryUsed;

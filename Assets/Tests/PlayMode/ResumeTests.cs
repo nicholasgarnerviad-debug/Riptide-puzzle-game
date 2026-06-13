@@ -224,6 +224,117 @@ namespace Riptide.PlayMode.Tests
         }
 
         [UnityTest]
+        public IEnumerator KilledWithPendingContinueOffer_Resume_ReRaisesTheOffer()
+        {
+            Wipe();
+            // Craft a real endless run that ends drowned with the continue unspent
+            // (design §7.1: the recorded state is terminal LostDrowned, offer pending).
+            Riptide.Core.EconomyConfig economy = Riptide.Game.RuntimeContent.LoadEconomy();
+            Riptide.Core.CreatureRoster roster = Riptide.Game.RuntimeContent.LoadCreatures();
+            Riptide.Core.LevelConfig config = Riptide.Core.ModeFactory.Endless(economy, roster.Count);
+
+            ulong seed = 0;
+            System.Collections.Generic.List<Riptide.Core.Move>? moves = null;
+            Riptide.Core.GameState? final = null;
+            for (ulong candidate = 1; candidate <= 60 && moves == null; candidate++)
+            {
+                (System.Collections.Generic.List<Riptide.Core.Move> played, Riptide.Core.GameState end)
+                    = PlayToTerminalHeadless(config, candidate);
+                if (end.Status == Riptide.Core.GameStatus.LostDrowned && !end.ContinueUsed)
+                {
+                    seed = candidate;
+                    moves = played;
+                    final = end;
+                }
+            }
+
+            Assert.That(moves, Is.Not.Null, "fixture: some seed under 60 drowns");
+            var record = new Riptide.Core.RunRecord("Endless", 0, 0, 0, seed, moves!,
+                Riptide.Core.StateHash.Compute(final!));
+            System.IO.File.WriteAllText(RunPath, record.Serialize());
+
+            (GameFlow revived, ScreenManager screens) = GameBootstrap.CreateApp(instantAnimations: true);
+            yield return null;
+
+            Assert.That(revived.PendingRun, Is.Not.Null, "drowned-with-offer record is resumable");
+            Assert.That(revived.ResumeRun(), Is.True);
+            Assert.That(revived.Screen, Is.EqualTo(FlowScreen.Playing));
+            Assert.That(revived.ContinueOfferPending, Is.True,
+                "the unspent continue offer re-raises on resume (design §7.1)");
+
+            KillApp(screens);
+        }
+
+        private static (System.Collections.Generic.List<Riptide.Core.Move>, Riptide.Core.GameState)
+            PlayToTerminalHeadless(Riptide.Core.LevelConfig config, ulong seed)
+        {
+            var moves = new System.Collections.Generic.List<Riptide.Core.Move>();
+            Riptide.Core.GameState state = Riptide.Core.GameState.NewGame(config, seed);
+            Riptide.Core.DeterministicRng rng = Riptide.Core.DeterministicRng.FromSeed(seed * 7919UL);
+            for (int step = 0; step < 300 && !state.Status.IsTerminal(); step++)
+            {
+                Riptide.Core.Move? move = PickAnyLegal(state, ref rng);
+                if (move == null)
+                {
+                    break;
+                }
+
+                state = Riptide.Core.SimEngine.ApplyMove(state, move).Next;
+                moves.Add(move);
+            }
+
+            return (moves, state);
+        }
+
+        private static Riptide.Core.Move? PickAnyLegal(Riptide.Core.GameState state,
+            ref Riptide.Core.DeterministicRng rng)
+        {
+            for (int attempt = 0; attempt < 64; attempt++)
+            {
+                Riptide.Core.RngIntDraw slotDraw = rng.NextInt(Riptide.Core.BoardSpec.TraySize);
+                rng = slotDraw.Rng;
+                Riptide.Core.RngIntDraw colDraw = rng.NextInt(Riptide.Core.BoardSpec.Width);
+                rng = colDraw.Rng;
+                Riptide.Core.RngIntDraw rowDraw = rng.NextInt(Riptide.Core.BoardSpec.Height);
+                rng = rowDraw.Rng;
+                Riptide.Core.TrayPiece? piece = state.TrayAt(slotDraw.Value);
+                if (!piece.HasValue || rowDraw.Value < state.WaterLevel)
+                {
+                    continue;
+                }
+
+                var pos = new Riptide.Core.GridPos(colDraw.Value, rowDraw.Value);
+                if (Riptide.Core.PlacementValidator.CanPlace(state, piece.Value.Piece, pos))
+                {
+                    return new Riptide.Core.PlaceMove(slotDraw.Value, pos);
+                }
+            }
+
+            for (int slot = 0; slot < Riptide.Core.BoardSpec.TraySize; slot++)
+            {
+                Riptide.Core.TrayPiece? piece = state.TrayAt(slot);
+                if (!piece.HasValue)
+                {
+                    continue;
+                }
+
+                for (int col = 0; col < Riptide.Core.BoardSpec.Width; col++)
+                {
+                    for (int row = state.WaterLevel; row < Riptide.Core.BoardSpec.Height; row++)
+                    {
+                        var pos = new Riptide.Core.GridPos(col, row);
+                        if (Riptide.Core.PlacementValidator.CanPlace(state, piece.Value.Piece, pos))
+                        {
+                            return new Riptide.Core.PlaceMove(slot, pos);
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        [UnityTest]
         public IEnumerator CorruptRecord_DiscardsGracefully()
         {
             Wipe();
