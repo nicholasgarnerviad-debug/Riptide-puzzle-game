@@ -9,9 +9,13 @@ plus the post-gate product passes: universal screen fit (iPhone 16 Pro Max 19.5:
 camera + canvas solved for every portrait phone), mid-run save & resume (kill the app,
 resume the exact board), and a full visual overhaul of every screen — glossy beveled
 blocks, god-ray atmosphere, gradient capsule CTAs, icon navigation, real settings
-switches, a merchandised shop, and a Tidepool diorama with an actual seabed.
-On-device visual gates, store SDKs, brand fonts, and Play signing are pending — see
-`docs/DECISIONS.md` for every open item and every judgment call made along the way.
+switches, a merchandised shop, a Tidepool diorama with an actual seabed, and eight
+distinct procedural sea-creature sprites. A full pre-release audit is on record
+(`docs/AUDIT_REPORT.md`, verdict *ship after human gates*): 10,000-game determinism fuzz
+with cross-pipeline pins, balance re-verified against the §4 targets, every deferred
+visual gate consolidated into `docs/HUMAN_GATE_CHECKLIST.md`.
+On-device visual gates, store SDKs, the licensed typeface, and Play signing are pending —
+see `docs/DECISIONS.md` for every open item and every judgment call made along the way.
 
 ## Game modes
 
@@ -28,7 +32,12 @@ On-device visual gates, store SDKs, brand fonts, and Play signing are pending �
   Preview in a portrait **Game** view or the **Device Simulator** (layout adapts to any
   portrait device); note the Simulator only routes input while it is the focused view.
 - **.NET SDK** (net10.0) for the headless test pipeline.
-- No third-party assets: every sprite, sound, and font fallback is generated or OS-stock.
+- No third-party binary assets: every sprite (blocks, the 8 creatures, icons, atmosphere),
+  sound, and the placeholder font are generated in code; the only bundled font is Unity's
+  TMP LiberationSans (SIL Open Font License, ships with its `OFL.txt`). To use the real
+  typeface, drop one `.ttf`/`.otf` into `Assets/Resources/Fonts/` — it reskins the whole
+  game at runtime (see that folder's README and `docs/ASSETS.md`). Use an OFL/CC0 font only;
+  nothing proprietary is committed.
 
 ## Architecture
 
@@ -55,17 +64,22 @@ Non-negotiables the codebase is built around:
 ## Testing
 
 ```bash
-./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (218) → content validation
+./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (219) → content validation
 ```
 
 The content gate also runs the accessibility audits: WCAG text contrast, block-palette
 luminance steps (≥1.15), and deuteranopia/protanopia palette-distance simulation.
 
-Unity-side suites (EditMode mirrors the 218; PlayMode adds 57 integration tests: board
+A determinism fuzz (`Tools/DeterminismFuzz`) plays 10,000 random-seed games — placements,
+every booster, drown-continues — and replays each twice with per-move state-hash comparison
+(0 divergences); 32 are pinned to `CrossPipelineFuzzPins.cs` and replayed under both the
+dotnet shim and Unity's Mono, which must agree hash-for-hash.
+
+Unity-side suites (EditMode mirrors the 219; PlayMode adds 61 integration tests: board
 acceptance, flow smoke, monetization threading, monkey runs, event-queue ordering,
 navigation matrix, strings coverage, real-click regression, perf budgets, kill-and-resume
-round trips, safe-area math) run from the Test Runner window — or headlessly via the
-trigger files below.
+round trips, safe-area math, clock-rollback, creature-sprite distinctness) run from the
+Test Runner window — or headlessly via the trigger files below.
 
 ## Editor automation (file triggers)
 
@@ -78,7 +92,10 @@ polls `Temp/` so external tooling can drive a machine where auto-refresh is off:
 | `Temp/riptide_run_tests.txt` (`EditMode`/`PlayMode`) | run a test suite | `riptide_test_results.txt` |
 | `Temp/riptide_play.txt` | enter Play (portrait Game view, boot report) | `riptide_play_result.txt` |
 | `Temp/riptide_uistate.txt` | re-dump runtime state while playing | `riptide_play_result.txt` |
+| `Temp/riptide_stop.txt` | exit Play (rescues a stranded-in-Play editor) | — |
 | `Temp/riptide_genprefabs.txt` | regenerate UI component prefabs + touch audit | `riptide_prefabs_result.txt` |
+| `Temp/riptide_creatures.txt` | export the 8 creature sprites as a contact sheet | `riptide_creatures.png` |
+| `Temp/riptide_capture_pending.txt` (+ play) | bot-drive + screenshot the state-dependent screens | `riptide_screen_*.png` |
 | `Temp/riptide_build.txt` (`android`) | build the AAB | `riptide_build_result.txt` |
 
 ## Building

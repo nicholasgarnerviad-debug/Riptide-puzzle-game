@@ -18,11 +18,19 @@ Asset Creator, no wiring, no SDF baking.
 Download → unzip → drop the `.ttf` (e.g. `Outfit-Bold.ttf` or the variable font) here.
 If you drop several, the first one Unity loads is used — keep just one for a clean look.
 
-## Licensing
+## Licensing — is it safe to ship?
 
-Commit the font's `OFL.txt` alongside it (OFL requires the license travel with the file).
-OFL fonts are free for commercial/closed-track use. Don't drop a non-OFL/proprietary font
-(e.g. a Windows system font) — it can't be redistributed in the build.
+Yes, if it's **OFL or CC0**. Fonts are always under copyright (the author owns it), but the
+**SIL Open Font License explicitly grants free use, modification, and embedding in
+commercial products** — including a paid/closed-track app — with **no royalty**. The one
+obligation: keep the font's `OFL.txt` next to the `.ttf` (drop it in this folder too). All
+four fonts recommended above are OFL, and so is the LiberationSans placeholder the game
+ships with today (`Assets/TextMesh Pro/Fonts/`), which is why it's already safe.
+
+**Do not drop a proprietary font** — Windows system fonts (Segoe UI, Arial, Cascadia, …),
+Adobe fonts, or anything without an OFL/CC0 license **cannot** be redistributed in the
+build. If in doubt, take it from fonts.google.com (every font there is OFL or Apache 2.0,
+both ship-safe).
 
 ## Notes
 
