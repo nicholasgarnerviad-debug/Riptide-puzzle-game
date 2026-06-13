@@ -138,6 +138,17 @@ namespace Riptide.EditorAutomation
                 return;
             }
 
+            // Remote stop: Windows foreground-lock blocks a background script from
+            // focusing the editor to press Ctrl+P, so the probe/capture can leave
+            // the editor stuck in Play. This trigger exits play from inside the
+            // editor update loop (which runs during play) — drop riptide_stop.txt.
+            if (File.Exists(StopTriggerPath))
+            {
+                File.Delete(StopTriggerPath);
+                EditorApplication.isPlaying = false;
+                return;
+            }
+
             // While playing: re-dump state on demand (input debugging).
             if (File.Exists(StateTriggerPath))
             {
@@ -167,6 +178,7 @@ namespace Riptide.EditorAutomation
         }
 
         private const string StateTriggerPath = "Temp/riptide_uistate.txt";
+        private const string StopTriggerPath = "Temp/riptide_stop.txt";
 
         /// <summary>
         /// The game is portrait 1080×2400; a Free Aspect landscape Game view shows
