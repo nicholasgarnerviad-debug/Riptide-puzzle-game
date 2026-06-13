@@ -37,9 +37,11 @@ alternatives — bold, rounded, geometric, legible small — all **SIL Open Font
 | **Baloo 2** | rounded + friendly for the casual side | fonts.google.com/specimen/Baloo+2 |
 | **Nunito** | soft geometric, excellent at small sizes | fonts.google.com/specimen/Nunito |
 
-**Install path:** drop the TTF in `Assets/Fonts/`, generate a TMP SDF asset (Window →
-TextMeshPro → Font Asset Creator), set it on `TMP_Settings.defaultFontAsset`. The type
-tokens (`ui_theme.json`) already drive every size/weight — it's a one-asset swap.
+**Install path — now a single file drop:** put one `.ttf`/`.otf` in
+`Assets/Resources/Fonts/` (see its README). `UiText.CustomFont` picks it up at runtime,
+generates a dynamic TMP SDF, and reskins every text element — TMP screens AND the legacy
+HUD — with no Font Asset Creator step. Falls back to LiberationSans until a font is
+present, so nothing regresses. The type tokens (`ui_theme.json`) still drive size/weight.
 
 ---
 

@@ -21,7 +21,11 @@ namespace Riptide.UI
             {
                 if (cachedFont == null)
                 {
-                    cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                    // Same one-drop game font as TMP (UiText.CustomFont) so the
+                    // legacy-UGUI HUD reskins from the same dropped .ttf; falls back
+                    // to the builtin placeholder until one is provided.
+                    cachedFont = UiText.CustomFont
+                        ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 }
 
                 return cachedFont;

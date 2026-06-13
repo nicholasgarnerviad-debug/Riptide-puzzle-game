@@ -13,6 +13,31 @@ namespace Riptide.UI
     public static class UiText
     {
         private static TMP_FontAsset? cachedFont;
+        private static Font? customFont;
+        private static bool customResolved;
+
+        /// <summary>
+        /// One-drop typeface swap: any .ttf/.otf placed in
+        /// <c>Assets/Resources/Fonts/</c> is picked up here at runtime and a dynamic
+        /// TMP SDF is generated from it (no editor SDF step). Returns null until a
+        /// font is dropped, so the LiberationSans placeholder keeps rendering and
+        /// nothing regresses. Both the TMP path (DefaultFont) and the legacy-UGUI
+        /// path (UiKit.DefaultFont) read this, so a single drop reskins everything.
+        /// </summary>
+        public static Font? CustomFont
+        {
+            get
+            {
+                if (!customResolved)
+                {
+                    customResolved = true;
+                    Font[] fonts = Resources.LoadAll<Font>("Fonts");
+                    customFont = fonts.Length > 0 ? fonts[0] : null;
+                }
+
+                return customFont;
+            }
+        }
 
         public static TMP_FontAsset DefaultFont
         {
@@ -20,6 +45,14 @@ namespace Riptide.UI
             {
                 if (cachedFont != null)
                 {
+                    return cachedFont;
+                }
+
+                // A dropped game font wins over every placeholder source.
+                Font? custom = CustomFont;
+                if (custom != null)
+                {
+                    cachedFont = TMP_FontAsset.CreateFontAsset(custom);
                     return cachedFont;
                 }
 
