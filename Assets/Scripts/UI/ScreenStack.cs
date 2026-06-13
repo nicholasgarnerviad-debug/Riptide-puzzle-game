@@ -36,16 +36,9 @@ namespace Riptide.UI
                 group = screenRoot.gameObject.AddComponent<CanvasGroup>();
             }
 
-            // Screen roots are transparent (the ambient backdrop is shared, behind
-            // the whole stack), so the outgoing screen is HIDDEN immediately rather
-            // than cross-faded — a fade-out would briefly layer two see-through
-            // screens over the backdrop (the "double exposure" the capture sweep
-            // caught). The incoming float-in (it surfaces from the deep) is the
-            // motion that reads; deactivation is synchronous so a screen can never
-            // be left stale-active beneath a transparent top.
             if (stack.Count > 0)
             {
-                HideNow(stack[stack.Count - 1]);
+                AnimateOut(stack[stack.Count - 1], deactivate: true);
             }
 
             stack.Add((id, screenRoot, group));
@@ -62,22 +55,15 @@ namespace Riptide.UI
                 return false;
             }
 
-            (string id, RectTransform root, CanvasGroup group) top = stack[stack.Count - 1];
+            (string _, RectTransform root, CanvasGroup group) top = stack[stack.Count - 1];
             stack.RemoveAt(stack.Count - 1);
-            HideNow(top);
+            AnimateOut((TopId ?? "", top.root, top.group), deactivate: true, destroyAfter: false);
 
             (string id, RectTransform root, CanvasGroup group) revealed = stack[stack.Count - 1];
             revealed.root.gameObject.SetActive(true);
             AnimateIn(revealed.root, revealed.group);
             TopChanged?.Invoke(revealed.id);
             return true;
-        }
-
-        private static void HideNow((string id, RectTransform root, CanvasGroup group) screen)
-        {
-            screen.group.alpha = 1f;
-            screen.group.interactable = false;
-            screen.root.gameObject.SetActive(false);
         }
 
         private void AnimateIn(RectTransform root, CanvasGroup group)
@@ -95,6 +81,30 @@ namespace Riptide.UI
             {
                 group.interactable = true;
                 root.anchoredPosition = home;
+            });
+        }
+
+        private void AnimateOut((string id, RectTransform root, CanvasGroup group) screen,
+            bool deactivate, bool destroyAfter = false)
+        {
+            Vector2 home = screen.root.anchoredPosition;
+            screen.group.interactable = false;
+            Tween.Run(this, "t.screen", "easeInCubic", u =>
+            {
+                screen.group.alpha = 1f - u;
+                screen.root.anchoredPosition = home + new Vector2(0f, -24f * u);
+            }, () =>
+            {
+                screen.root.anchoredPosition = home;
+                if (deactivate)
+                {
+                    screen.root.gameObject.SetActive(false);
+                }
+
+                if (destroyAfter)
+                {
+                    Destroy(screen.root.gameObject);
+                }
             });
         }
 
