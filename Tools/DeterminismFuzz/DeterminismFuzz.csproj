@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Audit B1: N fuzzed games (random legal moves incl. every booster and the
+       continue), each replayed twice with per-move StateHash comparison; also
+       emits the cross-pipeline pin file (goldens pattern) so the same replays
+       run under Unity Mono. Parallelism lives here (Tools), never in Core. -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Riptide.DeterminismFuzz</AssemblyName>
+    <RootNamespace>Riptide.Tools.DeterminismFuzz</RootNamespace>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Assets\Scripts\Core\**\*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+</Project>
