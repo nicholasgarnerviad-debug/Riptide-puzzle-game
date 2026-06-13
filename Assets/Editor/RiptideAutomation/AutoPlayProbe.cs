@@ -20,6 +20,8 @@ namespace Riptide.EditorAutomation
         private const string TriggerPath = "Temp/riptide_play.txt";
         private const string PendingPath = "Temp/riptide_play_pending.txt";
         private const string ResultPath = "Temp/riptide_play_result.txt";
+        private const string CreaturesTrigger = "Temp/riptide_creatures.txt";
+        private const string CreaturesOut = "Temp/riptide_creatures.png";
 
         private static readonly List<string> Errors = new List<string>();
         private static double probeAtTime = -1;
@@ -33,6 +35,56 @@ namespace Riptide.EditorAutomation
             {
                 probeAtTime = EditorApplication.timeSinceStartup + 3.0;
             }
+        }
+
+        /// <summary>Renders the 8 procedural creature sprites into a labelled grid
+        /// PNG (Temp/riptide_creatures.png) so they can be eyeballed without
+        /// navigating to the Tidepool. Each tinted by its Palette.CreatureColor.</summary>
+        private static void ExportCreatureContactSheet()
+        {
+            const int cols = 4;
+            const int rows = 2;
+            const int tile = 160;
+            const int pad = 16;
+            int w = cols * tile + (cols + 1) * pad;
+            int h = rows * tile + (rows + 1) * pad;
+            var sheet = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            Color bg = ThemeRuntime.Color("bg.abyss");
+            var fill = new Color[w * h];
+            for (int i = 0; i < fill.Length; i++)
+            {
+                fill[i] = bg;
+            }
+
+            sheet.SetPixels(fill);
+
+            for (int id = 0; id < 8; id++)
+            {
+                int cx0 = pad + (id % cols) * (tile + pad);
+                int cy0 = pad + (1 - id / cols) * (tile + pad); // row 0 at top
+                Sprite sprite = CreatureSprites.For(id);
+                Texture2D src = sprite.texture;
+                Color tint = Palette.CreatureColor((byte)id);
+                for (int y = 0; y < tile; y++)
+                {
+                    for (int x = 0; x < tile; x++)
+                    {
+                        float u = (float)x / tile;
+                        float v = (float)y / tile;
+                        Color s = src.GetPixelBilinear(u, v);
+                        if (s.a > 0.01f)
+                        {
+                            Color c = new Color(s.r * tint.r, s.g * tint.g, s.b * tint.b, 1f);
+                            sheet.SetPixel(cx0 + x, cy0 + y, Color.Lerp(bg, c, s.a));
+                        }
+                    }
+                }
+            }
+
+            sheet.Apply();
+            File.WriteAllBytes(CreaturesOut, sheet.EncodeToPNG());
+            Object.DestroyImmediate(sheet);
+            File.WriteAllText(ResultPath, $"CREATURES exported {CreaturesOut}\n");
         }
 
         private static void OnLog(string condition, string stackTrace, LogType type)
@@ -54,6 +106,14 @@ namespace Riptide.EditorAutomation
                 }
 
                 nextPollTime = EditorApplication.timeSinceStartup + 2.0;
+
+                if (File.Exists(CreaturesTrigger))
+                {
+                    File.Delete(CreaturesTrigger);
+                    ExportCreatureContactSheet();
+                    return;
+                }
+
                 if (!File.Exists(TriggerPath))
                 {
                     return;

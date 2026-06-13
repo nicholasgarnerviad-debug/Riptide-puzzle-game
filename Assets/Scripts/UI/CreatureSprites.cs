@@ -102,45 +102,47 @@ namespace Riptide.UI
 
         private static void Seahorse(float[,] a)
         {
-            // Curved S spine.
-            float px = C - 2f, py = C - 26f;
-            for (int i = 1; i <= 20; i++)
+            // Upright: head high, curved belly, tail curling at the bottom.
+            float px = C - 4f, py = C + 18f;
+            for (int i = 1; i <= 22; i++)
             {
-                float t = i / 20f;
-                float x = C - 2f + Mathf.Sin(t * Mathf.PI * 1.6f) * 12f;
-                float y = C - 26f + t * 46f;
-                Seg(a, px, py, x, y, Mathf.Lerp(9f, 4f, t));
+                float t = i / 22f;                    // 0 = neck, 1 = tail tip
+                float x = C - 4f + Mathf.Sin(t * Mathf.PI * 1.5f) * 13f;
+                float y = C + 18f - t * 40f;          // descends from head to tail
+                Seg(a, px, py, x, y, Mathf.Lerp(9f, 3f, t));
                 px = x;
                 py = y;
             }
 
-            Disc(a, C, C - 22f, 10f);                 // head
-            Tri(a, C + 6f, C - 26f, C + 6f, C - 18f, C + 18f, C - 24f); // snout
-            Seg(a, C - 2f, C - 12f, C - 8f, C - 6f, 3f); // dorsal fin hint
-            Eye(a, C + 3f, C - 22f);
+            Disc(a, px + 3f, py - 1f, 5f);            // coiled tail bulb
+            Disc(a, C - 1f, C + 21f, 10f);            // head (top)
+            Tri(a, C + 5f, C + 24f, C + 5f, C + 17f, C + 22f, C + 20f); // snout points right
+            Disc(a, C - 9f, C + 7f, 3f);              // dorsal bumps
+            Disc(a, C - 11f, C - 1f, 3f);
+            Eye(a, C + 3f, C + 22f);
         }
 
         private static void Octopus(float[,] a)
         {
-            Disc(a, C, C - 6f, 20f);                  // mantle
-            Oval(a, C, C - 14f, 20f, 12f);            // head widen
-            for (int i = 0; i < 5; i++)               // tentacles
+            Disc(a, C, C + 8f, 19f);                  // domed head (top)
+            Oval(a, C, C + 2f, 20f, 13f);             // mantle widen
+            for (int i = 0; i < 5; i++)               // tentacles HANG DOWN
             {
-                float ox = C - 18f + i * 9f;
-                float px = ox, py = C + 8f;
+                float ox = C - 16f + i * 8f;
+                float px = ox, py = C - 4f;
                 for (int s = 1; s <= 6; s++)
                 {
                     float t = s / 6f;
                     float x = ox + Mathf.Sin(t * Mathf.PI * 2f + i) * 4f;
-                    float y = C + 8f + t * 20f;
+                    float y = C - 4f - t * 22f;       // descending y = downward
                     Seg(a, px, py, x, y, Mathf.Lerp(5f, 2f, t));
                     px = x;
                     py = y;
                 }
             }
 
-            Eye(a, C - 8f, C - 8f);
-            Eye(a, C + 8f, C - 8f);
+            Eye(a, C - 8f, C + 10f);
+            Eye(a, C + 8f, C + 10f);
         }
 
         private static void Turtle(float[,] a)
@@ -151,8 +153,16 @@ namespace Riptide.UI
             Oval(a, C + 20f, C + 2f, 8f, 5f);
             Oval(a, C - 14f, C - 18f, 7f, 5f);
             Oval(a, C + 14f, C - 18f, 7f, 5f);
-            // Shell plates carved slightly darker.
-            Ring(a, C, C - 2f, 11f, 2f, 0.55f);
+            // Hexagonal scute pattern (reads as shell, not a porthole).
+            for (int i = 0; i < 6; i++)
+            {
+                float a0 = i * Mathf.PI / 3f;
+                float a1 = (i + 1) * Mathf.PI / 3f;
+                DarkSeg(a, C + Mathf.Cos(a0) * 11f, C - 2f + Mathf.Sin(a0) * 11f,
+                    C + Mathf.Cos(a1) * 11f, C - 2f + Mathf.Sin(a1) * 11f);
+                DarkSeg(a, C, C - 2f, C + Mathf.Cos(a0) * 11f, C - 2f + Mathf.Sin(a0) * 11f);
+            }
+
             Eye(a, C - 4f, C + 18f);
             Eye(a, C + 4f, C + 18f);
         }
@@ -175,24 +185,25 @@ namespace Riptide.UI
 
         private static void Jellyfish(float[,] a)
         {
-            Dome(a, C, C + 4f, 20f);                  // bell
-            for (int i = 0; i < 5; i++)               // wavy tentacles
+            Dome(a, C, C + 6f, 20f);                  // bell (rounded top, flat base)
+            Oval(a, C, C + 6f, 20f, 5f);              // bell rim
+            for (int i = 0; i < 5; i++)               // wavy tentacles HANG DOWN
             {
                 float ox = C - 14f + i * 7f;
-                float px = ox, py = C + 4f;
+                float px = ox, py = C + 5f;
                 for (int s = 1; s <= 7; s++)
                 {
                     float t = s / 7f;
                     float x = ox + Mathf.Sin(t * Mathf.PI * 3f + i) * 5f;
-                    float y = C + 4f + t * 26f;
+                    float y = C + 5f - t * 26f;       // descending y = downward
                     Seg(a, px, py, x, y, Mathf.Lerp(4f, 1.5f, t));
                     px = x;
                     py = y;
                 }
             }
 
-            Eye(a, C - 7f, C + 8f);
-            Eye(a, C + 7f, C + 8f);
+            Eye(a, C - 7f, C + 12f);
+            Eye(a, C + 7f, C + 12f);
         }
 
         private static void Axolotl(float[,] a)
@@ -261,17 +272,27 @@ namespace Riptide.UI
             }
         }
 
-        private static void Ring(float[,] a, float cx, float cy, float r, float w, float strength)
+        /// <summary>Darkens a thin line, but only where body already exists — for
+        /// carved surface detail (turtle scutes) that survives the tint.</summary>
+        private static void DarkSeg(float[,] a, float x1, float y1, float x2, float y2)
         {
-            for (int y = (int)(cy - r - w - 2); y <= cy + r + w + 2; y++)
+            var p1 = new Vector2(x1, y1);
+            var d = new Vector2(x2 - x1, y2 - y1);
+            float len2 = Mathf.Max(0.001f, d.sqrMagnitude);
+            for (int y = (int)(Mathf.Min(y1, y2) - 2); y <= Mathf.Max(y1, y2) + 2; y++)
             {
-                for (int x = (int)(cx - r - w - 2); x <= cx + r + w + 2; x++)
+                for (int x = (int)(Mathf.Min(x1, x2) - 2); x <= Mathf.Max(x1, x2) + 2; x++)
                 {
-                    float d = Mathf.Abs(Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) - r);
-                    float v = Mathf.Clamp01(w * 0.5f - d + 0.5f) * strength;
-                    if (x >= 0 && y >= 0 && x < Size && y < Size && v > 0f && a[x, y] > 0f)
+                    if (x < 0 || y < 0 || x >= Size || y >= Size || a[x, y] <= 0f)
                     {
-                        a[x, y] = Mathf.Min(a[x, y], 1f - v); // darken plates
+                        continue;
+                    }
+
+                    var p = new Vector2(x, y);
+                    float t = Mathf.Clamp01(Vector2.Dot(p - p1, d) / len2);
+                    if (Vector2.Distance(p, p1 + d * t) <= 1.1f)
+                    {
+                        a[x, y] = Mathf.Min(a[x, y], 0.5f);
                     }
                 }
             }
