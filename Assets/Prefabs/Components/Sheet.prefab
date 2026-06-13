@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5827907350030962779}
   - component: {fileID: 4486072897449084670}
   - component: {fileID: 7445589285858046392}
-  - component: {fileID: 8983430198715704694}
+  - component: {fileID: 1468393319294930479}
   m_Layer: 0
   m_Name: Sheet
   m_TagString: Untagged
@@ -68,7 +68,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -76,8 +76,8 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!114 &8983430198715704694
+  m_PixelsPerUnitMultiplier: 0.68359375
+--- !u!114 &1468393319294930479
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -101,7 +101,7 @@ GameObject:
   - component: {fileID: 7284273691894211925}
   - component: {fileID: 4276483180971102576}
   - component: {fileID: 5436344213743315764}
-  - component: {fileID: 1961123729512259875}
+  - component: {fileID: 2180426272167697936}
   m_Layer: 0
   m_Name: handle
   m_TagString: Untagged
@@ -166,7 +166,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &1961123729512259875
+--- !u!114 &2180426272167697936
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -190,7 +190,7 @@ GameObject:
   - component: {fileID: 4516012974204228239}
   - component: {fileID: 2087071017720617374}
   - component: {fileID: 3926179724092739586}
-  - component: {fileID: 7502938507530969766}
+  - component: {fileID: 6326505571717828812}
   - component: {fileID: 5974223670566276377}
   m_Layer: 0
   m_Name: Sheet
@@ -257,7 +257,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &7502938507530969766
+--- !u!114 &6326505571717828812
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

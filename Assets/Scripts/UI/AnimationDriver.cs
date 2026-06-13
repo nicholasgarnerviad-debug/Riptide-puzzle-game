@@ -208,28 +208,57 @@ namespace Riptide.UI
                 // settle-pop on every placed cell — the thunk made visible.
                 if (!InstantMode)
                 {
-                    StartCoroutine(PlaceSettle(sr));
+                    AddSettle(sr);
                 }
             }
         }
 
-        private IEnumerator PlaceSettle(SpriteRenderer sr)
+        // Audit C5: placement is STEADY-STATE, so the settle pop runs on a pooled
+        // ticker instead of a coroutine per cell (§9 zero-alloc-per-move budget).
+        private struct Settle
         {
-            float life = Mathf.Max(0.01f, ThemeRuntime.MotionSeconds("t.instant") * 2f);
-            float t = 0f;
-            Vector3 baseScale = Vector3.one * 0.94f;
-            while (t < life && sr != null)
+            public SpriteRenderer Renderer;
+            public float T;
+        }
+
+        private readonly Settle[] settles = new Settle[32];
+        private int settleCount;
+
+        private void AddSettle(SpriteRenderer sr)
+        {
+            if (settleCount < settles.Length)
             {
-                t += Time.deltaTime;
-                float u = Mathf.Clamp01(t / life);
-                float ease = 1f - (1f - u) * (1f - u);
-                sr.transform.localScale = baseScale * Mathf.Lerp(1.16f, 1f, ease);
-                yield return null;
+                settles[settleCount].Renderer = sr;
+                settles[settleCount].T = 0f;
+                settleCount++;
+            }
+        }
+
+        private void Update()
+        {
+            if (settleCount == 0)
+            {
+                return;
             }
 
-            if (sr != null)
+            float life = Mathf.Max(0.01f, ThemeRuntime.MotionSeconds("t.instant") * 2f);
+            Vector3 baseScale = Vector3.one * 0.94f;
+            for (int i = settleCount - 1; i >= 0; i--)
             {
-                sr.transform.localScale = baseScale;
+                settles[i].T += Time.deltaTime;
+                SpriteRenderer sr = settles[i].Renderer;
+                float u = Mathf.Clamp01(settles[i].T / life);
+                if (sr != null)
+                {
+                    float ease = 1f - (1f - u) * (1f - u);
+                    sr.transform.localScale = baseScale * Mathf.Lerp(1.16f, 1f, ease);
+                }
+
+                if (u >= 1f)
+                {
+                    settles[i] = settles[settleCount - 1];
+                    settleCount--;
+                }
             }
         }
 

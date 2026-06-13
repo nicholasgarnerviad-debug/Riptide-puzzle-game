@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 1476236055817421888}
   - component: {fileID: 4391437616566809097}
   - component: {fileID: 2732468992649266155}
-  - component: {fileID: 7118402054775116382}
+  - component: {fileID: 2470919953243008310}
   m_Layer: 0
   m_Name: star0
   m_TagString: Untagged
@@ -76,7 +76,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &7118402054775116382
+--- !u!114 &2470919953243008310
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -98,7 +98,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5545569271806998361}
-  - component: {fileID: 5329270337650432730}
+  - component: {fileID: 5534984577554499963}
   m_Layer: 0
   m_Name: StarTriplet
   m_TagString: Untagged
@@ -128,7 +128,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 420, y: 130}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &5329270337650432730
+--- !u!114 &5534984577554499963
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -151,7 +151,7 @@ GameObject:
   - component: {fileID: 4507739320008280682}
   - component: {fileID: 6562388679646039597}
   - component: {fileID: 8878111830987293306}
-  - component: {fileID: 4838613302919148230}
+  - component: {fileID: 7844460361469673170}
   m_Layer: 0
   m_Name: star1
   m_TagString: Untagged
@@ -216,7 +216,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &4838613302919148230
+--- !u!114 &7844460361469673170
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -240,7 +240,7 @@ GameObject:
   - component: {fileID: 1969020265946194769}
   - component: {fileID: 743938157672698566}
   - component: {fileID: 1678028204055591505}
-  - component: {fileID: 5503455663140171308}
+  - component: {fileID: 7311332758206137133}
   m_Layer: 0
   m_Name: star2
   m_TagString: Untagged
@@ -305,7 +305,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &5503455663140171308
+--- !u!114 &7311332758206137133
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
