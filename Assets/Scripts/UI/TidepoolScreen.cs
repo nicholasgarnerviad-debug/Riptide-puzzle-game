@@ -299,6 +299,7 @@ namespace Riptide.UI
             flavorCursor = shownSpecies == speciesId ? (flavorCursor + 1) % species.Flavor.Count : 0;
             shownSpecies = speciesId;
 
+            infoPortrait.sprite = CreatureSprites.For(speciesId);
             infoPortrait.color = rescued ? Palette.CreatureColor((byte)speciesId) : ThemeRuntime.Color("bg.raised");
             infoName.text = rescued ? species.Name : flow.Strings.Get("tidepool.unknown");
             infoCount.text = rescued

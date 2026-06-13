@@ -366,7 +366,7 @@ namespace Riptide.UI
         {
             creatureId = id;
             portrait = root.gameObject.AddComponent<Image>();
-            portrait.sprite = SpriteFactory.Creature();
+            portrait.sprite = CreatureSprites.For(id);
             Apply(State.Silhouette);
         }
 

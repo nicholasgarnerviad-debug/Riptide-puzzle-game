@@ -352,7 +352,7 @@ namespace Riptide.UI
             go.transform.SetParent(transform, false);
             go.transform.position = BoardLayout.CellToWorld(rescue.Pos.Col, rescue.Pos.Row);
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = SpriteFactory.Creature();
+            sr.sprite = CreatureSprites.For(rescue.CreatureId);
             sr.color = Palette.CreatureColor(rescue.CreatureId);
             sr.sortingOrder = 70;
 
@@ -379,7 +379,7 @@ namespace Riptide.UI
             go.transform.SetParent(transform, false);
             go.transform.position = BoardLayout.CellToWorld(lost.Pos.Col, lost.Pos.Row);
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = SpriteFactory.Creature();
+            sr.sprite = CreatureSprites.For(lost.CreatureId);
             sr.color = Palette.CreatureColor(lost.CreatureId);
             sr.sortingOrder = 70;
 

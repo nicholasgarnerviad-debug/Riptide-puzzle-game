@@ -239,6 +239,11 @@ Format: date · decision · rationale. Reviewed by Nick at every visual gate.
 - 2026-06-12 · the level map was practically unreachable: in-game the Pause sheet offered only resume/sound/home, and on Home the hero's big Continue dominated while map access was the undiscoverable card-body tap · Pause gains a "Level map" button; the hero gains an explicit "Map ›" ghost beside the title; the card-body tap stays (UiClickTests pins it).
 - 2026-06-12 · quit-a-live-run abandon semantics generalized in `GameFlow.GoTo`: leaving Playing for ANY menu (home or map) finishes the run recorder · the resume design's no-resume-after-quit rule applies to every deliberate exit, not just Home; terminal states (results path, pending continue offer) remain untouched.
 
+## Creature art — 8 procedural species (Nick: "find free assets and make assets that fit this game's theme", 2026-06-13)
+
+- 2026-06-13 · the 8 rescue species (GDD §2.5, "the only real art demand") were a single eyed-circle tinted per-species; replaced with `CreatureSprites` — 8 DISTINCT 64px silhouettes (crab/starfish/seahorse/octopus/turtle/pufferfish/jellyfish/axolotl) drawn by a small distance-field rasterizer, grayscale-baked with a top-light gradient + dark baked eyes, hue still from `Palette.CreatureColor` · stays inside the no-hand-authored-assets discipline; wired into BoardView, the rescue/lost juice, CreatureChip, and the Tidepool portrait; PlayMode test asserts all 8 are non-null, cached, and visually distinct (8/8 unique coverage signatures, 0.10–0.80 fill).
+- 2026-06-13 · binary free-asset acquisition deliberately NOT done in-repo — documented instead in `docs/ASSETS.md` (CC0/OFL curated sources for the Rungo-gap fonts, audio upgrades, optional illustrated art) · pulling binaries is licensing-attribution + SDF/import editor work that belongs to Nick; the shipping v1 art is the procedural set.
+
 ## v1.0 audit pass (meta-prompt, 2026-06-13 — full record in docs/AUDIT_REPORT.md)
 
 - 2026-06-13 · determinism re-proven from zero trust: Tools/DeterminismFuzz (10,000 chaos games incl. boosters+continues, 318,835 moves, double-replay, 0 divergences) + 32 cross-pipeline pins replayed hash-identically under CoreCLR AND Mono (`FuzzPinTests`) · the dual-compile is now exploited as a standing determinism gate, not just a compile check.

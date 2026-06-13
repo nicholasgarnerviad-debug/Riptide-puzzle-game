@@ -64,7 +64,7 @@ namespace Riptide.UI
                             sr.color = Palette.Coral;
                             break;
                         case CellKind.Creature:
-                            sr.sprite = SpriteFactory.Creature();
+                            sr.sprite = CreatureSprites.For(cell.Id);
                             sr.color = Palette.CreatureColor(cell.Id);
                             break;
                         default:
