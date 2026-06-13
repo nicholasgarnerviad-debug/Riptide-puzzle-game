@@ -517,6 +517,9 @@ namespace Riptide.UI
             resolved = true;
             sheet.Dismiss();
         }
+
+        /// <summary>Test/driver hook: dismiss as if "Let go" was tapped.</summary>
+        public void DismissForDriver() => Resolve();
     }
 
     /// <summary>
