@@ -23,21 +23,27 @@ see `docs/DECISIONS.md` for every open item and every judgment call made along t
 ## Screenshots
 
 <p>
-  <img src="docs/screenshots/home.png" width="200" alt="Home">
+  <img src="docs/screenshots/home.png" width="200" alt="Home: your Pod leader on stage, its name and your eggs">
   <img src="docs/screenshots/level-map.png" width="200" alt="Level map">
-  <img src="docs/screenshots/game.png" width="200" alt="In a run, with the buddy on the tray">
-  <img src="docs/screenshots/results.png" width="200" alt="Level complete">
+  <img src="docs/screenshots/game.png" width="200" alt="In a run, with the leader on the tray">
+  <img src="docs/screenshots/results.png" width="200" alt="Level complete, with the next-egg pips">
 </p>
 <p>
   <img src="docs/screenshots/tidelings.png" width="200" alt="The Tidelings tab: your Pod in the tidepool, the Conch, the Tide Journal">
+  <img src="docs/screenshots/tideling-card.png" width="200" alt="A Tideling's card: ability now and next, bond, Pod slots, Grow up">
   <img src="docs/screenshots/conch.png" width="200" alt="The Conch: guarantee rings, eggs, disclosed odds, Call ×1 / ×10">
+  <img src="docs/screenshots/call.png" width="200" alt="A Call: the Tideling bursts out of a bubble in its tier's colors">
+</p>
+<p>
+  <img src="docs/screenshots/ten-call.png" width="200" alt="A ten-Call: ten bubbles and a spotlight on the best">
+  <img src="docs/screenshots/grow-up.png" width="200" alt="Growing up: the new form, its ability going up, the Journal line reward">
   <img src="docs/screenshots/quests.png" width="200" alt="Quests and badges">
   <img src="docs/screenshots/event-tide.png" width="200" alt="Weekly Event Tide">
 </p>
 
-The eight rescue pets — open eyes, happy blink, and the locked silhouette (all drawn in code):
+All 16 Tidelings — Baby, Grown, Grand and the Sparkle form, two lines to a row (all drawn in code):
 
-<img src="docs/screenshots/pets.png" width="820" alt="The eight chibi sea-pets">
+<img src="docs/screenshots/tidelings-lineup.png" width="820" alt="All sixteen Tidelings in their Baby, Grown, Grand and Sparkle forms">
 
 ## Game modes
 
