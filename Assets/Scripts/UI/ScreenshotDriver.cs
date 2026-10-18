@@ -4,6 +4,7 @@ using System.IO;
 using Riptide.Core;
 using Riptide.Game;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Riptide.UI
 {
@@ -159,14 +160,59 @@ namespace Riptide.UI
                     pause.Dismiss();
                 }
 
-                // 6) The tab screens.
-                foreach (FlowScreen tab in new[] { FlowScreen.Settings, FlowScreen.Shop, FlowScreen.Tidepool })
+                // 6) GDD §15: the Event Tide intro and a run of it.
+                flow.GoTo(FlowScreen.EventIntro);
+                yield return Settle();
+                yield return Shoot("event_intro");
+                flow.StartEvent();
+                yield return DriveToTerminal(flow, 31);
+                yield return WaitForOfferOrScreen(flow, FlowScreen.Results);
+                if (flow.ContinueOfferPending)
+                {
+                    flow.DeclineContinue();
+                    var eventOffer = Object.FindFirstObjectByType<ContinueSheet>();
+                    if (eventOffer != null)
+                    {
+                        eventOffer.DismissForDriver();
+                    }
+
+                    yield return WaitForScreen(flow, FlowScreen.Results);
+                }
+
+                yield return Shoot("results_event");
+
+                // 7) The tab screens — with a buddy picked so the pet bits show.
+                int buddy = -1;
+                for (int i = 0; i < flow.Roster.Count && buddy < 0; i++)
+                {
+                    buddy = flow.Meta.Save.RescuesFor(i) > 0 ? i : -1;
+                }
+
+                flow.SetBuddy(buddy);
+                foreach (FlowScreen tab in new[] { FlowScreen.Settings, FlowScreen.Shop, FlowScreen.Quests, FlowScreen.Tidepool })
                 {
                     flow.GoTo(tab);
                     yield return Settle();
                     yield return Shoot(tab.ToString().ToLowerInvariant());
                 }
 
+                Button? petChip = buddy >= 0 ? GameObject.Find($"CreatureChip{buddy}")?.GetComponent<Button>() : null;
+                if (petChip != null)
+                {
+                    petChip.onClick.Invoke();
+                    yield return Settle();
+                    yield return Shoot("tidepool_pet");
+                }
+
+                flow.GoTo(FlowScreen.Home);
+                yield return Settle();
+                yield return Shoot("home_buddy");
+
+                // 8) The buddy perched on the tray in a live run.
+                flow.StartVoyageLevel(1, 3);
+                yield return DriveMoves(flow, 7, 3);
+                yield return Settle();
+                yield return Shoot("game_buddy");
                 flow.GoTo(FlowScreen.Home);
                 File.WriteAllText(Done, "OK\n");
             }

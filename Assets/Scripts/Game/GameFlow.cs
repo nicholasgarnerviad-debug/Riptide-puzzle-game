@@ -16,6 +16,8 @@ namespace Riptide.Game
         Settings,
         Shop,
         Tidepool,
+        Quests,
+        EventIntro,
     }
 
     public enum GameMode
@@ -23,6 +25,7 @@ namespace Riptide.Game
         Voyage,
         Endless,
         Daily,
+        Event,
     }
 
     public enum BoosterKind
@@ -57,6 +60,13 @@ namespace Riptide.Game
 
         /// <summary>The double-coins rewarded payout fired for this outcome (once only).</summary>
         public bool DoubledClaimed;
+
+        // GDD §15 Pets & Tides.
+        public int BuddyBonus;
+        public int PowersFired;
+        public string EventId = "";
+        public bool EventFirstWin;
+        public string EventRewardDecoration = "";
     }
 
     /// <summary>
@@ -64,7 +74,7 @@ namespace Riptide.Game
     /// transitions. UI screens render from this and call back into it; they never
     /// touch the sim directly (GDD 8.2 discipline, one layer up).
     /// </summary>
-    public sealed class GameFlow
+    public sealed partial class GameFlow
     {
         public EconomyConfig Economy { get; }
         public CreatureRoster Roster { get; }
@@ -349,7 +359,7 @@ namespace Riptide.Game
             Mode = GameMode.Voyage;
             CurrentSeed = (ulong)casualSeeds.Next(1, int.MaxValue);
             Recorder.Begin("Voyage", zone, index, 0, CurrentSeed);
-            BeginRun(def.ToLevelConfig(Economy, Roster.Count));
+            BeginRun(VoyageConfig(def));
         }
 
         public void StartEndless()
@@ -358,7 +368,7 @@ namespace Riptide.Game
             Mode = GameMode.Endless;
             CurrentSeed = (ulong)casualSeeds.Next(1, int.MaxValue);
             Recorder.Begin("Endless", 0, 0, 0, CurrentSeed);
-            BeginRun(ModeFactory.Endless(Economy, Roster.Count));
+            BeginRun(EndlessRunConfig());
         }
 
         /// <summary>GDD 3.3: one attempt per day; seed from the date; retry consumes the hook.</summary>
@@ -409,7 +419,8 @@ namespace Riptide.Game
         public void DetectPendingRun()
         {
             RunRecord? record = Recorder.ReadPending();
-            if (record != null && record.Mode == "Daily" && record.EpochDay != Meta.TodayEpochDay())
+            if (record != null && ((record.Mode == "Daily" && record.EpochDay != Meta.TodayEpochDay())
+                || (record.Mode == "Event" && record.EpochDay != EventSchedule.WeekOf(Meta.TodayEpochDay()))))
             {
                 Recorder.DeleteFile();
                 record = null;
@@ -447,12 +458,23 @@ namespace Riptide.Game
                     }
 
                     level = ZoneLevels(record.Zone)[record.Level - 1];
-                    config = level.ToLevelConfig(Economy, Roster.Count);
+                    config = VoyageConfig(level);
                     mode = GameMode.Voyage;
                     break;
                 case "Endless":
-                    config = ModeFactory.Endless(Economy, Roster.Count);
+                    config = EndlessRunConfig();
                     mode = GameMode.Endless;
+                    break;
+                case "Event":
+                    if (record.EpochDay != EventSchedule.WeekOf(Meta.TodayEpochDay()))
+                    {
+                        Recorder.DeleteFile();
+                        return false;
+                    }
+
+                    CurrentEvent = EventSchedule.ForWeek((int)record.EpochDay, Expansion.Events);
+                    config = EventRunConfig(CurrentEvent);
+                    mode = GameMode.Event;
                     break;
                 case "Daily":
                     config = ModeFactory.Daily(Economy, Roster.Count);
@@ -464,6 +486,19 @@ namespace Riptide.Game
             }
 
             RunReplayResult replay = RunReplay.Rebuild(config, record);
+            if (replay.Status != RunReplayStatus.Ok && config.Powers != null)
+            {
+                // GDD §15 upgrade path: a run recorded before creature powers was
+                // played powers-off — the hash proves it, and it resumes as played.
+                LevelConfig legacy = config.WithCreaturePowers(null);
+                RunReplayResult legacyReplay = RunReplay.Rebuild(legacy, record);
+                if (legacyReplay.Status == RunReplayStatus.Ok)
+                {
+                    config = legacy;
+                    replay = legacyReplay;
+                }
+            }
+
             if (replay.Status != RunReplayStatus.Ok)
             {
                 Recorder.DeleteFile();
@@ -496,6 +531,8 @@ namespace Riptide.Game
 
             runMaxWater = replay.MaxWater;
             runRescues = replay.Rescues;
+            runTides = replay.State!.Goals.TidesSurvived;
+            runPowers = 0;
             freeDrainUsedThisRun = false;
             freeNewTideUsedThisRun = false;
             ContinueOfferPending = false;
@@ -541,6 +578,8 @@ namespace Riptide.Game
 
             runMaxWater = config.StartWaterLevel;
             runRescues = 0;
+            runTides = 0;
+            runPowers = 0;
             freeDrainUsedThisRun = false;
             freeNewTideUsedThisRun = false;
             ContinueOfferPending = false;
@@ -559,6 +598,9 @@ namespace Riptide.Game
             // Mid-run save: persist the inputs in the same frame as the move
             // (design §4 — OnApplicationPause is unreliable on OS kill).
             Recorder.Append(move, result.Next);
+
+            // GDD §15: quest/badge counters advance per move, every mode.
+            RecordExpansionProgress(result);
 
             // GDD 5.1: lifetime rescue counters feed the Tidepool, every mode.
             if (result.Events.RescuedCreatures.Count > 0)
@@ -703,7 +745,13 @@ namespace Riptide.Game
                 case GameMode.Daily:
                     FinishDaily(outcome);
                     break;
+                case GameMode.Event:
+                    FinishEvent(outcome, final);
+                    break;
             }
+
+            // GDD §15: run-end quest fuel, then the buddy's coin bonus on top.
+            FinishExpansion(outcome);
 
             if (outcome.CoinsAwarded > 0)
             {
@@ -731,6 +779,10 @@ namespace Riptide.Game
                     break;
                 case GameMode.Daily:
                     Analytics.LogDailyAttempt(resultName, outcome.Score, dailyWasRetry);
+                    break;
+                case GameMode.Event:
+                    Analytics.Log("event_end", ("event", outcome.EventId), ("result", resultName),
+                        ("score", outcome.Score.ToString()));
                     break;
             }
         }

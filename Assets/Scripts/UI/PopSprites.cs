@@ -10,7 +10,7 @@ namespace Riptide.UI
     /// sunburst and bubbles. Grayscale/alpha only: hue always arrives by tint
     /// from theme tokens, keeping the single-source color rule.
     /// </summary>
-    public static class PopSprites
+    public static partial class PopSprites
     {
         /// <summary>Sprite PPU = the canvas reference PPU, so slice borders are in ref-px.</summary>
         public const float PixelsPerUnit = 100f;
@@ -371,7 +371,7 @@ namespace Riptide.UI
                     MenuSprites.Wave(a, 86f, 12f);
                     break;
                 default:
-                    return null;
+                    return DrawMore(id, a) ? a : null;
             }
 
             return a;
@@ -393,7 +393,7 @@ namespace Riptide.UI
         // ------------------------------------------------------------ rasterizers
 
         /// <summary>Anti-aliased polygon fill (4×4 supersampled even-odd test).</summary>
-        private static void Poly(float[,] a, Vector2[] pts)
+        internal static void Poly(float[,] a, Vector2[] pts)
         {
             float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
             foreach (Vector2 p in pts)
@@ -444,7 +444,7 @@ namespace Riptide.UI
         }
 
         /// <summary>Thick ring arc between two angles (degrees, CCW from +x).</summary>
-        private static void Arc(float[,] a, float cx, float cy, float r, float w, float fromDeg, float toDeg)
+        internal static void Arc(float[,] a, float cx, float cy, float r, float w, float fromDeg, float toDeg)
         {
             int steps = Mathf.Max(8, (int)(Mathf.Abs(toDeg - fromDeg) / 6f));
             float prevX = cx + Mathf.Cos(fromDeg * Mathf.Deg2Rad) * r;

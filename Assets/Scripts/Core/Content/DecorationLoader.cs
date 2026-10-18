@@ -11,12 +11,16 @@ namespace Riptide.Core
         public int Cost { get; }
         public string Emoji { get; }
 
-        public Decoration(string id, string name, int cost, string emoji)
+        /// <summary>GDD §15.4: earned from a weekly Event Tide only — never sold (cost 0).</summary>
+        public bool EventOnly { get; }
+
+        public Decoration(string id, string name, int cost, string emoji, bool eventOnly = false)
         {
             Id = id;
             Name = name;
             Cost = cost;
             Emoji = emoji;
+            EventOnly = eventOnly;
         }
     }
 
@@ -48,14 +52,17 @@ namespace Riptide.Core
 
                     JsonValue costNode = obj.Require("cost");
                     int cost = costNode.AsInt();
-                    if (cost < 200 || cost > 2000)
+                    bool eventOnly = obj.Optional("eventOnly") is JsonValue eo && eo.AsBool();
+                    if (eventOnly ? cost != 0 : cost < 200 || cost > 2000)
                     {
-                        throw new JsonParseException($"Decoration '{id}' cost {cost} is outside the GDD 5.2 band 200–2000",
+                        throw new JsonParseException(eventOnly
+                                ? $"Event-only decoration '{id}' must cost 0 (GDD §15.4: earned, never sold)"
+                                : $"Decoration '{id}' cost {cost} is outside the GDD 5.2 band 200–2000",
                             costNode.Line, costNode.Column);
                     }
 
                     decorations.Add(new Decoration(id, obj.Require("name").AsString(), cost,
-                        obj.Require("emoji").AsString()));
+                        obj.Require("emoji").AsString(), eventOnly));
                 }
 
                 return decorations;

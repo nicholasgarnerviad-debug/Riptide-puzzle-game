@@ -9,7 +9,8 @@ namespace Riptide.Tools.BalanceRunner
 {
     /// <summary>
     /// Usage: dotnet run --project Tools/BalanceRunner -c Release --
-    ///        --mode endless|daily --games 10000 --policy gh|gc|rl [--out path.csv] [--content Assets/Resources/Content]
+    ///        --mode endless|daily|event --games 10000 --policy gh|gc|rl [--out path.csv] [--content Assets/Resources/Content]
+    ///        [--powers] (GDD §15.1 creature powers on) [--event id] (event mode: which rotation entry)
     /// Plays N seeded games headlessly and writes a raw per-game CSV plus a
     /// summary block on stdout (master prompt 3B).
     /// </summary>
@@ -39,12 +40,26 @@ namespace Riptide.Tools.BalanceRunner
             EconomyConfig economy = EconomyLoader.Load(File.ReadAllText(Path.Combine(contentRoot, "economy.json")), "economy.json");
             CreatureRoster roster = CreatureLoader.Load(File.ReadAllText(Path.Combine(contentRoot, "creatures.json")), "creatures.json");
 
+            ExpansionConfig expansion = ExpansionLoader.Load(
+                File.ReadAllText(Path.Combine(contentRoot, "expansion.json")), "expansion.json", roster.Count);
+            bool powers = Array.IndexOf(args, "--powers") >= 0;
+            if (mode == "voyage")
+            {
+                return RunVoyage(contentRoot, economy, roster, powers ? expansion.Powers : null, games);
+            }
+
             LevelConfig config = mode switch
             {
                 "endless" => ModeFactory.Endless(economy, roster.Count),
                 "daily" => ModeFactory.Daily(economy, roster.Count),
+                "event" => EventSchedule.BuildConfig(FindEvent(expansion, Arg(args, "--event")), economy, roster.Count,
+                    null),
                 _ => throw new ArgumentException($"unknown mode '{mode}'"),
             };
+            if (powers)
+            {
+                config = config.WithCreaturePowers(expansion.Powers);
+            }
 
             var rows = new GameRow[games];
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -69,6 +84,74 @@ namespace Riptide.Tools.BalanceRunner
 
             PrintSummary(rows, mode, policyName, games, sw.ElapsedMilliseconds, outPath);
             return 0;
+        }
+
+        /// <summary>
+        /// GDD §4 Voyage targets re-measured from the SHIPPED zone files (audit
+        /// follow-up): per level, N seeds under GreedyClear (3-star share) and
+        /// GreedyHeuristic (completion share); reported per band.
+        /// </summary>
+        private static int RunVoyage(string contentRoot, EconomyConfig economy, CreatureRoster roster,
+            CreaturePowersConfig? powers, int gamesPerLevel)
+        {
+            string[] zoneFiles = Directory.GetFiles(Path.Combine(contentRoot, "levels"), "zone*.json");
+            Array.Sort(zoneFiles, (a, b) => ZoneNumber(a).CompareTo(ZoneNumber(b)));
+            Console.WriteLine($"SUMMARY mode=voyage powers={(powers != null ? "on" : "off")} gamesPerLevel={gamesPerLevel}");
+            foreach (string file in zoneFiles)
+            {
+                var levels = LevelDefLoader.LoadZone(File.ReadAllText(file), Path.GetFileName(file), economy);
+                double ghSum = 0;
+                int gc3StarLevels = 0;
+                int rescueLevels = 0;
+                foreach (LevelDef level in levels)
+                {
+                    LevelConfig cfg = level.ToLevelConfig(economy, roster.Count).WithCreaturePowers(powers);
+                    int ghWins = 0;
+                    int gcThree = 0;
+                    var outcomes = new (bool ghWon, bool gcThree)[gamesPerLevel];
+                    Parallel.For(0, gamesPerLevel, i =>
+                    {
+                        GameRow gh = PlayOne(cfg, (ulong)i, "gh", economy);
+                        GameRow gc = PlayOne(cfg, (ulong)i, "gc", economy);
+                        bool three = gc.Result == "won" && level.ParMoves.HasValue
+                            && StarRating.For(gc.Placements, level.ParMoves.Value) == 3;
+                        outcomes[i] = (gh.Result == "won", three);
+                    });
+                    foreach ((bool won, bool three) in outcomes)
+                    {
+                        ghWins += won ? 1 : 0;
+                        gcThree += three ? 1 : 0;
+                    }
+
+                    ghSum += (double)ghWins / gamesPerLevel;
+                    gc3StarLevels += gcThree * 2 >= gamesPerLevel ? 1 : 0;
+                    rescueLevels += level.Goals.HasRescueGoal ? 1 : 0;
+                }
+
+                Console.WriteLine($"  zone {ZoneNumber(file),2}: ghComplete={(100.0 * ghSum / levels.Count).ToString("F1", CultureInfo.InvariantCulture)}%" +
+                    $"  gc3StarLevels={gc3StarLevels}/{levels.Count}  rescueLevels={rescueLevels}");
+            }
+
+            return 0;
+        }
+
+        private static int ZoneNumber(string path)
+        {
+            string name = Path.GetFileNameWithoutExtension(path);
+            return int.TryParse(name.Substring(4), out int n) ? n : 0;
+        }
+
+        private static EventDef FindEvent(ExpansionConfig expansion, string? id)
+        {
+            foreach (EventDef ev in expansion.Events)
+            {
+                if (id == null || ev.Id == id)
+                {
+                    return ev;
+                }
+            }
+
+            throw new ArgumentException($"unknown event '{id}'");
         }
 
         private static GameRow PlayOne(LevelConfig config, ulong seed, string policyName, EconomyConfig economy)

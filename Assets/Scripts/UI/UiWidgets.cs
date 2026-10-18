@@ -411,6 +411,15 @@ namespace Riptide.UI
 
         public State Current { get; private set; } = State.Silhouette;
 
+        /// <summary>Blink / happy frame for a met creature (silhouettes never blink).</summary>
+        public void SetEyesClosed(bool closed)
+        {
+            if (Current != State.Silhouette)
+            {
+                portrait.sprite = closed ? CreatureSprites.Blink(creatureId) : CreatureSprites.For(creatureId);
+            }
+        }
+
         internal void Build(RectTransform root, byte id)
         {
             creatureId = id;
@@ -424,12 +433,14 @@ namespace Riptide.UI
             Current = state;
             if (state == State.Silhouette)
             {
-                // Locked species: a theme-bound navy silhouette.
+                // Locked species: the shape alone, as a theme-bound navy silhouette.
+                portrait.sprite = CreatureSprites.Silhouette(creatureId);
                 ThemedElement.Bind(portrait.gameObject, "pop.navy");
             }
             else
             {
-                // Met species wear their generated-art tint (Palette provenance note).
+                // Met species wear their full-color chibi model.
+                portrait.sprite = CreatureSprites.For(creatureId);
                 ThemedElement.Bind(portrait.gameObject, "");
                 portrait.color = Palette.CreatureColor(creatureId);
             }

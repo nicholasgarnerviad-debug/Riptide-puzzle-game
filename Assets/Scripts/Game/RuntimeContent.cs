@@ -38,6 +38,10 @@ namespace Riptide.Game
         public static System.Collections.Generic.IReadOnlyList<Decoration> LoadDecorations() =>
             DecorationLoader.Load(LoadText("Content/decorations"), "decorations.json");
 
+        /// <summary>GDD §15 Pets &amp; Tides content (powers, pets, quests, badges, events).</summary>
+        public static ExpansionConfig LoadExpansion(int speciesCount) =>
+            ExpansionLoader.Load(LoadText("Content/expansion"), "expansion.json", speciesCount);
+
         public static UiTheme LoadTheme() =>
             UiThemeLoader.Load(LoadText("Content/ui_theme"), "ui_theme.json");
 

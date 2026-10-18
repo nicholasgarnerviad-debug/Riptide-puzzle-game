@@ -64,6 +64,34 @@ namespace Riptide.UI
             "stat.rescuedShort", "results.home", "daily.intro.streak",
             "booster.drainName", "booster.popName", "booster.rerollName", "booster.swapName",
             "booster.free", "hud.chip",
+
+            // GDD §15 Pets & Tides. Badge / event / quest / power keys are built from
+            // content ids at runtime — every one is listed so the coverage test sees it.
+            "tab.quests", "quests.title", "quests.daily", "quests.resets", "quests.claim", "quests.done",
+            "quests.badges", "quests.badgesEarned",
+            "quest.rescue", "quest.rescueSpecies", "quest.rows", "quest.deepClear", "quest.tides",
+            "quest.score", "quest.levels", "quest.daily", "quest.powers", "quest.endless",
+            "badge.first_rescue", "badge.rescuer_50", "badge.rescuer_250", "badge.species_4", "badge.species_8",
+            "badge.rows_100", "badge.rows_1000", "badge.clear_3", "badge.clear_4", "badge.tides_100",
+            "badge.stars_30", "badge.stars_150", "badge.levels_20", "badge.endless_5000", "badge.streak_7",
+            "badge.decor_5", "badge.powers_25", "badge.quests_10", "badge.events_1", "badge.pet_max",
+            "badgeStat.rescues", "badgeStat.species", "badgeStat.rows", "badgeStat.bestClear", "badgeStat.tides",
+            "badgeStat.stars", "badgeStat.levels", "badgeStat.endlessBest", "badgeStat.streakBest",
+            "badgeStat.decor", "badgeStat.powers", "badgeStat.quests", "badgeStat.events", "badgeStat.petLevel",
+            "pet.level", "pet.next", "pet.maxed", "pet.makeBuddy", "pet.isBuddy", "pet.buddyBonus",
+            "pet.gift", "pet.giftClaimed", "pet.giftTomorrow",
+            "power.Pinch", "power.Wish", "power.Steady", "power.Ink", "power.Calm", "power.Puff", "power.Glow",
+            "power.Regrow", "power.Pinch.desc", "power.Wish.desc", "power.Steady.desc", "power.Ink.desc",
+            "power.Calm.desc", "power.Puff.desc", "power.Glow.desc", "power.Regrow.desc", "power.popup",
+            "home.eventShort", "home.eventDays", "home.eventLastDay", "home.eventWon",
+            "event.title", "event.goal.rescue", "event.goal.rows", "event.goal.tides", "event.goal.score",
+            "event.reward", "event.best", "event.won",
+            "event.crab_carnival", "event.starfish_shower", "event.seahorse_stampede", "event.octopus_ink",
+            "event.turtle_trek", "event.jelly_glow",
+            "event.crab_carnival.desc", "event.starfish_shower.desc", "event.seahorse_stampede.desc",
+            "event.octopus_ink.desc", "event.turtle_trek.desc", "event.jelly_glow.desc",
+            "results.eventWin", "results.eventReward", "results.buddyBonus", "results.powers",
+            "tidepool.eventReward",
         };
     }
 }

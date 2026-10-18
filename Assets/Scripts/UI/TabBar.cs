@@ -7,7 +7,8 @@ namespace Riptide.UI
 {
     /// <summary>
     /// Tidal Pop persistent bottom tab bar (Nick's pick, 2026-10-18): Home ·
-    /// Tidepool · Shop · Settings, one tap from every menu screen. The active tab
+    /// Tidepool · Quests (GDD §15.3, with a claimable-count bubble) · Shop ·
+    /// Settings, one tap from every menu screen. The active tab
     /// rises as a raised blue tile; ZoneMap highlights Home (it is Voyage's page).
     /// Hidden in play and on results (those screens own their CTAs). Navigation
     /// still goes through GameFlow.GoTo — the bar is only a face.
@@ -18,25 +19,31 @@ namespace Riptide.UI
         public const float HeightRefPx = 210f;
 
         private static readonly FlowScreen[] Tabs =
-            { FlowScreen.Home, FlowScreen.Tidepool, FlowScreen.Shop, FlowScreen.Settings };
-        private static readonly string[] IconIds = { "home", "fish", "bag", "gear" };
-        private static readonly string[] IconTokens = { "panel.light", "pop.yellow", "pop.green", "panel.shade" };
-        private static readonly string[] LabelKeys = { "tab.home", "home.tidepool", "shop.title", "home.settings" };
+            { FlowScreen.Home, FlowScreen.Tidepool, FlowScreen.Quests, FlowScreen.Shop, FlowScreen.Settings };
+        private static readonly string[] IconIds = { "home", "fish", "trophy", "bag", "gear" };
+        private static readonly string[] IconTokens =
+            { "panel.light", "pop.yellow", "pop.yellow", "pop.green", "panel.shade" };
+        private static readonly string[] LabelKeys =
+            { "tab.home", "home.tidepool", "tab.quests", "shop.title", "home.settings" };
 
-        private readonly GameObject[] tiles = new GameObject[4];
-        private readonly RectTransform[] icons = new RectTransform[4];
-        private readonly TextMeshProUGUI[] labels = new TextMeshProUGUI[4];
+        private readonly GameObject[] tiles = new GameObject[5];
+        private readonly RectTransform[] icons = new RectTransform[5];
+        private readonly TextMeshProUGUI[] labels = new TextMeshProUGUI[5];
         private RectTransform bar = null!;
+        private GameFlow flow = null!;
+        private GameObject countBubble = null!;
+        private TextMeshProUGUI countLabel = null!;
         private int active = -1;
 
         /// <summary>Screens that show the bar.</summary>
         public static bool Shows(FlowScreen screen) =>
             screen == FlowScreen.Home || screen == FlowScreen.ZoneMap || screen == FlowScreen.Tidepool
-            || screen == FlowScreen.Shop || screen == FlowScreen.Settings;
+            || screen == FlowScreen.Shop || screen == FlowScreen.Settings || screen == FlowScreen.Quests;
 
         /// <summary>Tab roots besides Home — switching between them never stacks up.</summary>
         public static bool IsTabRoot(FlowScreen screen) =>
-            screen == FlowScreen.Tidepool || screen == FlowScreen.Shop || screen == FlowScreen.Settings;
+            screen == FlowScreen.Tidepool || screen == FlowScreen.Shop || screen == FlowScreen.Settings
+            || screen == FlowScreen.Quests;
 
         public static TabBar Create(RectTransform canvasRoot, GameFlow flow)
         {
@@ -44,6 +51,7 @@ namespace Riptide.UI
             UiComponents.Stretch(safe);
             safe.gameObject.AddComponent<SafeArea>();
             var tabBar = safe.gameObject.AddComponent<TabBar>();
+            tabBar.flow = flow;
 
             RectTransform bar = UiComponents.Rect(safe, "bar", Vector2.zero);
             bar.anchorMin = new Vector2(0f, 0f);
@@ -114,8 +122,29 @@ namespace Riptide.UI
 
             labels[index] = UiText.CreateOutlined(slot, "label", flow.Strings.Get(LabelKeys[index]),
                 "caption", "text.secondary", "panel.edgeDeep", 0.2f);
-            UiComponents.Place(labels[index].rectTransform, new Vector2(0.5f, 0f), new Vector2(240f, 44f));
+            UiComponents.Place(labels[index].rectTransform, new Vector2(0.5f, 0f), new Vector2(204f, 44f));
             labels[index].rectTransform.anchoredPosition = new Vector2(0f, 42f);
+            labels[index].enableAutoSizing = true;
+            labels[index].fontSizeMin = 22f;
+            labels[index].fontSizeMax = labels[index].fontSize;
+
+            if (Tabs[index] == FlowScreen.Quests)
+            {
+                // Claimable rewards bubble, riding the icon as it rises.
+                RectTransform bubble = PopKit.Panel(icons[index], "count", new Vector2(62f, 62f), PopTone.Coral, 31f, 6f);
+                bubble.anchoredPosition = new Vector2(42f, 34f);
+                countLabel = UiText.CreateOutlined(bubble, "label", "", "caption", "text.primary", "pop.coral.edge");
+                UiComponents.Stretch(countLabel.rectTransform);
+                countBubble = bubble.gameObject;
+            }
+        }
+
+        /// <summary>Re-reads the claimable count (quests + badges) into the Quests bubble.</summary>
+        public void RefreshBadge()
+        {
+            int count = flow.ClaimableCount();
+            countBubble.SetActive(count > 0);
+            countLabel.text = count > 9 ? "9+" : count.ToString();
         }
 
         /// <summary>Shows/hides the bar for a screen and raises the matching tab.</summary>
@@ -128,6 +157,7 @@ namespace Riptide.UI
                 return;
             }
 
+            RefreshBadge();
             int current = screen == FlowScreen.ZoneMap ? 0 : System.Array.IndexOf(Tabs, screen);
             if (current == active)
             {

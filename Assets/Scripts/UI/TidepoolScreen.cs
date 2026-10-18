@@ -13,9 +13,10 @@ namespace Riptide.UI
     /// species = dark silhouette + "???"), tap → bottom card with portrait, name,
     /// lifetime rescues and a flavor line cycling its 3 entries. Decorations get
     /// an edit-mode toggle: owned pieces place at predefined slot points (save
-    /// v3); unowned show in the tray with their coin cost (the shop entry).
+    /// v3); unowned show in the tray with their coin cost (the shop entry);
+    /// event prizes are earned, never sold. Pets live in TidepoolScreen.Pets.
     /// </summary>
-    public sealed class TidepoolScreen : MonoBehaviour, IScreenRefresh
+    public sealed partial class TidepoolScreen : MonoBehaviour, IScreenRefresh
     {
         private const int DecoSlotCount = 8;
         private const float ContentWidth = 3240f; // §4.6: three screens wide
@@ -28,10 +29,6 @@ namespace Riptide.UI
         private ScrollRect scroll = null!;
         private Button editToggle = null!;
         private RectTransform infoCard = null!;
-        private TextMeshProUGUI infoName = null!;
-        private TextMeshProUGUI infoCount = null!;
-        private TextMeshProUGUI infoFlavor = null!;
-        private Image infoPortrait = null!;
         private RectTransform tray = null!;
         private TextMeshProUGUI hint = null!;
 
@@ -60,6 +57,7 @@ namespace Riptide.UI
             var editRt = (RectTransform)screen.editToggle.transform;
             editRt.anchorMin = editRt.anchorMax = new Vector2(0f, 1f);
             editRt.anchoredPosition = new Vector2(150f, -ScreenChrome.HeaderRefPx * 0.5f);
+            screen.BuildGiftButton(root);
 
             screen.BuildDiorama(root);
             screen.BuildInfoCard(root);
@@ -78,7 +76,7 @@ namespace Riptide.UI
         // Vertical budget (ref-px from the safe bottom): tab bar, then the info /
         // decoration card, then the diorama window up to the header.
         private const float InfoBottom = ScreenChrome.TabFloorRefPx - 20f;
-        private const float InfoHeight = 540f;
+        private const float InfoHeight = 640f;
         private const float InfoTop = InfoBottom + InfoHeight;
 
         private void BuildDiorama(RectTransform root)
@@ -151,15 +149,15 @@ namespace Riptide.UI
 
                 // Visual pass: each creature sits in a circular well so it reads
                 // as an inhabitant, not a blob adrift in the void.
-                RectTransform well = UiComponents.Rect(content, $"well{speciesId}", new Vector2(132f, 132f));
-                UiComponents.Place(well, new Vector2(0f, 0.5f), new Vector2(132f, 132f));
+                RectTransform well = UiComponents.Rect(content, $"well{speciesId}", new Vector2(176f, 176f));
+                UiComponents.Place(well, new Vector2(0f, 0.5f), new Vector2(176f, 176f));
                 well.anchoredPosition = new Vector2(x, y);
                 var wellBg = well.gameObject.AddComponent<Image>();
                 wellBg.sprite = PopSprites.Circle();
                 wellBg.raycastTarget = false;
                 ThemedElement.Bind(well.gameObject, "panel.edge");
-                RectTransform wellInner = UiComponents.Rect(well, "inner", new Vector2(118f, 118f));
-                UiComponents.Place(wellInner, new Vector2(0.5f, 0.5f), new Vector2(118f, 118f));
+                RectTransform wellInner = UiComponents.Rect(well, "inner", new Vector2(160f, 160f));
+                UiComponents.Place(wellInner, new Vector2(0.5f, 0.5f), new Vector2(160f, 160f));
                 var wellInnerImage = wellInner.gameObject.AddComponent<Image>();
                 wellInnerImage.sprite = PopSprites.Circle();
                 wellInnerImage.raycastTarget = false;
@@ -167,13 +165,14 @@ namespace Riptide.UI
 
                 CreatureChip chip = UiComponents.CreatureChipComponent(well, (byte)speciesId);
                 var chipRt = (RectTransform)chip.transform;
-                UiComponents.Place(chipRt, new Vector2(0.5f, 0.5f), new Vector2(88f, 88f));
+                UiComponents.Place(chipRt, new Vector2(0.5f, 0.5f), new Vector2(140f, 140f));
                 var button = chip.gameObject.AddComponent<Button>();
                 button.onClick.AddListener(() => OnSpeciesTapped(speciesId));
+                BuildPetPill(well);
 
                 TextMeshProUGUI name = UiText.CreateOutlined(content, $"name{speciesId}", "", "micro", "text.primary", "panel.edge");
                 UiComponents.Place(name.rectTransform, new Vector2(0f, 0.5f), new Vector2(220f, 40f));
-                name.rectTransform.anchoredPosition = new Vector2(x, y - 100f);
+                name.rectTransform.anchoredPosition = new Vector2(x, y - 122f);
 
                 chips.Add((speciesId, chip, name, well, y));
             }
@@ -250,31 +249,6 @@ namespace Riptide.UI
             return layer;
         }
 
-        private void BuildInfoCard(RectTransform root)
-        {
-            infoCard = BottomCard(root, "infoCard");
-
-            RectTransform portraitWell = PopKit.Panel(infoCard, "portraitWell", new Vector2(230f, 230f),
-                PopTone.Blue, 115f, 9f);
-            portraitWell.anchorMin = portraitWell.anchorMax = new Vector2(0f, 1f);
-            portraitWell.anchoredPosition = new Vector2(170f, -170f);
-
-            var portraitGo = new GameObject("portrait", typeof(RectTransform));
-            portraitGo.transform.SetParent(portraitWell, false);
-            infoPortrait = portraitGo.AddComponent<Image>();
-            infoPortrait.sprite = SpriteFactory.Creature();
-            infoPortrait.raycastTarget = false;
-            UiComponents.Place((RectTransform)portraitGo.transform, new Vector2(0.5f, 0.5f), new Vector2(170f, 170f));
-
-            infoName = UiText.Create(infoCard, "name", "", "title", "text.ink", TextAlignmentOptions.MidlineLeft);
-            Pin(infoName.rectTransform, 320f, -110f, 600f, 80f);
-            infoCount = UiText.Create(infoCard, "count", "", "body", "text.inkSoft", TextAlignmentOptions.MidlineLeft);
-            Pin(infoCount.rectTransform, 320f, -190f, 600f, 60f);
-            infoFlavor = UiText.Create(infoCard, "flavor", "", "body", "text.ink");
-            infoFlavor.enableWordWrapping = true;
-            UiComponents.Place(infoFlavor.rectTransform, new Vector2(0.5f, 0.2f), new Vector2(880f, 130f));
-        }
-
         private void BuildTray(RectTransform root)
         {
             tray = BottomCard(root, "decoTray");
@@ -302,27 +276,6 @@ namespace Riptide.UI
             editMode = !editMode;
             selectedDecoration = "";
             Refresh();
-        }
-
-        private void OnSpeciesTapped(int speciesId)
-        {
-            if (editMode)
-            {
-                return;
-            }
-
-            CreatureSpecies species = flow.Roster.Species[speciesId];
-            bool rescued = flow.Meta.Save.RescuesFor(speciesId) > 0;
-            flavorCursor = shownSpecies == speciesId ? (flavorCursor + 1) % species.Flavor.Count : 0;
-            shownSpecies = speciesId;
-
-            infoPortrait.sprite = CreatureSprites.For(speciesId);
-            infoPortrait.color = rescued ? Palette.CreatureColor((byte)speciesId) : ThemeRuntime.Color("pop.navy");
-            infoName.text = rescued ? species.Name : flow.Strings.Get("tidepool.unknown");
-            infoCount.text = rescued
-                ? string.Format(flow.Strings.Get("tidepool.rescued"), flow.Meta.Save.RescuesFor(speciesId))
-                : flow.Strings.Get("tidepool.never");
-            infoFlavor.text = rescued ? species.Flavor[flavorCursor] : "";
         }
 
         private void OnSlotTapped(int slot)
@@ -357,10 +310,31 @@ namespace Riptide.UI
 
             TextMeshProUGUI heading = UiText.Create(tray, "heading",
                 flow.Strings.Get("tidepool.decorations"), "heading", "text.ink");
-            UiComponents.Place(heading.rectTransform, new Vector2(0.5f, 0.92f), new Vector2(700f, 60f));
+            heading.rectTransform.anchorMin = heading.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            heading.rectTransform.sizeDelta = new Vector2(700f, 60f);
+            heading.rectTransform.anchoredPosition = new Vector2(0f, -56f);
+
+            // 26 pieces (20 shop + 6 event prizes) outgrow the card: the grid scrolls.
+            RectTransform viewport = UiComponents.Rect(tray, "grid", Vector2.zero);
+            UiComponents.Stretch(viewport);
+            viewport.offsetMin = new Vector2(24f, 36f);
+            viewport.offsetMax = new Vector2(-24f, -100f);
+            var hit = viewport.gameObject.AddComponent<Image>();
+            hit.sprite = SpriteFactory.Solid();
+            hit.color = new Color(0f, 0f, 0f, 0f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            var scrollRect = viewport.gameObject.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            RectTransform grid = UiComponents.Rect(viewport, "content", Vector2.zero);
+            grid.anchorMin = new Vector2(0f, 1f);
+            grid.anchorMax = new Vector2(1f, 1f);
+            grid.pivot = new Vector2(0.5f, 1f);
+            scrollRect.content = grid;
 
             var decorations = flow.Decorations;
-            int perRow = 4;
+            const int perRow = 4;
+            const float rowStep = 145f;
             for (int i = 0; i < decorations.Count; i++)
             {
                 Decoration deco = decorations[i];
@@ -368,22 +342,27 @@ namespace Riptide.UI
                 int row = i / perRow;
                 bool owned = flow.Meta.OwnsDecoration(deco.Id);
 
-                string label = owned
-                    ? deco.Name
-                    : $"{deco.Name}\n{string.Format(flow.Strings.Get("tidepool.buy"), deco.Cost)}";
+                string price = deco.EventOnly
+                    ? flow.Strings.Get("tidepool.eventReward")
+                    : string.Format(flow.Strings.Get("tidepool.buy"), deco.Cost);
+                string label = owned ? deco.Name : $"{deco.Name}\n{price}";
                 Decoration decoCopy = deco;
-                Button cell = UiComponents.ButtonSecondary(tray, $"deco_{deco.Id}", label,
+                Button cell = UiComponents.ButtonSecondary(grid, $"deco_{deco.Id}", label,
                     () => OnTrayDecoTapped(decoCopy));
                 var cellRt = (RectTransform)cell.transform;
-                UiComponents.Place(cellRt, new Vector2((col + 0.5f) / perRow, 0.78f), new Vector2(235f, 130f));
-                cellRt.anchoredPosition = new Vector2(0f, -row * 145f);
+                UiComponents.Place(cellRt, new Vector2((col + 0.5f) / perRow, 1f), new Vector2(225f, 130f));
+                cellRt.pivot = new Vector2(0.5f, 1f);
+                cellRt.anchoredPosition = new Vector2(0f, -8f - row * rowStep);
                 cell.GetComponentInChildren<TextMeshProUGUI>().fontSize =
                     ThemeRuntime.Theme.TypeStyle("micro").Size;
 
                 bool selected = owned && selectedDecoration == deco.Id;
-                cell.GetComponent<PopSurface>().SetTone(selected ? PopTone.Yellow : PopTone.White);
-                cell.interactable = owned || flow.Meta.CanAfford(deco.Cost);
+                cell.GetComponent<PopSurface>().SetTone(selected ? PopTone.Yellow
+                    : !owned && deco.EventOnly ? PopTone.Purple : PopTone.White);
+                cell.interactable = owned || (!deco.EventOnly && flow.Meta.CanAfford(deco.Cost));
             }
+
+            grid.sizeDelta = new Vector2(0f, 16f + ((decorations.Count + perRow - 1) / perRow) * rowStep);
         }
 
         private void OnTrayDecoTapped(Decoration deco)
@@ -433,14 +412,8 @@ namespace Riptide.UI
             {
                 RebuildTray();
             }
-            else if (shownSpecies < 0)
-            {
-                infoName.text = "";
-                infoCount.text = "";
-                // An empty card is a dead card — invite the tap instead.
-                infoFlavor.text = flow.Strings.Get("tidepool.tapHint");
-                infoPortrait.color = ThemeRuntime.Color("pop.navy");
-            }
+
+            RefreshPets();
         }
 
         private Decoration? Find(string id)
@@ -458,6 +431,8 @@ namespace Riptide.UI
 
         private void Update()
         {
+            UpdatePets();
+
             // §4.6 idle bob + parallax; both park under reduced motion.
             if (ThemeRuntime.ReducedMotion)
             {

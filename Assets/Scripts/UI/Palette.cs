@@ -50,8 +50,11 @@ namespace Riptide.UI
         public static Color BlockColor(byte colorId) =>
             ThemeRuntime.Color(BlockKeys[colorId % BlockKeys.Length]);
 
-        /// <summary>Placeholder creature tints (provenance: generated art, not theme tokens).</summary>
-        public static Color CreatureColor(byte creatureId) =>
-            Color.HSVToRGB((0.08f + creatureId * 0.13f) % 1f, 0.45f, 1f);
+        /// <summary>
+        /// Creature sprite tint. The GDD §15 chibi models carry their own pet.*
+        /// colors, so the tint is neutral; kept as the single hook if a species
+        /// ever needs a runtime wash (e.g. a lost creature fading to coral).
+        /// </summary>
+        public static Color CreatureColor(byte creatureId) => Color.white;
     }
 }

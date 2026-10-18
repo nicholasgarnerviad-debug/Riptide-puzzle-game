@@ -51,7 +51,7 @@ namespace Riptide.PlayMode.Tests
             foreach (FlowScreen screen in new[]
             {
                 FlowScreen.ZoneMap, FlowScreen.Settings, FlowScreen.Shop,
-                FlowScreen.Tidepool, FlowScreen.DailyIntro,
+                FlowScreen.Tidepool, FlowScreen.DailyIntro, FlowScreen.Quests, FlowScreen.EventIntro,
             })
             {
                 BackDecision d = BackRouter.Decide(screen, false, false);

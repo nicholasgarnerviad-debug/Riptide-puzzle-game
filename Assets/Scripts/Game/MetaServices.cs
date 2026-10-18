@@ -8,7 +8,7 @@ namespace Riptide.Game
     /// the Phase 5 PlayerPrefs shim is imported once by SaveStore). Also the
     /// single source of "today" — injectable so flow tests can travel in time.
     /// </summary>
-    public sealed class MetaServices
+    public sealed partial class MetaServices
     {
         private readonly SaveStore store;
         private CoinWallet wallet;
@@ -170,7 +170,8 @@ namespace Riptide.Game
 
         public bool TryBuyDecoration(Decoration decoration)
         {
-            if (OwnsDecoration(decoration.Id) || !wallet.TrySpend(decoration.Cost))
+            // GDD §15.4: event rewards are earned, never sold (they cost 0 — guard first).
+            if (decoration.EventOnly || OwnsDecoration(decoration.Id) || !wallet.TrySpend(decoration.Cost))
             {
                 return false;
             }

@@ -39,6 +39,48 @@ namespace Riptide.Tools.ContentCheck
                 var decorations = DecorationLoader.Load(File.ReadAllText(decorationsPath), "decorations.json");
                 Console.WriteLine($"OK decorations.json ({decorations.Count} items)");
 
+                // GDD §15: the Pets & Tides expansion, cross-checked against the
+                // roster (quest/event species) and the decorations (event rewards).
+                string expansionPath = Path.Combine(root, "expansion.json");
+                ExpansionConfig expansion = ExpansionLoader.Load(File.ReadAllText(expansionPath), "expansion.json",
+                    roster.Count);
+                foreach (EventDef ev in expansion.Events)
+                {
+                    Decoration? reward = null;
+                    foreach (Decoration d in decorations)
+                    {
+                        if (d.Id == ev.RewardDecoration)
+                        {
+                            reward = d;
+                        }
+                    }
+
+                    if (reward == null || !reward.EventOnly)
+                    {
+                        Console.Error.WriteLine(
+                            $"expansion.json: event '{ev.Id}' rewards '{ev.RewardDecoration}', which must be an eventOnly decoration.");
+                        return 1;
+                    }
+
+                    // Each event must build a valid sim config (start water, intervals, goal).
+                    EventSchedule.BuildConfig(ev, economy, roster.Count, expansion.Powers);
+                }
+
+                int shopItems = 0;
+                foreach (Decoration d in decorations)
+                {
+                    shopItems += d.EventOnly ? 0 : 1;
+                }
+
+                if (shopItems != 20)
+                {
+                    Console.Error.WriteLine($"decorations.json: GDD 5.1 ships 20 shop decorations, found {shopItems}.");
+                    return 1;
+                }
+
+                Console.WriteLine($"OK expansion.json ({expansion.QuestPool.Count} quests, {expansion.Badges.Count} badges, " +
+                    $"{expansion.Events.Count} events)");
+
                 string themePath = Path.Combine(root, "ui_theme.json");
                 UiTheme theme = UiThemeLoader.Load(File.ReadAllText(themePath), "ui_theme.json");
                 int audit = AuditTheme(theme);

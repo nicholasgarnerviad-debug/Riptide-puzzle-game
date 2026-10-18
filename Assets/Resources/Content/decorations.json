@@ -19,6 +19,12 @@
     { "id": "telescope", "name": "Sunken Telescope", "cost": 1100, "emoji": "🔭" },
     { "id": "crown", "name": "Lost Crown", "cost": 1800, "emoji": "👑" },
     { "id": "trident", "name": "Ancient Trident", "cost": 2000, "emoji": "🔱" },
-    { "id": "bubbles", "name": "Bubble Fountain", "cost": 600, "emoji": "💭" }
+    { "id": "bubbles", "name": "Bubble Fountain", "cost": 600, "emoji": "💭" },
+    { "id": "golden_crab", "name": "Golden Crab Statue", "cost": 0, "emoji": "🦀", "eventOnly": true },
+    { "id": "star_lantern", "name": "Starfish Lantern", "cost": 0, "emoji": "⭐", "eventOnly": true },
+    { "id": "seahorse_carousel", "name": "Seahorse Carousel", "cost": 0, "emoji": "🎠", "eventOnly": true },
+    { "id": "octopus_vase", "name": "Octopus Ink Vase", "cost": 0, "emoji": "🏺", "eventOnly": true },
+    { "id": "shell_arch", "name": "Turtle Shell Arch", "cost": 0, "emoji": "🐢", "eventOnly": true },
+    { "id": "jelly_lantern", "name": "Jellyfish Lantern", "cost": 0, "emoji": "🪼", "eventOnly": true }
   ]
 }

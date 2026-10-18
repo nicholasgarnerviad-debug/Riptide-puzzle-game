@@ -161,6 +161,13 @@ namespace Riptide.UI
                 queue.AddInstant("rescue");
             }
 
+            // 3b) GDD §15.1 creature powers: the HUD names them on this beat; their
+            // cells burst inside the clear beat (powers only fire on a rescue).
+            if (events.Powers.Count > 0)
+            {
+                queue.AddInstant("power");
+            }
+
             // 4) Drain — the over-delivered relief beat (§5.1).
             if (drains)
             {
@@ -278,6 +285,15 @@ namespace Riptide.UI
             foreach (CreatureEvent rescue in events.RescuedCreatures)
             {
                 StartCoroutine(SwimOff(rescue));
+            }
+
+            float powerDelay = Mathf.Min(blockSeconds, 0.18f);
+            foreach (PowerEvent power in events.Powers)
+            {
+                foreach (GridPos pos in power.ClearedCells)
+                {
+                    StartCoroutine(PopCell(board.RendererAt(pos.Col, pos.Row), powerDelay));
+                }
             }
 
             if (events.Scoring.ComboHalves >= 3)

@@ -9,14 +9,17 @@ namespace Riptide.UI
     /// <summary>
     /// Spec §4.1 Home, Tidal Pop edition (UI spec §13): streak + coin pills, the
     /// stickered wordmark with a resident creature, the Voyage level card (zone
-    /// ribbon, level badge, zone stars, progress, one huge PLAY), and the Daily /
-    /// Endless tiles above the tab bar. The card body opens the level map; PLAY
-    /// dives straight into the next level.
+    /// ribbon, level badge, zone stars, progress, one huge PLAY), and the Daily ·
+    /// Event Tide · Endless tiles above the tab bar (GDD §15.4). The card body
+    /// opens the level map; PLAY dives straight into the next level. The mascot
+    /// over the wordmark is your buddy (the crab until you pick one).
     /// </summary>
     public sealed class HomeScreen : MonoBehaviour, IScreenRefresh
     {
         private const float TilesBottom = ScreenChrome.TabFloorRefPx - 20f;
         private const float TileHeight = 340f;
+        private const float TileWidth = 314f;
+        private const float TileStep = 333f;
         private const float CardHeight = 700f;
         private const float CardBottom = TilesBottom + TileHeight + 50f;
 
@@ -33,8 +36,14 @@ namespace Riptide.UI
         private GameObject dailyNew = null!;
         private GameObject dailyDone = null!;
         private TextMeshProUGUI endlessCaption = null!;
+        private TextMeshProUGUI eventCaption = null!;
+        private Image eventCreature = null!;
+        private GameObject eventWon = null!;
         private RectTransform play = null!;
         private RectTransform mascot = null!;
+        private Image mascotImage = null!;
+        private int mascotSpecies;
+        private float nextBlink;
         private RectTransform[] sections = null!;
         private float idle;
 
@@ -47,9 +56,9 @@ namespace Riptide.UI
             RectTransform topBar = screen.BuildTopBar(root);
             RectTransform logo = screen.BuildLogo(root);
             RectTransform card = screen.BuildVoyageCard(root);
-            (RectTransform daily, RectTransform endless) = screen.BuildModeTiles(root);
+            (RectTransform daily, RectTransform tide, RectTransform endless) = screen.BuildModeTiles(root);
 
-            screen.sections = new[] { topBar, logo, card, daily, endless };
+            screen.sections = new[] { topBar, logo, card, daily, tide, endless };
             screen.Refresh();
             return root;
         }
@@ -119,9 +128,8 @@ namespace Riptide.UI
             mascot = UiComponents.Rect(logo, "mascot", new Vector2(190f, 190f));
             UiComponents.Place(mascot, new Vector2(0.93f, 0.86f), new Vector2(190f, 190f));
             mascot.localRotation = Quaternion.Euler(0f, 0f, -14f);
-            Image body = PopKit.Img(mascot, "creature", CreatureSprites.For(0), "panel.light");
-            UiComponents.Stretch(body.rectTransform);
-            body.color = Palette.CreatureColor(0);
+            mascotImage = PopKit.Img(mascot, "creature", CreatureSprites.For(0), "pet.eye");
+            UiComponents.Stretch(mascotImage.rectTransform);
             return zone;
         }
 
@@ -204,21 +212,21 @@ namespace Riptide.UI
             return card;
         }
 
-        private (RectTransform daily, RectTransform endless) BuildModeTiles(RectTransform root)
+        private (RectTransform daily, RectTransform tide, RectTransform endless) BuildModeTiles(RectTransform root)
         {
             Button daily = PopKit.Tile(root, "daily", PopTone.Yellow, () => flow.GoTo(FlowScreen.DailyIntro),
-                new Vector2(470f, TileHeight));
+                new Vector2(TileWidth, TileHeight));
             var dailyRt = (RectTransform)daily.transform;
             dailyRt.anchorMin = dailyRt.anchorMax = new Vector2(0.5f, 0f);
             dailyRt.pivot = new Vector2(0.5f, 0f);
-            dailyRt.anchoredPosition = new Vector2(-250f, TilesBottom);
+            dailyRt.anchoredPosition = new Vector2(-TileStep, TilesBottom);
             RectTransform dailyFace = PopKit.FaceOf(daily);
             TileContent(dailyFace, "calendar", "pop.coral", "pop.yellow.edge", flow.Strings.Get("home.dailyShort"),
                 PopTone.Yellow, out dailyCaption);
 
             RectTransform sticker = PopKit.Panel(dailyRt, "new", new Vector2(150f, 70f), PopTone.Coral, 20f, 7f);
             sticker.anchorMin = sticker.anchorMax = new Vector2(1f, 1f);
-            sticker.anchoredPosition = new Vector2(-30f, -14f);
+            sticker.anchoredPosition = new Vector2(-20f, -14f);
             sticker.localRotation = Quaternion.Euler(0f, 0f, -8f);
             TextMeshProUGUI newText = UiText.CreateOutlined(sticker, "label", flow.Strings.Get("home.dailyNew"),
                 "body", "text.primary", "pop.coral.edge");
@@ -231,15 +239,35 @@ namespace Riptide.UI
             checkRt.anchoredPosition = new Vector2(-62f, -70f);
             dailyDone = checkRt.gameObject;
 
+            // GDD §15.4 Event Tide: this week's featured creature fronts the tile.
+            Button tide = PopKit.Tile(root, "event", PopTone.Coral, () => flow.GoTo(FlowScreen.EventIntro),
+                new Vector2(TileWidth, TileHeight));
+            var tideRt = (RectTransform)tide.transform;
+            tideRt.anchorMin = tideRt.anchorMax = new Vector2(0.5f, 0f);
+            tideRt.pivot = new Vector2(0.5f, 0f);
+            tideRt.anchoredPosition = new Vector2(0f, TilesBottom);
+            RectTransform tideFace = PopKit.FaceOf(tide);
+            TileContent(tideFace, "star", "pop.yellow", "pop.coral.edge", flow.Strings.Get("home.eventShort"),
+                PopTone.Coral, out eventCaption);
+            tideFace.Find("icon").gameObject.SetActive(false);
+            eventCreature = PopKit.Img(tideFace, "creature", CreatureSprites.For(0), "pet.eye");
+            UiComponents.Place(eventCreature.rectTransform, new Vector2(0f, 1f), new Vector2(150f, 150f));
+            eventCreature.rectTransform.anchoredPosition = new Vector2(104f, -98f);
+            Image won = PopKit.Icon(tideRt, "won", "check", "pop.green.top", 70f, "pop.green.edge", 9);
+            var wonRt = (RectTransform)won.transform.parent;
+            wonRt.anchorMin = wonRt.anchorMax = new Vector2(1f, 1f);
+            wonRt.anchoredPosition = new Vector2(-62f, -70f);
+            eventWon = wonRt.gameObject;
+
             Button endless = PopKit.Tile(root, "endless", PopTone.Purple, flow.StartEndless,
-                new Vector2(470f, TileHeight));
+                new Vector2(TileWidth, TileHeight));
             var endlessRt = (RectTransform)endless.transform;
             endlessRt.anchorMin = endlessRt.anchorMax = new Vector2(0.5f, 0f);
             endlessRt.pivot = new Vector2(0.5f, 0f);
-            endlessRt.anchoredPosition = new Vector2(250f, TilesBottom);
+            endlessRt.anchoredPosition = new Vector2(TileStep, TilesBottom);
             TileContent(PopKit.FaceOf(endless), "waves", "accent.primary", "pop.purple.edge",
                 flow.Strings.Get("home.endlessShort"), PopTone.Purple, out endlessCaption);
-            return (dailyRt, endlessRt);
+            return (dailyRt, tideRt, endlessRt);
         }
 
         private static void TileContent(RectTransform face, string iconId, string iconToken, string edgeToken,
@@ -255,16 +283,22 @@ namespace Riptide.UI
             titleText.rectTransform.anchorMin = new Vector2(0f, 0f);
             titleText.rectTransform.anchorMax = new Vector2(1f, 0f);
             titleText.rectTransform.pivot = new Vector2(0.5f, 0f);
-            titleText.rectTransform.offsetMin = new Vector2(36f, 84f);
-            titleText.rectTransform.offsetMax = new Vector2(-24f, 160f);
+            titleText.rectTransform.offsetMin = new Vector2(30f, 84f);
+            titleText.rectTransform.offsetMax = new Vector2(-20f, 160f);
+            titleText.enableAutoSizing = true;
+            titleText.fontSizeMin = 34f;
+            titleText.fontSizeMax = titleText.fontSize;
 
             caption = UiText.CreateOutlined(face, "caption", "", "body", "text.primary", PopKit.Edge(tone), 0.2f,
                 TextAlignmentOptions.BottomLeft);
             caption.rectTransform.anchorMin = new Vector2(0f, 0f);
             caption.rectTransform.anchorMax = new Vector2(1f, 0f);
             caption.rectTransform.pivot = new Vector2(0.5f, 0f);
-            caption.rectTransform.offsetMin = new Vector2(36f, 34f);
-            caption.rectTransform.offsetMax = new Vector2(-24f, 84f);
+            caption.rectTransform.offsetMin = new Vector2(30f, 34f);
+            caption.rectTransform.offsetMax = new Vector2(-20f, 84f);
+            caption.enableAutoSizing = true;
+            caption.fontSizeMin = 24f;
+            caption.fontSizeMax = caption.fontSize;
         }
 
         public void Refresh()
@@ -298,6 +332,18 @@ namespace Riptide.UI
             dailyNew.SetActive(dailyReady);
             dailyDone.SetActive(!dailyReady);
 
+            EventDef tide = flow.ThisWeeksEvent;
+            eventCreature.sprite = CreatureSprites.For(tide.FeaturedSpecies);
+            int days = flow.EventDaysLeft;
+            eventCaption.text = flow.EventWonThisWeek ? flow.Strings.Get("home.eventWon")
+                : days <= 1 ? flow.Strings.Get("home.eventLastDay")
+                : string.Format(flow.Strings.Get("home.eventDays"), days);
+            eventWon.SetActive(flow.EventWonThisWeek);
+
+            int buddy = flow.Meta.Save.BuddySpecies;
+            mascotSpecies = buddy >= 0 && buddy < flow.Roster.Count ? buddy : 0;
+            mascotImage.sprite = CreatureSprites.For(mascotSpecies);
+
             int current = flow.Meta.Streak.Current;
             streakPill.gameObject.SetActive(current > 0);
             streakCount.text = current.ToString();
@@ -311,6 +357,16 @@ namespace Riptide.UI
 
         private void Update()
         {
+            if (Time.time > nextBlink)
+            {
+                bool closing = Time.time < nextBlink + 0.14f;
+                mascotImage.sprite = closing ? CreatureSprites.Blink(mascotSpecies) : CreatureSprites.For(mascotSpecies);
+                if (!closing)
+                {
+                    nextBlink = Time.time + Random.Range(2.5f, 5f);
+                }
+            }
+
             if (ThemeRuntime.ReducedMotion)
             {
                 return;

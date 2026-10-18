@@ -12,7 +12,7 @@ namespace Riptide.Core
     /// </summary>
     public sealed class SaveData
     {
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         public long Coins;
         public string VoyageProgress = "";
@@ -37,6 +37,26 @@ namespace Riptide.Core
 
         /// <summary>Sanity ceiling so a hand-tampered save can't balloon the list.</summary>
         public const int MaxDecorationSlots = 16;
+
+        // v4: GDD §15 Pets & Tides.
+        public int BuddySpecies = -1;
+        public long PetGiftDay = -1;
+        public long QuestDay = -1;
+        public int[] QuestProgress = new int[0];
+        public bool[] QuestClaimed = new bool[0];
+        public List<string> BadgesClaimed = new List<string>();
+        public long TotalRowsCleared;
+        public int BestClearAtOnce;
+        public long TotalTides;
+        public long PowersTriggered;
+        public int QuestsCompleted;
+        public int EventsCompleted;
+        public int EventRewardWeek = -1;
+        public int EventProgressWeek = -1;
+        public int EventBestProgress;
+
+        /// <summary>Sanity ceiling for the per-day quest arrays (a tampered save can't balloon them).</summary>
+        public const int MaxQuestsPerDay = 8;
 
         public string Serialize()
         {
@@ -78,7 +98,36 @@ namespace Riptide.Core
                 sb.Append('"').Append(Escape(DecorationSlots[i])).Append('"');
             }
 
-            sb.Append("]\n");
+            sb.Append("],\n");
+            sb.Append($"  \"buddy\": {BuddySpecies},\n");
+            sb.Append($"  \"petGiftDay\": {PetGiftDay},\n");
+            sb.Append($"  \"questDay\": {QuestDay},\n");
+            sb.Append("  \"questProgress\": [");
+            for (int i = 0; i < QuestProgress.Length; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(QuestProgress[i]);
+            }
+
+            sb.Append("],\n");
+            sb.Append("  \"questClaimed\": [");
+            for (int i = 0; i < QuestClaimed.Length; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(QuestClaimed[i] ? "true" : "false");
+            }
+
+            sb.Append("],\n");
+            sb.Append("  \"badgesClaimed\": [");
+            for (int i = 0; i < BadgesClaimed.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append('"').Append(Escape(BadgesClaimed[i])).Append('"');
+            }
+
+            sb.Append("],\n");
+            sb.Append($"  \"stats\": [{TotalRowsCleared}, {BestClearAtOnce}, {TotalTides}, {PowersTriggered}, {QuestsCompleted}, {EventsCompleted}],\n");
+            sb.Append($"  \"event\": [{EventRewardWeek}, {EventProgressWeek}, {EventBestProgress}]\n");
             sb.Append("}");
             return sb.ToString();
         }
@@ -169,6 +218,55 @@ namespace Riptide.Core
                     {
                         save.DecorationSlots.Add(item.AsString());
                     }
+                }
+
+                // v3 → v4 migration (GDD §15): everything new defaults — no buddy,
+                // no gift taken, no quest day, zeroed lifetime stats.
+                if (version >= 4)
+                {
+                    save.BuddySpecies = root.Require("buddy").AsInt();
+                    save.PetGiftDay = root.Require("petGiftDay").AsLong();
+                    save.QuestDay = root.Require("questDay").AsLong();
+                    JsonArray progress = root.Require("questProgress").AsArray();
+                    JsonArray claimed = root.Require("questClaimed").AsArray();
+                    if (progress.Count > MaxQuestsPerDay || claimed.Count != progress.Count || save.BuddySpecies < -1)
+                    {
+                        return null;
+                    }
+
+                    save.QuestProgress = new int[progress.Count];
+                    save.QuestClaimed = new bool[claimed.Count];
+                    for (int i = 0; i < progress.Count; i++)
+                    {
+                        save.QuestProgress[i] = Math.Max(0, progress.Items[i].AsInt());
+                        save.QuestClaimed[i] = claimed.Items[i].AsBool();
+                    }
+
+                    foreach (JsonValue item in root.Require("badgesClaimed").AsArray().Items)
+                    {
+                        string id = item.AsString();
+                        if (!save.BadgesClaimed.Contains(id))
+                        {
+                            save.BadgesClaimed.Add(id);
+                        }
+                    }
+
+                    JsonArray stats = root.Require("stats").AsArray();
+                    JsonArray evt = root.Require("event").AsArray();
+                    if (stats.Count != 6 || evt.Count != 3)
+                    {
+                        return null;
+                    }
+
+                    save.TotalRowsCleared = Math.Max(0, stats.Items[0].AsLong());
+                    save.BestClearAtOnce = Math.Max(0, stats.Items[1].AsInt());
+                    save.TotalTides = Math.Max(0, stats.Items[2].AsLong());
+                    save.PowersTriggered = Math.Max(0, stats.Items[3].AsLong());
+                    save.QuestsCompleted = Math.Max(0, stats.Items[4].AsInt());
+                    save.EventsCompleted = Math.Max(0, stats.Items[5].AsInt());
+                    save.EventRewardWeek = evt.Items[0].AsInt();
+                    save.EventProgressWeek = evt.Items[1].AsInt();
+                    save.EventBestProgress = Math.Max(0, evt.Items[2].AsInt());
                 }
 
                 return save;

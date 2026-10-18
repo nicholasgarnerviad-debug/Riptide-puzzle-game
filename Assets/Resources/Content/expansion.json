@@ -1,0 +1,71 @@
+{
+  "creaturePowers": {
+    "modes": { "voyage": true, "endless": true, "event": true },
+    "crabCoral": 1,
+    "starfishScore": 200,
+    "seahorseTideRelief": 2,
+    "octopusCoral": 3,
+    "turtleDrain": 1,
+    "axolotlDrain": 2
+  },
+  "pets": {
+    "levelThresholds": [1, 5, 15, 35, 75],
+    "giftCoinsPerLevel": 4,
+    "giftCap": 120,
+    "buddyBonusPercentPerLevel": 2
+  },
+  "quests": {
+    "perDay": 3,
+    "pool": [
+      { "id": "rescue_3", "kind": "rescue", "target": 3, "reward": 40 },
+      { "id": "rescue_6", "kind": "rescue", "target": 6, "reward": 70 },
+      { "id": "crab_1", "kind": "rescueSpecies", "species": 0, "target": 1, "reward": 40 },
+      { "id": "starfish_1", "kind": "rescueSpecies", "species": 1, "target": 1, "reward": 40 },
+      { "id": "seahorse_1", "kind": "rescueSpecies", "species": 2, "target": 1, "reward": 40 },
+      { "id": "octopus_1", "kind": "rescueSpecies", "species": 3, "target": 1, "reward": 40 },
+      { "id": "turtle_1", "kind": "rescueSpecies", "species": 4, "target": 1, "reward": 40 },
+      { "id": "puffer_1", "kind": "rescueSpecies", "species": 5, "target": 1, "reward": 40 },
+      { "id": "jelly_1", "kind": "rescueSpecies", "species": 6, "target": 1, "reward": 40 },
+      { "id": "rows_15", "kind": "rows", "target": 15, "reward": 40 },
+      { "id": "rows_40", "kind": "rows", "target": 40, "reward": 80 },
+      { "id": "deep_2", "kind": "deepClear", "target": 2, "reward": 60 },
+      { "id": "tides_10", "kind": "tides", "target": 10, "reward": 50 },
+      { "id": "tides_25", "kind": "tides", "target": 25, "reward": 90 },
+      { "id": "score_1500", "kind": "score", "target": 1500, "reward": 60 },
+      { "id": "levels_2", "kind": "levels", "target": 2, "reward": 50 },
+      { "id": "daily_1", "kind": "daily", "target": 1, "reward": 40 },
+      { "id": "powers_3", "kind": "powers", "target": 3, "reward": 60 },
+      { "id": "endless_2", "kind": "endless", "target": 2, "reward": 30 }
+    ]
+  },
+  "badges": [
+    { "id": "first_rescue", "stat": "rescues", "target": 1, "reward": 25, "icon": "fish" },
+    { "id": "rescuer_50", "stat": "rescues", "target": 50, "reward": 100, "icon": "fish" },
+    { "id": "rescuer_250", "stat": "rescues", "target": 250, "reward": 300, "icon": "fish" },
+    { "id": "species_4", "stat": "species", "target": 4, "reward": 80, "icon": "star" },
+    { "id": "species_8", "stat": "species", "target": 8, "reward": 300, "icon": "crown" },
+    { "id": "rows_100", "stat": "rows", "target": 100, "reward": 80, "icon": "rows" },
+    { "id": "rows_1000", "stat": "rows", "target": 1000, "reward": 300, "icon": "rows" },
+    { "id": "clear_3", "stat": "bestClear", "target": 3, "reward": 80, "icon": "bomb" },
+    { "id": "clear_4", "stat": "bestClear", "target": 4, "reward": 150, "icon": "trophy" },
+    { "id": "tides_100", "stat": "tides", "target": 100, "reward": 100, "icon": "waves" },
+    { "id": "stars_30", "stat": "stars", "target": 30, "reward": 100, "icon": "star" },
+    { "id": "stars_150", "stat": "stars", "target": 150, "reward": 400, "icon": "star" },
+    { "id": "levels_20", "stat": "levels", "target": 20, "reward": 200, "icon": "map" },
+    { "id": "endless_5000", "stat": "endlessBest", "target": 5000, "reward": 150, "icon": "crown" },
+    { "id": "streak_7", "stat": "streakBest", "target": 7, "reward": 150, "icon": "flame" },
+    { "id": "decor_5", "stat": "decor", "target": 5, "reward": 100, "icon": "chest" },
+    { "id": "powers_25", "stat": "powers", "target": 25, "reward": 120, "icon": "drop" },
+    { "id": "quests_10", "stat": "quests", "target": 10, "reward": 120, "icon": "check" },
+    { "id": "events_1", "stat": "events", "target": 1, "reward": 100, "icon": "calendar" },
+    { "id": "pet_max", "stat": "petLevel", "target": 5, "reward": 250, "icon": "trophy" }
+  ],
+  "events": [
+    { "id": "crab_carnival", "featuredSpecies": 0, "startWaterLevel": 1, "startTideInterval": 6, "creatureSpawnIntervalTrays": 3, "goal": "rescue", "goalTarget": 4, "rewardCoins": 150, "rewardDecoration": "golden_crab" },
+    { "id": "starfish_shower", "featuredSpecies": 1, "startWaterLevel": 1, "startTideInterval": 6, "creatureSpawnIntervalTrays": 3, "goal": "score", "goalTarget": 3200, "rewardCoins": 150, "rewardDecoration": "star_lantern" },
+    { "id": "seahorse_stampede", "featuredSpecies": 2, "startWaterLevel": 2, "startTideInterval": 7, "creatureSpawnIntervalTrays": 3, "goal": "tides", "goalTarget": 19, "rewardCoins": 150, "rewardDecoration": "seahorse_carousel" },
+    { "id": "octopus_ink", "featuredSpecies": 3, "startWaterLevel": 1, "startTideInterval": 6, "creatureSpawnIntervalTrays": 3, "goal": "rows", "goalTarget": 11, "rewardCoins": 150, "rewardDecoration": "octopus_vase" },
+    { "id": "turtle_trek", "featuredSpecies": 4, "startWaterLevel": 2, "startTideInterval": 6, "creatureSpawnIntervalTrays": 3, "goal": "tides", "goalTarget": 20, "rewardCoins": 175, "rewardDecoration": "shell_arch" },
+    { "id": "jelly_glow", "featuredSpecies": 6, "startWaterLevel": 1, "startTideInterval": 6, "creatureSpawnIntervalTrays": 2, "goal": "score", "goalTarget": 3150, "rewardCoins": 175, "rewardDecoration": "jelly_lantern" }
+  ]
+}

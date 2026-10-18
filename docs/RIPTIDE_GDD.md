@@ -291,3 +291,38 @@ Tutorial completion ≥85% · D1 ≥35% · D7 ≥12% (top-25 casual benchmark ~1
 ---
 
 *Companion docs to produce next: `RIPTIDE_MASTER_PROMPT.md` (Claude Code operating rules + shared context block + Phase 0–1 task breakdown in house style) and `economy.json` / `levels/zone1.json` starter fixtures.*
+
+---
+
+## 15. Amendment — the Pets & Tides expansion (2026-10-18, Nick-approved: all four of four proposed)
+
+Supersedes §2.5's "purely cosmetic differences in v1" and §12's out-of-scope entries for *creature abilities* and *events*. Everything here is data in `Assets/Resources/Content/expansion.json`; rulings in DECISIONS.md "Pets & Tides expansion".
+
+### 15.1 Creature Powers (rules change)
+When a rescued creature's row clears (§2.6 step 2), its species power fires — in rescue order (row ascending, then column), after the clear's drain, before the step-2 win check. Powers apply in **Voyage, Endless and Event Tide only — never the Daily** (purity of comparison; its pinned boards and share cards stay valid).
+
+| Species | Power | Effect (tunables in expansion.json) |
+|---|---|---|
+| Crab | Pinch | removes the coral cell nearest the crab (Manhattan; ties → lower row, then lower column) |
+| Starfish | Wish | +starfishScore points |
+| Seahorse | Steady | the tide counter is relieved by seahorseTideRelief this move (floor 0) |
+| Octopus | Ink | removes up to octopusCoral coral cells, lowest rows first, left→right |
+| Turtle | Calm | water −turtleDrain, floored at minWaterLevel |
+| Pufferfish | Puff | pops the block/coral cells orthogonally adjacent to where it sat (never creatures) |
+| Jellyfish | Glow | the combo chain extends by 1 (a stronger multiplier on the next clear) |
+| Axolotl (rare) | Regrow | water −axolotlDrain (floored) and the tide counter resets to 0 |
+
+Deterministic: no RNG draws, so the deal stream is untouched. The sim emits `PowerEvent`s; the view animates them. A config without powers (`LevelConfig.Powers == null`) behaves byte-identically to before — every existing golden and cross-pipeline pin stays valid.
+
+### 15.2 Pet Pals (meta)
+- Each species levels 1–5 from its lifetime rescue count (`pets.levelThresholds`); unmet = level 0.
+- **Daily pet gift:** once per calendar day, coins = Σ pet levels × giftCoinsPerLevel, capped.
+- **Buddy:** one met species can be equipped; it rides on the in-game HUD and adds buddyBonusPercentPerLevel × level % to every run's coin award (all modes — coins are not part of score comparison).
+
+### 15.3 Daily Quests & Badges (meta)
+- 3 quests per calendar day, drawn deterministically from the pool by the date (same for everyone, like the Daily). Progress resets daily; each completed quest is claimed once for coins.
+- Badges: lifetime milestones over tracked stats (rescues, species met, rows, best single clear, tides, stars, endless best, streak, decorations, powers, quests, events, pet levels); each pays once when claimed.
+
+### 15.4 Weekly Event Tide (mode)
+- One event per ISO-ish week (`CivilDate.WeekIndex`), rotating through `events.rotation`. Endless ruleset + per-event overrides (start water, tide interval, spawn cadence, featured species) + one goal. Seed derives from the week, so the week's board is shared; attempts are unlimited.
+- First completion each week pays the event's coins and unlocks its event-only decoration (one-time). Boosters and the continue are allowed (it's a Voyage-like challenge, not a comparison mode). Powers are on.

@@ -62,6 +62,15 @@ namespace Riptide.Core
         /// <summary>GDD 5.3: Daily Riptide allows zero boosters (locked); everything else allows them.</summary>
         public bool BoostersAllowed { get; }
 
+        /// <summary>
+        /// GDD §15.1 creature powers; null = off (the pre-expansion ruleset, byte-identical
+        /// — every golden and cross-pipeline pin runs here). Set via <see cref="WithCreaturePowers"/>.
+        /// </summary>
+        public CreaturePowersConfig? Powers { get; }
+
+        /// <summary>GDD §15.4 event featured species: spawned creatures take this id (the species draw still happens). −1 = off.</summary>
+        public int FeaturedSpecies { get; }
+
         public LevelConfig(
             int startWaterLevel,
             int minWaterLevel,
@@ -74,7 +83,9 @@ namespace Riptide.Core
             GoalSet goals,
             IReadOnlyList<PresetCell>? preset = null,
             EscalationConfig? escalation = null,
-            bool boostersAllowed = true)
+            bool boostersAllowed = true,
+            CreaturePowersConfig? powers = null,
+            int featuredSpecies = -1)
         {
             if (startWaterLevel < 0 || startWaterLevel >= BoardSpec.DrownWaterLevel)
             {
@@ -126,12 +137,25 @@ namespace Riptide.Core
             Preset = ValidatePreset(preset ?? Array.Empty<PresetCell>(), startWaterLevel);
             Escalation = escalation;
             BoostersAllowed = boostersAllowed;
+            Powers = powers;
+            if (featuredSpecies >= creatureSpeciesCount || featuredSpecies < -1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(featuredSpecies));
+            }
+
+            FeaturedSpecies = featuredSpecies;
 
             if (escalation != null && escalation.IntervalFloor > tideInterval)
             {
                 throw new ArgumentException("Escalation interval floor exceeds the starting tide interval.", nameof(escalation));
             }
         }
+
+        /// <summary>This config with GDD §15.1 creature powers switched on (or off with null).</summary>
+        public LevelConfig WithCreaturePowers(CreaturePowersConfig? powers) =>
+            new LevelConfig(StartWaterLevel, MinWaterLevel, TideInterval, CreatureSpawnIntervalTrays,
+                CreatureSpeciesCount, DealColorCount, pieceWeights, Scoring, Goals, Preset, Escalation,
+                BoostersAllowed, powers, FeaturedSpecies);
 
         private static IReadOnlyList<PresetCell> ValidatePreset(IReadOnlyList<PresetCell> preset, int startWaterLevel)
         {

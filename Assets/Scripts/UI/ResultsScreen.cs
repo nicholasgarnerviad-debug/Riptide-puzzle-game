@@ -8,10 +8,11 @@ using UnityEngine.UI;
 namespace Riptide.UI
 {
     /// <summary>
-    /// Spec §4.4 results (Voyage win / Voyage lose / Endless over), Tidal Pop
-    /// edition: a rotating sunburst behind popping stars on wins (a mood icon on
+    /// Spec §4.4 results (Voyage win / Voyage lose / Endless over / Event Tide,
+    /// GDD §15.4), Tidal Pop edition: a rotating sunburst behind popping stars on wins (a mood icon on
     /// losses), the ribbon headline, a white score card (score, stat chips, coin
-    /// reward with the ×2 ad), and a Home · Retry · NEXT row. Lose-by-drown opens
+    /// reward with the ×2 ad, the buddy bonus and powers line), and a Home ·
+    /// Retry · NEXT row. Lose-by-drown opens
     /// with a 600ms top-down water tint; lose-by-stuck with a single muted flash —
     /// the two deaths must feel different.
     /// </summary>
@@ -39,6 +40,7 @@ namespace Riptide.UI
         private RectTransform coinRow = null!;
         private CoinCounter coins = null!;
         private Button doubleCoins = null!;
+        private TextMeshProUGUI bonusLine = null!;
         private RectTransform card = null!;
         private Button primary = null!;
         private Button retry = null!;
@@ -145,6 +147,11 @@ namespace Riptide.UI
             doubleRt.pivot = new Vector2(1f, 0.5f);
             doubleRt.sizeDelta = new Vector2(440f, 124f);
             doubleRt.anchoredPosition = new Vector2(-14f, 4f);
+
+            // GDD §15.2/§15.1: what your buddy added and how many powers fired.
+            bonusLine = UiText.Create(card, "bonus", "", "body", "text.inkSoft");
+            bonusLine.rectTransform.anchorMin = bonusLine.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            bonusLine.rectTransform.sizeDelta = new Vector2(860f, 50f);
         }
 
         private static TextMeshProUGUI Chip(RectTransform card, int index, string icon, string label)
@@ -202,13 +209,13 @@ namespace Riptide.UI
             rt.anchoredPosition = new Vector2(left, 0f);
         }
 
-        /// <summary>The wide green button: Next (voyage win), Retry (voyage loss), Play (endless).</summary>
+        /// <summary>The wide green button: Next (voyage win), Retry (voyage loss), Play (endless / event).</summary>
         private void OnPrimary()
         {
             RunOutcome outcome = flow.LastOutcome!;
-            if (outcome.Mode == GameMode.Endless)
+            if (outcome.Mode != GameMode.Voyage)
             {
-                flow.StartEndless();
+                OnRetry();
                 return;
             }
 
@@ -238,6 +245,10 @@ namespace Riptide.UI
             {
                 flow.StartEndless();
             }
+            else if (outcome.Mode == GameMode.Event)
+            {
+                flow.StartEvent();
+            }
             else
             {
                 flow.StartVoyageLevel(outcome.Zone, outcome.LevelIndex);
@@ -245,7 +256,7 @@ namespace Riptide.UI
         }
 
         private void OnMap() =>
-            flow.GoTo(flow.LastOutcome!.Mode == GameMode.Endless ? FlowScreen.Home : FlowScreen.ZoneMap);
+            flow.GoTo(flow.LastOutcome!.Mode == GameMode.Voyage ? FlowScreen.ZoneMap : FlowScreen.Home);
 
         private void OnDoubleCoins()
         {
@@ -265,15 +276,17 @@ namespace Riptide.UI
             }
 
             bool endless = outcome.Mode == GameMode.Endless;
+            bool tide = outcome.Mode == GameMode.Event;
+            bool replay = endless || tide;
             bool win = outcome.Won;
-            bool voyageWin = win && !endless;
+            bool voyageWin = win && outcome.Mode == GameMode.Voyage;
 
             score.text = ShareCard.GroupThousands(outcome.Score);
             chipMoves.text = outcome.Moves.ToString();
             chipTides.text = outcome.TidesSurvived.ToString();
             chipRescued.text = outcome.Rescues.ToString();
 
-            burst.gameObject.SetActive(voyageWin || (endless && outcome.NewEndlessBest));
+            burst.gameObject.SetActive(voyageWin || (tide && win) || (endless && outcome.NewEndlessBest));
             stars.gameObject.SetActive(voyageWin);
             moodBadge.gameObject.SetActive(!voyageWin);
             if (voyageWin)
@@ -283,9 +296,9 @@ namespace Riptide.UI
 
             newBestSticker.SetActive(endless && outcome.NewEndlessBest);
             PopKit.FaceOf(primary).Find("label").GetComponent<TextMeshProUGUI>().text = flow.Strings.Get(
-                endless ? "common.play" : win ? "results.next" : "results.retry");
-            // Win: Map · Retry · Next. Loss/endless: Map · one wide primary.
-            bool showRetry = !endless && win;
+                replay ? "common.play" : win ? "results.next" : "results.retry");
+            // Win: Map · Retry · Next. Loss/endless/event: Map · one wide primary.
+            bool showRetry = !replay && win;
             retry.gameObject.SetActive(showRetry);
             Side((RectTransform)primary.transform, showRetry ? 440f : 220f, showRetry ? 540f : 760f);
 
@@ -308,9 +321,21 @@ namespace Riptide.UI
                     UiJuice.Play("streak");
                 }
             }
+            else if (tide && win)
+            {
+                levelLabel.text = ExpansionText.EventLabel(flow, outcome);
+                SetRibbon(flow.Strings.Get("results.eventWin"), PopTone.Coral);
+                SetMood("trophy", PopTone.Yellow);
+                bestCaption.text = outcome.EventFirstWin
+                    ? string.Format(flow.Strings.Get("results.eventReward"),
+                        ExpansionText.DecorationName(flow, outcome.EventRewardDecoration))
+                    : flow.Strings.Get("event.won");
+            }
             else
             {
-                levelLabel.text = string.Format(flow.Strings.Get("results.zoneLevel"), outcome.Zone, outcome.LevelIndex);
+                levelLabel.text = tide
+                    ? ExpansionText.EventLabel(flow, outcome)
+                    : string.Format(flow.Strings.Get("results.zoneLevel"), outcome.Zone, outcome.LevelIndex);
                 bestCaption.text = "";
                 if (win)
                 {
@@ -339,8 +364,13 @@ namespace Riptide.UI
                 }
             }
 
-            coinRow.gameObject.SetActive(outcome.CoinsAwarded > 0);
-            card.sizeDelta = new Vector2(980f, outcome.CoinsAwarded > 0 ? 820f : 640f);
+            string bonus = ExpansionText.RunBonus(flow, outcome);
+            bool coinsShown = outcome.CoinsAwarded > 0;
+            coinRow.gameObject.SetActive(coinsShown);
+            bonusLine.text = bonus;
+            bonusLine.gameObject.SetActive(bonus.Length > 0);
+            bonusLine.rectTransform.anchoredPosition = new Vector2(0f, coinsShown ? 226f : 62f);
+            card.sizeDelta = new Vector2(980f, coinsShown ? 820f : bonus.Length > 0 ? 700f : 640f);
             coins.SetInstant(0);
             if (outcome.CoinsAwarded > 0)
             {

@@ -95,6 +95,13 @@ namespace Riptide.UI
             }
         }
 
+        /// <summary>Re-pins to a new world position now (pooled popups that hop between cells).</summary>
+        public void MoveTo(Vector3 world)
+        {
+            World = world;
+            Apply();
+        }
+
         private void LateUpdate()
         {
             Camera? cam = Camera.main;

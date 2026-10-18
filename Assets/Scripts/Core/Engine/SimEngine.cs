@@ -33,6 +33,7 @@ namespace Riptide.Core
         private static readonly int[] NoRows = Array.Empty<int>();
         private static readonly CreatureEvent[] NoCreatures = Array.Empty<CreatureEvent>();
         private static readonly TrayPiece[] NoTray = Array.Empty<TrayPiece>();
+        private static readonly PowerEvent[] NoPowers = Array.Empty<PowerEvent>();
 
         /// <summary>Start a game: preset board, initial deal (tray #1), spawn cadence, initial stuck check.</summary>
         public static GameState NewGame(LevelConfig config, ulong seed)
@@ -381,6 +382,31 @@ namespace Riptide.Core
                 comboChain = 0;
             }
 
+            // GDD §15.1: rescued creatures' powers fire in rescue order, after the
+            // clear's drain and before the step-2 win check. RNG-free; off when
+            // cfg.Powers is null (the pre-expansion ruleset, byte-identical).
+            IReadOnlyList<PowerEvent> powerEvents = NoPowers;
+            int tideRelief = 0;
+            bool tideReset = false;
+            if (cfg.Powers != null && rescuedCreatures.Count > 0)
+            {
+                var working = new CreaturePowerRules.Working { Water = water, Score = score, ComboChain = comboChain };
+                var fired = new List<PowerEvent>(rescuedCreatures.Count);
+                foreach (CreatureEvent rescue in rescuedCreatures)
+                {
+                    fired.Add(CreaturePowerRules.Apply(cfg, cfg.Powers, cells, rescue, ref working));
+                }
+
+                water = working.Water;
+                score = working.Score;
+                comboChain = working.ComboChain;
+                rescuePoints += working.ScoreBonusTotal;
+                drainAmount += working.DrainTotal;
+                tideRelief = working.TideRelief;
+                tideReset = working.TideReset;
+                powerEvents = fired;
+            }
+
             // Win check after step 2 (DECISIONS.md): a clear can complete the level before the tide ticks.
             if (goals.IsSatisfied(score))
             {
@@ -388,11 +414,12 @@ namespace Riptide.Core
                     moveCount, traysDealt, rng, goals, GameStatus.Won, waterBefore,
                     placed, clearedRows, NoPos, NoPos, rescuedCreatures, NoCreatures, NoCreatures,
                     drainAmount, false, NoTray,
-                    placementPoints, clearPoints, rescuePoints, 0, 0, comboHalves, s.ContinueUsed);
+                    placementPoints, clearPoints, rescuePoints, 0, 0, comboHalves, s.ContinueUsed, powerEvents);
             }
 
             // ---------------- GDD 2.6 STEP 3: tide tick (drain already resolved in step 2) ----------------
-            int tideCounter = s.TideCounter + 1;
+            // GDD §15.1: Seahorse relieves the tick; Axolotl resets the counter (no rise this move).
+            int tideCounter = tideReset ? 0 : Math.Max(0, s.TideCounter + 1 - tideRelief);
             bool tideRose = false;
             var petrified = new List<GridPos>();
             var lostCreatures = new List<CreatureEvent>();
@@ -452,7 +479,7 @@ namespace Riptide.Core
                     moveCount, traysDealt, rng, goals, GameStatus.LostCreature, waterBefore,
                     placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                     drainAmount, tideRose, NoTray,
-                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves, s.ContinueUsed);
+                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves, s.ContinueUsed, powerEvents);
             }
 
             // ---------------- GDD 2.6 STEP 4: drown check ----------------
@@ -463,7 +490,7 @@ namespace Riptide.Core
                     moveCount, traysDealt, rng, goals, GameStatus.LostDrowned, waterBefore,
                     placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                     drainAmount, tideRose, NoTray,
-                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves, s.ContinueUsed);
+                    placementPoints, clearPoints, rescuePoints, 0, penaltyPoints, comboHalves, s.ContinueUsed, powerEvents);
             }
 
             int tideSurvivalPoints = 0;
@@ -485,7 +512,7 @@ namespace Riptide.Core
                         moveCount, traysDealt, rng, goals, GameStatus.Won, waterBefore,
                         placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, NoCreatures,
                         drainAmount, true, NoTray,
-                        placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves, s.ContinueUsed);
+                        placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves, s.ContinueUsed, powerEvents);
                 }
             }
 
@@ -526,7 +553,7 @@ namespace Riptide.Core
                 moveCount, traysDealt, rng, goals, status, waterBefore,
                 placed, clearedRows, petrified, NoPos, rescuedCreatures, lostCreatures, spawnedCreatures,
                 drainAmount, tideRose, dealtPieces,
-                placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves, s.ContinueUsed);
+                placementPoints, clearPoints, rescuePoints, tideSurvivalPoints, penaltyPoints, comboHalves, s.ContinueUsed, powerEvents);
         }
 
         private static bool ShouldSpawn(LevelConfig config, int traysDealt) =>
@@ -571,7 +598,9 @@ namespace Riptide.Core
             rng = speciesDraw.Rng;
 
             GridPos pos = empties[cellDraw.Value];
-            var creatureId = (byte)speciesDraw.Value;
+            // GDD §15.4: an event's featured species replaces the drawn id — the
+            // draw still happened, so the RNG stream matches an un-featured config.
+            var creatureId = (byte)(config.FeaturedSpecies >= 0 ? config.FeaturedSpecies : speciesDraw.Value);
             cells[pos.Index] = Cell.Creature(creatureId);
             spawned = new CreatureEvent(creatureId, pos);
             return rng;
@@ -608,7 +637,8 @@ namespace Riptide.Core
             int tideSurvivalPoints,
             int penaltyPoints,
             int comboHalves,
-            bool continueUsed)
+            bool continueUsed,
+            IReadOnlyList<PowerEvent>? powers = null)
         {
             GameState next = GameState.CreateOwned(cfg, cells, tray, water, tideCounter, score, comboChain,
                 rescueStreak, moveCount, traysDealt, rng, goals, status, continueUsed);
@@ -617,7 +647,7 @@ namespace Riptide.Core
                 penaltyPoints, comboHalves);
 
             var events = new MoveEvents(placed, clearedRows, petrified, removed, rescued, lost, spawnedCreatures,
-                drainAmount, tideRose, water - waterBefore, dealtPieces, scoring, status);
+                drainAmount, tideRose, water - waterBefore, dealtPieces, scoring, status, powers);
 
             return new MoveResult(next, events);
         }

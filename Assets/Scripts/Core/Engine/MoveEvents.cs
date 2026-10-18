@@ -61,7 +61,7 @@ namespace Riptide.Core
         public IReadOnlyList<CreatureEvent> LostCreatures { get; }
         public IReadOnlyList<CreatureEvent> SpawnedCreatures { get; }
 
-        /// <summary>Water rows drained by clears this move (after the MinWaterLevel floor).</summary>
+        /// <summary>Water rows drained this move by clears and GDD §15.1 powers (after the MinWaterLevel floor).</summary>
         public int DrainAmount { get; }
 
         /// <summary>GDD 2.6 step 3 fired (water rose by one).</summary>
@@ -76,6 +76,9 @@ namespace Riptide.Core
         public ScoreBreakdown Scoring { get; }
         public GameStatus StatusAfter { get; }
 
+        /// <summary>GDD §15.1 creature powers fired this move, in rescue order; empty when powers are off.</summary>
+        public IReadOnlyList<PowerEvent> Powers { get; }
+
         public MoveEvents(
             IReadOnlyList<GridPos> placedCells,
             IReadOnlyList<int> rowsCleared,
@@ -89,7 +92,8 @@ namespace Riptide.Core
             int waterDelta,
             IReadOnlyList<TrayPiece> dealtPieces,
             ScoreBreakdown scoring,
-            GameStatus statusAfter)
+            GameStatus statusAfter,
+            IReadOnlyList<PowerEvent>? powers = null)
         {
             PlacedCells = placedCells ?? throw new ArgumentNullException(nameof(placedCells));
             RowsCleared = rowsCleared ?? throw new ArgumentNullException(nameof(rowsCleared));
@@ -104,6 +108,7 @@ namespace Riptide.Core
             DealtPieces = dealtPieces ?? throw new ArgumentNullException(nameof(dealtPieces));
             Scoring = scoring ?? throw new ArgumentNullException(nameof(scoring));
             StatusAfter = statusAfter;
+            Powers = powers ?? Array.Empty<PowerEvent>();
         }
     }
 }

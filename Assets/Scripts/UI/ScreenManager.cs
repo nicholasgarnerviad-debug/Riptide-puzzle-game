@@ -36,6 +36,7 @@ namespace Riptide.UI
         public AnimationDriver? Driver => driver;
         public ScreenStack Stack => stack;
         public ToastManager Toasts => toasts;
+        public TabBar Tabs => tabBar;
         public bool PauseShown => pause != null && pause.Shown;
         public bool AgeGateOpen => ageGate != null && ageGate.IsOpen;
 
@@ -234,6 +235,7 @@ namespace Riptide.UI
             Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             InputController.Create(boardRig.transform, store, tray, driver, cam, InputTuning.CreateDefault());
             hud = HudOverlay.Create(canvas.GetComponent<RectTransform>(), flow, ShowPause);
+            HudPets.Create(hud, flow, driver);
             music?.SetDriver(driver);
             TutorialDirector.Create(canvas.GetComponent<RectTransform>(), flow);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -354,6 +356,8 @@ namespace Riptide.UI
                 FlowScreen.Settings => SettingsScreen.Build(screensRoot, flow),
                 FlowScreen.Shop => ShopScreen.Build(screensRoot, flow, this),
                 FlowScreen.Tidepool => TidepoolScreen.Build(screensRoot, flow),
+                FlowScreen.Quests => QuestsScreen.Build(screensRoot, flow),
+                FlowScreen.EventIntro => EventIntroScreen.Build(screensRoot, flow),
                 _ => UiComponents.Card(screensRoot, "unknown", Vector2.zero),
             };
         }
