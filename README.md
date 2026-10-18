@@ -99,7 +99,7 @@ every booster, drown-continues — and replays each twice with per-move state-ha
 (0 divergences); 32 are pinned to `CrossPipelineFuzzPins.cs` and replayed under both the
 dotnet shim and Unity's Mono, which must agree hash-for-hash.
 
-Unity-side suites (EditMode mirrors the 266; PlayMode adds 68 integration tests: board
+Unity-side suites (EditMode mirrors the 266; PlayMode adds 70 integration tests: board
 acceptance, flow smoke, monetization threading, monkey runs, event-queue ordering,
 navigation matrix, strings coverage, real-click regression, perf budgets, kill-and-resume
 round trips, safe-area math, clock-rollback, creature-sprite distinctness, Pets & Tides

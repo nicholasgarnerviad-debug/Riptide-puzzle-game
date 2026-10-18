@@ -1,43 +1,60 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Riptide.UI
 {
     /// <summary>
-    /// The 8 rescue species' sprites (GDD §2.5 / §15): full-color chibi models
-    /// painted by <see cref="CreatureArt"/> — open eyes, a blink frame (happy
-    /// closed eyes) and a white silhouette for locked species (tint it at use).
-    /// 256px, mipmapped, PPU 256 so one sprite = one board cell. Cached per variant.
+    /// Sprites for the board creatures (GDD §2.5) and every Tideling form (GDD §16),
+    /// painted by <see cref="CreatureArt"/>: eyes open, a blink / happy frame (eyes
+    /// closed in a smile) and a white silhouette for the unknown (tint it at use).
+    /// 256px, mipmapped, PPU 256 so one sprite = one board cell. Cached per form.
     ///
-    /// Id order matches creatures.json: 0 Crab · 1 Starfish · 2 Seahorse ·
-    /// 3 Octopus · 4 Turtle · 5 Pufferfish · 6 Jellyfish · 7 Axolotl (rare).
+    /// Board ids match creatures.json: 0 Crab · 1 Starfish · 2 Seahorse · 3 Octopus ·
+    /// 4 Turtle · 5 Pufferfish · 6 Jellyfish · 7 Axolotl (rare) — each drawn as its
+    /// Tideling's Baby form.
     /// </summary>
     public static class CreatureSprites
     {
         public const int Size = CreatureArt.Size;
         public const float PixelsPerUnit = CreatureArt.Size;
 
-        private static readonly Sprite?[,] cache = new Sprite?[8, 3];
+        private static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
 
-        /// <summary>The species, eyes open.</summary>
-        public static Sprite For(int speciesId) => Get(speciesId, CreatureArt.Variant.Open);
+        /// <summary>The board species, eyes open, full size.</summary>
+        public static Sprite For(int speciesId) => Get(BoardKey(speciesId), 1, CreatureArt.Variant.Open, false, false);
 
-        /// <summary>The blink / happy frame: eyes closed in a smile.</summary>
-        public static Sprite Blink(int speciesId) => Get(speciesId, CreatureArt.Variant.Closed);
+        /// <summary>The board species' blink / happy frame.</summary>
+        public static Sprite Blink(int speciesId) => Get(BoardKey(speciesId), 1, CreatureArt.Variant.Closed, false, false);
 
-        /// <summary>White outline-shape silhouette — tint it for unmet species.</summary>
-        public static Sprite Silhouette(int speciesId) => Get(speciesId, CreatureArt.Variant.Silhouette);
+        /// <summary>The board species' silhouette — tint it for the unmet.</summary>
+        public static Sprite Silhouette(int speciesId) =>
+            Get(BoardKey(speciesId), 1, CreatureArt.Variant.Silhouette, false, false);
 
-        private static Sprite Get(int speciesId, CreatureArt.Variant variant)
+        /// <summary>
+        /// A Tideling form by its pals.json key, stage (1 Baby … 3 Grand) and Sparkle; the
+        /// stage also sets its size (Babies small, Grand full) so growing up shows.
+        /// </summary>
+        public static Sprite Tideling(string key, int stage, bool sparkle = false, bool closed = false) =>
+            Get(key, stage, closed ? CreatureArt.Variant.Closed : CreatureArt.Variant.Open, sparkle, true);
+
+        public static Sprite TidelingSilhouette(string key, int stage) =>
+            Get(key, stage, CreatureArt.Variant.Silhouette, false, true);
+
+        private static string BoardKey(int speciesId) =>
+            CreatureArt.BoardKeys[((speciesId % CreatureArt.BoardKeys.Length) + CreatureArt.BoardKeys.Length)
+                % CreatureArt.BoardKeys.Length];
+
+        private static Sprite Get(string key, int stage, CreatureArt.Variant variant, bool sparkle, bool grow)
         {
-            int id = ((speciesId % 8) + 8) % 8;
-            int v = (int)variant;
-            if (cache[id, v] == null)
+            string id = $"{key}/{stage}/{(int)variant}/{(sparkle ? 1 : 0)}/{(grow ? 1 : 0)}";
+            if (!cache.TryGetValue(id, out Sprite sprite))
             {
-                Texture2D tex = CreatureArt.Render(id, variant);
-                cache[id, v] = Sprite.Create(tex, new Rect(0, 0, Size, Size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+                Texture2D tex = CreatureArt.Render(key, stage, variant, sparkle, grow);
+                sprite = Sprite.Create(tex, new Rect(0, 0, Size, Size), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+                cache[id] = sprite;
             }
 
-            return cache[id, v]!;
+            return sprite;
         }
     }
 }

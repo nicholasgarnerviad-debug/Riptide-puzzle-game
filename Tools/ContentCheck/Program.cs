@@ -126,6 +126,21 @@ namespace Riptide.Tools.ContentCheck
 
                 Console.WriteLine($"OK ui_theme.json ({theme.Colors.Count} colors; contrast + luminance audits pass)");
 
+                // GDD §16 "the roster will grow": every Tideling needs its palette before it can be drawn.
+                foreach (PalLine line in pals.Lines)
+                {
+                    foreach (string part in new[] { "base", "dark", "light", "sparkle" })
+                    {
+                        if (!theme.Colors.ContainsKey($"pet.{line.Key}.{part}"))
+                        {
+                            Console.Error.WriteLine($"ui_theme.json: Tideling '{line.Key}' needs color pet.{line.Key}.{part}.");
+                            return 1;
+                        }
+                    }
+                }
+
+                Console.WriteLine($"OK Tideling palettes ({pals.Lines.Count} lines)");
+
                 string levelsDir = Path.Combine(root, "levels");
                 string[] zoneFiles = Directory.Exists(levelsDir)
                     ? Directory.GetFiles(levelsDir, "*.json")
