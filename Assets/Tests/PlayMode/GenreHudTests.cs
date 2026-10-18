@@ -48,7 +48,7 @@ namespace Riptide.PlayMode.Tests
             yield return null;
 
             HudOverlay hud = Object.FindFirstObjectByType<HudOverlay>(FindObjectsInactive.Include);
-            Text praise = hud.transform.Find("praise").GetComponent<Text>();
+            TMPro.TMP_Text praise = hud.transform.Find("praise").GetComponent<TMPro.TMP_Text>();
 
             hud.ShowPraise(2);
             Assert.That(praise.gameObject.activeSelf, Is.True);

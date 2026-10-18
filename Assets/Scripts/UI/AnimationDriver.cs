@@ -203,6 +203,7 @@ namespace Riptide.UI
                 SpriteRenderer sr = board.RendererAt(pos.Col, pos.Row);
                 sr.sprite = SpriteFactory.Cell();
                 sr.color = Palette.BlockColor(colorId);
+                BoardView.SetGloss(sr, true);
 
                 // Juice (research: amplified, eased feedback per input): a tiny
                 // settle-pop on every placed cell — the thunk made visible.
@@ -343,7 +344,8 @@ namespace Riptide.UI
 
             sr.transform.localScale = baseScale;
             sr.color = Palette.EmptyCell;
-            sr.sprite = SpriteFactory.Cell();
+            sr.sprite = SpriteFactory.CellWell();
+            BoardView.SetGloss(sr, false);
         }
 
         private IEnumerator SwimOff(CreatureEvent rescue)
@@ -406,7 +408,7 @@ namespace Riptide.UI
             go.transform.SetParent(transform, false);
             var sr = go.AddComponent<SpriteRenderer>();
             Color glow = ThemeRuntime.Color("glow.primary");
-            sr.sprite = SpriteFactory.Cell();
+            sr.sprite = SpriteFactory.Solid();
             sr.color = new Color(glow.r, glow.g, glow.b, 0f);
             sr.sortingOrder = 95;
             go.transform.position = Vector3.zero;

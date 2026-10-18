@@ -1,41 +1,34 @@
-# Drop the game font here
+# Game font
 
-To replace the LiberationSans placeholder with the real typeface, **drop one `.ttf`
-or `.otf` file into this folder** (`Assets/Resources/Fonts/`). That's the whole step —
-the game picks it up at runtime (`UiText.CustomFont`), generates a dynamic TMP SDF from
-it, and reskins **every** text element: TMP screens *and* the legacy-UGUI HUD. No Font
-Asset Creator, no wiring, no SDF baking.
+The shipping typeface is **Fredoka** (SIL Open Font License 1.1 — `OFL.txt` in this folder,
+which must ship with the fonts). It is bundled as three static weights cut from the
+google/fonts variable font:
 
-## Recommended free fonts (all SIL Open Font License — safe to ship)
+| File | §1.2 weight token |
+|---|---|
+| `Fredoka-Medium.ttf` | Medium (caption) |
+| `Fredoka-SemiBold.ttf` | SemiBold (body) |
+| `Fredoka-Bold.ttf` | Bold (display, title, heading, micro, score) |
 
-| Font | Feel | Get it |
-|---|---|---|
-| **Outfit** | geometric + rounded, closest to the GDD's "Rungo" | fonts.google.com/specimen/Outfit |
-| **Sora** | technical, clean "instrument panel" tone | fonts.google.com/specimen/Sora |
-| **Baloo 2** | rounded, friendly casual | fonts.google.com/specimen/Baloo+2 |
-| **Nunito** | soft geometric, great at small sizes | fonts.google.com/specimen/Nunito |
+The game picks fonts up at runtime (`UiText.FontFor`): every `.ttf`/`.otf` in this folder
+becomes a dynamic TMP SDF, and a file named `Family-Weight.ttf` serves that weight token
+(missing weights fall back to the nearest available one; glyphs the font lacks fall back to
+the bundled LiberationSans). No Font Asset Creator, no SDF baking, no wiring.
 
-Download → unzip → drop the `.ttf` (e.g. `Outfit-Bold.ttf` or the variable font) here.
-If you drop several, the first one Unity loads is used — keep just one for a clean look.
+## Swapping the typeface
+
+Replace the three files with another family's `-Medium` / `-SemiBold` / `-Bold` files (or
+drop a single file — it then serves every weight). Keep that family's `OFL.txt` here.
 
 ## Licensing — is it safe to ship?
 
 Yes, if it's **OFL or CC0**. Fonts are always under copyright (the author owns it), but the
 **SIL Open Font License explicitly grants free use, modification, and embedding in
 commercial products** — including a paid/closed-track app — with **no royalty**. The one
-obligation: keep the font's `OFL.txt` next to the `.ttf` (drop it in this folder too). All
-four fonts recommended above are OFL, and so is the LiberationSans placeholder the game
-ships with today (`Assets/TextMesh Pro/Fonts/`), which is why it's already safe.
+obligation: keep the font's `OFL.txt` next to the `.ttf`. Fredoka is OFL, and so is the
+LiberationSans fallback (`Assets/TextMesh Pro/Fonts/`).
 
 **Do not drop a proprietary font** — Windows system fonts (Segoe UI, Arial, Cascadia, …),
 Adobe fonts, or anything without an OFL/CC0 license **cannot** be redistributed in the
 build. If in doubt, take it from fonts.google.com (every font there is OFL or Apache 2.0,
 both ship-safe).
-
-## Notes
-
-- The dynamic SDF is generated at runtime, so the swap is instant on next Play — no import
-  ritual. If you later want a baked SDF for perf, generate one and the same loader path picks
-  the Font up either way.
-- All sizes/weights/tracking still come from `ui_theme.json` type tokens; the font only
-  changes the glyph shapes.

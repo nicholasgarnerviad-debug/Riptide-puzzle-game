@@ -118,6 +118,22 @@ namespace Riptide.Tools.ContentCheck
                 ("text.secondary", "bg.deep", 4.5),
                 ("text.onAccent", "accent.primary", 7.0),
                 ("text.muted", "bg.surface", 3.0),
+
+                // Tidal Pop (DECISIONS 2026-10-18): ink copy on the light cards…
+                ("text.ink", "panel.light", 4.5),
+                ("text.ink", "panel.shade", 4.5),
+                ("text.inkSoft", "panel.light", 4.5),
+                ("text.inkSoft", "panel.well", 4.5),
+                ("text.secondary", "bg.raised", 4.5),
+                // …and the sticker-letter labels: white fill against its OWN
+                // outline color (the outline is what the label is read against).
+                ("text.primary", "pop.green.edge", 4.5),
+                ("text.primary", "pop.yellow.edge", 4.5),
+                ("text.primary", "pop.coral.edge", 4.5),
+                ("text.primary", "pop.purple.edge", 4.5),
+                ("text.primary", "pop.blue.edge", 4.5),
+                ("text.primary", "pop.navy.edge", 4.5),
+                ("text.primary", "panel.edge", 4.5),
             };
 
             foreach ((string text, string bg, double min) in contrastPairs)

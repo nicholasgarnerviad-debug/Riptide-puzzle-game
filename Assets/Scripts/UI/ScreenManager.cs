@@ -27,6 +27,7 @@ namespace Riptide.UI
         private HudOverlay? hud;
         private PauseSheet? pause;
         private ConsentAgeGate? ageGate;
+        private TabBar tabBar = null!;
         private ToastManager toasts = null!;
         private AudioDirector? music;
         private bool instantAnimations;
@@ -55,6 +56,10 @@ namespace Riptide.UI
             // screen roots themselves are transparent and safe-area padded.
             ScreenBackdrop.Create(manager.screensRoot);
             manager.stack = ScreenStack.Create(manager.screensRoot);
+
+            // Tidal Pop: the persistent tab bar rides above the stack, below
+            // toasts and sheets (UI spec §13).
+            manager.tabBar = TabBar.Create(canvasRoot, flow);
             manager.toasts = ToastManager.Create(canvasRoot);
 
             // 8-UI: music lives at the app root so menus keep their ambience.
@@ -242,6 +247,7 @@ namespace Riptide.UI
         {
             bool playing = screen == FlowScreen.Playing;
             screensRoot.gameObject.SetActive(!playing);
+            tabBar.Refresh(screen);
             if (boardRig != null)
             {
                 boardRig.SetActive(playing);
@@ -264,6 +270,14 @@ namespace Riptide.UI
                 return;
             }
 
+            // Tab-to-tab: swap the top instead of stacking tabs on tabs, so back
+            // from any tab lands on what was under the tabs (Home).
+            if (TabBar.IsTabRoot(screen) && Enum.TryParse(stack.TopId, out FlowScreen top)
+                && TabBar.IsTabRoot(top))
+            {
+                stack.DropTop();
+            }
+
             if (Contains(id))
             {
                 int guard = 0;
@@ -275,7 +289,10 @@ namespace Riptide.UI
                 return;
             }
 
+            // A cached screen that left the stack is inactive — refresh it ACTIVE
+            // so its widgets can start their coroutines (CoinCounter fly-in).
             RectTransform root = GetOrBuild(screen);
+            root.gameObject.SetActive(true);
             Refresh(root);
             stack.Push(id, root);
         }

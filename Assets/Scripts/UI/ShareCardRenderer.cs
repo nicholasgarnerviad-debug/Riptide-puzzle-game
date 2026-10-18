@@ -49,14 +49,17 @@ namespace Riptide.UI
                 bgImage.sprite = SpriteFactory.Solid();
                 bgImage.color = ThemeRuntime.Color("bg.deep");
 
-                TextMeshProUGUI wordmark = UiText.Create(canvasRoot, "wordmark", "RIPTIDE",
-                    "display", "accent.primary");
+                TextMeshProUGUI wordmark = UiText.CreateOutlined(canvasRoot, "wordmark", "Riptide",
+                    "display", "text.primary", "panel.edge", 0.32f);
+                wordmark.fontSize = 150f;
                 UiComponents.Place(wordmark.rectTransform, new Vector2(0.5f, 0.88f), new Vector2(900f, 140f));
 
                 RectTransform card = UiComponents.Card(canvasRoot, "card", new Vector2(940f, 760f));
                 UiComponents.Place(card, new Vector2(0.5f, 0.47f), new Vector2(940f, 760f));
-                TextMeshProUGUI body = UiText.Create(card, "body", shareText, "body", "text.primary");
+                TextMeshProUGUI body = UiText.Create(card, "body", shareText, "body", "text.ink");
                 UiComponents.Stretch(body.rectTransform);
+                body.rectTransform.offsetMin = new Vector2(30f, 40f);
+                body.rectTransform.offsetMax = new Vector2(-30f, -30f);
 
                 var rt = RenderTexture.GetTemporary(Width, Height, 24);
                 cam.targetTexture = rt;

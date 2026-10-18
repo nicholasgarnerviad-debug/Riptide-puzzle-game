@@ -9,9 +9,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1900834803308732381}
-  - component: {fileID: 6309732761851341483}
+  - component: {fileID: 5166067256235522508}
   - component: {fileID: 7386739318531393340}
   - component: {fileID: 722621578511642776}
+  - component: {fileID: 225013364243976375}
   m_Layer: 0
   m_Name: CreatureChip
   m_TagString: Untagged
@@ -39,7 +40,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 88, y: 88}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &6309732761851341483
+--- !u!114 &5166067256235522508
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -72,7 +73,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.13333334, g: 0.1882353, b: 0.2901961, a: 1}
+  m_Color: {r: 0.05882353, g: 0.23529412, b: 0.56078434, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -89,6 +90,19 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &225013364243976375
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4041883858778745897}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6721d0c3108d6549a36d12e229ee451, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Riptide.UI::Riptide.UI.ThemedElement
+  colorKey: pop.navy
 --- !u!1 &5730408107373445499
 GameObject:
   m_ObjectHideFlags: 0

@@ -53,7 +53,11 @@ namespace Riptide.UI
 
         public static float WaterlineY(float waterLevel) => BoardBottomY + waterLevel * CellSize;
 
-        public static Vector3 TrayCenter => new Vector3(0f, BoardBottomY - 2.0f, 0f);
+        /// <summary>
+        /// Tray card center. Tidal Pop (2026-10-18): 2.5 below the board (was 2.0)
+        /// so the board frame's 3D lip and the tray card's outline never touch.
+        /// </summary>
+        public static Vector3 TrayCenter => new Vector3(0f, BoardBottomY - 2.5f, 0f);
 
         /// <summary>Spec §5.2: the TideMeterRing anchors at the tray card's left end.</summary>
         public static Vector3 TrayRingCenter => TrayCenter + new Vector3(-3.75f, 0f, 0f);

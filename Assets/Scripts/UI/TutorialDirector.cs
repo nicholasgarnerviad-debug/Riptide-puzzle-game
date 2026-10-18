@@ -1,5 +1,6 @@
 using Riptide.Core;
 using Riptide.Game;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,7 +14,7 @@ namespace Riptide.UI
     public sealed class TutorialDirector : MonoBehaviour
     {
         private GameFlow flow = null!;
-        private Text banner = null!;
+        private TextMeshProUGUI banner = null!;
         private int levelIndex;
         private bool sawPlacement;
         private bool sawClear;
@@ -31,10 +32,15 @@ namespace Riptide.UI
             var director = root.gameObject.AddComponent<TutorialDirector>();
             director.flow = flow;
 
-            RectTransform panel = UiKit.Panel(root, "banner", new Color(0.05f, 0.10f, 0.16f, 0.92f));
-            UiKit.Place(panel, new Vector2(0.5f, 0.845f), new Vector2(940f, 96f), Vector2.zero);
-            director.banner = UiKit.Label(panel, "text", "", 36, Palette.MeterFilled);
-            UiKit.Stretch(director.banner.rectTransform, 12f);
+            // Tidal Pop hint bubble: a white sticker card with ink copy, pinned
+            // over the board's top rows (§6.3 HintBubble, dismissed by doing).
+            RectTransform panel = PopKit.Panel(root, "banner", new Vector2(960f, 120f), PopTone.White, 36f, 8f);
+            WorldAnchor.Pin(panel, new Vector3(0f, BoardLayout.BoardTopY - 1.0f, 0f));
+            director.banner = UiText.Create(panel, "text", "", "body", "text.ink");
+            UiComponents.Stretch(director.banner.rectTransform);
+            director.banner.rectTransform.offsetMin = new Vector2(24f, 8f);
+            director.banner.rectTransform.offsetMax = new Vector2(-24f, -8f);
+            director.banner.enableWordWrapping = true;
             panel.gameObject.SetActive(false);
 
             flow.RunStarted += director.OnRunStarted;

@@ -55,6 +55,15 @@ namespace Riptide.UI
             "tutorial.l1.drag", "tutorial.l1.clear", "tutorial.l2.meter",
             "tutorial.l3.rescue", "tutorial.l4.pump", "tutorial.l5.go",
             "common.back", "common.play",
+
+            // Tidal Pop overhaul (UI spec §13).
+            "tab.home", "home.play", "home.level", "home.zoneRibbon", "home.zoneStars",
+            "home.levelProgress", "home.dailyShort", "home.dailyBoard", "home.dailyDone",
+            "home.dailyNew", "home.endlessShort", "zone.locked",
+            "results.zoneLevel", "results.scoreLabel", "stat.movesShort", "stat.tidesShort",
+            "stat.rescuedShort", "results.home", "daily.intro.streak",
+            "booster.drainName", "booster.popName", "booster.rerollName", "booster.swapName",
+            "booster.free", "hud.chip",
         };
     }
 }

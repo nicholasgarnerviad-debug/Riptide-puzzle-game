@@ -7,337 +7,6 @@ using UnityEngine.UI;
 namespace Riptide.UI
 {
     /// <summary>
-    /// Spec §4.7 settings, modern pass: a stats card with icon tiles, grouped
-    /// section cards (preferences with REAL switches; about with chevron rows).
-    /// </summary>
-    public sealed class SettingsScreen : MonoBehaviour, IScreenRefresh
-    {
-        private readonly System.Collections.Generic.List<(string key, Image track, RectTransform knob)> toggles
-            = new System.Collections.Generic.List<(string, Image, RectTransform)>();
-
-        public static RectTransform Build(RectTransform parent, GameFlow flow)
-        {
-            RectTransform root = ScreenChrome.Root(parent, "SettingsScreen");
-            var screen = root.gameObject.AddComponent<SettingsScreen>();
-
-            TextMeshProUGUI title = UiText.Create(root, "title", flow.Strings.Get("settings.title"),
-                "title", "text.primary");
-            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.945f), new Vector2(700f, 90f));
-
-            // ROADMAP M5: identity stats — now an icon-tile card, not microtext.
-            RectTransform statsCard = UiComponents.Card(root, "stats", new Vector2(960f, 280f));
-            UiComponents.Place(statsCard, new Vector2(0.5f, 0.825f), new Vector2(960f, 280f));
-            TextMeshProUGUI statsHeader = UiText.Create(statsCard, "header",
-                flow.Strings.Get("stats.title"), "micro", "text.muted");
-            UiComponents.Place(statsHeader.rectTransform, new Vector2(0.5f, 0.87f), new Vector2(700f, 38f));
-            long rescued = 0;
-            foreach (int count in flow.Meta.Save.SpeciesRescues)
-            {
-                rescued += count;
-            }
-
-            StatTile(statsCard, 0, "fish", Riptide.Core.ShareCard.GroupThousands(rescued),
-                flow.Strings.Get("stats.rescued"));
-            StatTile(statsCard, 1, "compass", flow.Meta.Voyage.TotalStars.ToString(),
-                flow.Strings.Get("stats.stars"));
-            StatTile(statsCard, 2, "waves", Riptide.Core.ShareCard.GroupThousands(flow.Meta.EndlessBest),
-                flow.Strings.Get("stats.best"));
-            StatTile(statsCard, 3, "sun", flow.Meta.Streak.Best.ToString(),
-                flow.Strings.Get("stats.streak"));
-            StatTile(statsCard, 4, "chest", flow.Meta.Save.DecorationsOwned.Count.ToString(),
-                flow.Strings.Get("stats.decor"));
-
-            // Preferences: one grouped card, label left, REAL switch right.
-            RectTransform prefs = UiComponents.Card(root, "prefs", new Vector2(960f, 480f));
-            UiComponents.Place(prefs, new Vector2(0.5f, 0.585f), new Vector2(960f, 480f));
-            screen.ToggleRow(prefs, 0, "settings.audio.on", flow.Strings.Get("settings.audio"));
-            screen.ToggleRow(prefs, 1, "settings.music.on", flow.Strings.Get("settings.music"));
-            screen.ToggleRow(prefs, 2, "settings.haptics.on", flow.Strings.Get("settings.haptics"));
-            screen.ToggleRow(prefs, 3, "settings.reducedMotion.on", flow.Strings.Get("settings.reducedMotion"));
-
-            // About: grouped chevron rows.
-            RectTransform about = UiComponents.Card(root, "about", new Vector2(960f, 480f));
-            UiComponents.Place(about, new Vector2(0.5f, 0.335f), new Vector2(960f, 480f));
-            LinkRow(about, 0, flow.Strings.Get("settings.consent"), () => flow.Consent?.Reopen());
-            LinkRow(about, 1, flow.Strings.Get("settings.restore"), () => flow.Iap?.Restore());
-            LinkRow(about, 2, flow.Strings.Get("settings.privacy"),
-                () => Application.OpenURL("https://riptide.game/privacy"));
-            LinkRow(about, 3, flow.Strings.Get("settings.terms"),
-                () => Application.OpenURL("https://riptide.game/terms"));
-
-            Button back = UiComponents.ButtonGhost(root, "back", flow.Strings.Get("common.back"),
-                () => flow.GoTo(FlowScreen.Home));
-            UiComponents.Place((RectTransform)back.transform, new Vector2(0.5f, 0.115f), new Vector2(400f, 90f));
-
-            TextMeshProUGUI version = UiText.Create(root, "version",
-                string.Format(flow.Strings.Get("settings.version"), Application.version),
-                "micro", "text.muted");
-            UiComponents.Place(version.rectTransform, new Vector2(0.5f, 0.06f), new Vector2(500f, 40f));
-
-            screen.Refresh();
-            return root;
-        }
-
-        private static void StatTile(RectTransform card, int index, string icon, string value, string label)
-        {
-            float x = 0.10f + index * 0.20f;
-            RectTransform iconRt = UiComponents.Rect(card, $"statIcon{index}", new Vector2(52f, 52f));
-            UiComponents.Place(iconRt, new Vector2(x, 0.60f), new Vector2(52f, 52f));
-            var iconImage = iconRt.gameObject.AddComponent<Image>();
-            iconImage.sprite = MenuSprites.Icon(icon);
-            iconImage.raycastTarget = false;
-            ThemedElement.Bind(iconRt.gameObject, "accent.primary");
-
-            TextMeshProUGUI valueText = UiText.Create(card, $"statValue{index}", value, "score", "text.primary");
-            UiComponents.Place(valueText.rectTransform, new Vector2(x, 0.36f), new Vector2(180f, 52f));
-            TextMeshProUGUI labelText = UiText.Create(card, $"statLabel{index}", label, "micro", "text.muted");
-            UiComponents.Place(labelText.rectTransform, new Vector2(x, 0.16f), new Vector2(180f, 34f));
-        }
-
-        private void ToggleRow(RectTransform card, int index, string key, string label)
-        {
-            RectTransform row = GroupRow(card, index, key, label, () => Toggle(key));
-
-            RectTransform track = UiComponents.Rect(row, "track", new Vector2(104f, 56f));
-            track.anchorMin = new Vector2(1f, 0.5f);
-            track.anchorMax = new Vector2(1f, 0.5f);
-            track.anchoredPosition = new Vector2(-92f, 0f);
-            var trackImage = UiComponents.RoundedImage(track.gameObject, 28f);
-            trackImage.raycastTarget = false;
-
-            RectTransform knob = UiComponents.Rect(track, "knob", new Vector2(42f, 42f));
-            knob.anchorMin = new Vector2(0.5f, 0.5f);
-            knob.anchorMax = new Vector2(0.5f, 0.5f);
-            var knobImage = knob.gameObject.AddComponent<Image>();
-            knobImage.sprite = SpriteFactory.Dot();
-            knobImage.raycastTarget = false;
-            ThemedElement.Bind(knob.gameObject, "text.primary");
-
-            toggles.Add((key, trackImage, knob));
-        }
-
-        private static void LinkRow(RectTransform card, int index, string label, Action onClick)
-        {
-            RectTransform row = GroupRow(card, index, label, label, onClick);
-            TextMeshProUGUI chevron = UiText.Create(row, "chevron", "›", "heading", "text.muted");
-            UiComponents.Place(chevron.rectTransform, new Vector2(1f, 0.5f), new Vector2(50f, 60f));
-            chevron.rectTransform.anchoredPosition = new Vector2(-66f, 0f);
-        }
-
-        /// <summary>A grouped-card row: full-width tap target, left label, hairline below.</summary>
-        private static RectTransform GroupRow(RectTransform card, int index, string name, string label,
-            Action onClick)
-        {
-            RectTransform row = UiComponents.Rect(card, name, new Vector2(0f, 108f));
-            row.anchorMin = new Vector2(0f, 1f);
-            row.anchorMax = new Vector2(1f, 1f);
-            row.pivot = new Vector2(0.5f, 1f);
-            row.offsetMin = new Vector2(16f, -22f - 110f * (index + 1));
-            row.offsetMax = new Vector2(-16f, -22f - 110f * index);
-            var bg = row.gameObject.AddComponent<Image>();
-            bg.sprite = SpriteFactory.Solid();
-            bg.color = new Color(0f, 0f, 0f, 0f); // tap target only
-            UiComponents.PadHitTarget(row); // 120 ref-px touch floor (§3)
-            var button = row.gameObject.AddComponent<Button>();
-            button.onClick.AddListener(() => onClick());
-            row.gameObject.AddComponent<PressEffect>();
-
-            TextMeshProUGUI text = UiText.Create(row, "label", label, "body", "text.primary");
-            text.alignment = TextAlignmentOptions.Left;
-            UiComponents.Place(text.rectTransform, new Vector2(0f, 0.5f), new Vector2(560f, 60f));
-            text.rectTransform.anchoredPosition = new Vector2(330f, 0f);
-
-            if (index < 3)
-            {
-                RectTransform line = UiComponents.Rect(row, "hairline", Vector2.zero);
-                line.anchorMin = new Vector2(0f, 0f);
-                line.anchorMax = new Vector2(1f, 0f);
-                line.offsetMin = new Vector2(28f, -1f);
-                line.offsetMax = new Vector2(-28f, 1f);
-                var lineImage = line.gameObject.AddComponent<Image>();
-                lineImage.sprite = SpriteFactory.Solid();
-                lineImage.raycastTarget = false;
-                ThemedElement.Bind(line.gameObject, "stroke.subtle");
-            }
-
-            return row;
-        }
-
-        private void Toggle(string key)
-        {
-            PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key, key == "settings.reducedMotion.on" ? 0 : 1) == 1 ? 0 : 1);
-            PlayerPrefs.Save();
-            Refresh();
-        }
-
-        public void Refresh()
-        {
-            foreach ((string key, Image track, RectTransform knob) in toggles)
-            {
-                int fallback = key == "settings.reducedMotion.on" ? 0 : 1;
-                bool on = PlayerPrefs.GetInt(key, fallback) == 1;
-                // State-driven switch: cyan track + knob right when on.
-                track.color = ThemeRuntime.Color(on ? "accent.deep" : "bg.raised");
-                knob.anchoredPosition = new Vector2(on ? 24f : -24f, 0f);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Spec §4.7 shop: Remove Ads hero card (price + one-line promise) above three
-    /// coin pack cards. Packs stay disabled with a caption until the IAP SDK lands
-    /// (§6.2 offline/disabled rule); Remove Ads is fully wired through the seam.
-    /// </summary>
-    public sealed class ShopScreen : MonoBehaviour, IScreenRefresh
-    {
-        private GameFlow flow = null!;
-        private ScreenManager manager = null!;
-        private Button buy = null!;
-        private CoinCounter coinPill = null!;
-
-        public static RectTransform Build(RectTransform parent, GameFlow flow, ScreenManager manager)
-        {
-            RectTransform root = ScreenChrome.Root(parent, "ShopScreen");
-            var screen = root.gameObject.AddComponent<ShopScreen>();
-            screen.flow = flow;
-            screen.manager = manager;
-
-            TextMeshProUGUI title = UiText.Create(root, "title", flow.Strings.Get("shop.title"),
-                "title", "text.primary");
-            UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.935f), new Vector2(700f, 100f));
-
-            // Players check their balance in a shop — coin pill, top-right.
-            RectTransform coinPill = UiComponents.Rect(root, "coinPill", new Vector2(250f, 78f));
-            UiComponents.Place(coinPill, new Vector2(0.84f, 0.935f), new Vector2(250f, 78f));
-            Image pillImage = UiComponents.RoundedImage(coinPill.gameObject, 39f);
-            pillImage.raycastTarget = false;
-            ThemedElement.Bind(coinPill.gameObject, "bg.surface");
-            UiComponents.RoundedStrokeImage(coinPill, "stroke.subtle", 39f);
-            screen.coinPill = UiComponents.CoinCounterComponent(coinPill);
-            UiComponents.Place((RectTransform)screen.coinPill.transform, new Vector2(0.5f, 0.5f), new Vector2(230f, 64f));
-
-            // HERO (research: featured offer up top — icon identity, benefit
-            // bullets, the PRICE lives on the button and nowhere else).
-            RectTransform hero = UiComponents.Card(root, "hero", new Vector2(960f, 420f));
-            UiComponents.Place(hero, new Vector2(0.5f, 0.745f), new Vector2(960f, 420f));
-            UiComponents.RoundedStrokeImage(hero, "accent.deep", 32f);
-
-            RectTransform heroBadge = UiComponents.Rect(hero, "badge", new Vector2(140f, 140f));
-            UiComponents.Place(heroBadge, new Vector2(0.145f, 0.70f), new Vector2(140f, 140f));
-            var heroBadgeBg = heroBadge.gameObject.AddComponent<Image>();
-            heroBadgeBg.sprite = SpriteFactory.Dot();
-            heroBadgeBg.raycastTarget = false;
-            ThemedElement.Bind(heroBadge.gameObject, "bg.raised");
-            TextMeshProUGUI adGlyph = UiText.Create(heroBadge, "adText", "AD", "caption", "text.muted");
-            UiComponents.Place(adGlyph.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(100f, 50f));
-            RectTransform slash = UiComponents.Rect(heroBadge, "slash", new Vector2(96f, 96f));
-            UiComponents.Place(slash, new Vector2(0.5f, 0.5f), new Vector2(96f, 96f));
-            var slashImage = slash.gameObject.AddComponent<Image>();
-            slashImage.sprite = MenuSprites.Icon("noAds");
-            slashImage.raycastTarget = false;
-            ThemedElement.Bind(slash.gameObject, "danger");
-
-            TextMeshProUGUI heroTitle = UiText.Create(hero, "heroTitle",
-                flow.Strings.Get("shop.removeAds"), "title", "text.primary");
-            heroTitle.alignment = TextAlignmentOptions.Left;
-            UiComponents.Place(heroTitle.rectTransform, new Vector2(0.62f, 0.80f), new Vector2(580f, 80f));
-            TextMeshProUGUI benefit1 = UiText.Create(hero, "benefit1",
-                flow.Strings.Get("shop.benefit1"), "caption", "text.secondary");
-            benefit1.alignment = TextAlignmentOptions.Left;
-            UiComponents.Place(benefit1.rectTransform, new Vector2(0.62f, 0.62f), new Vector2(580f, 48f));
-            TextMeshProUGUI benefit2 = UiText.Create(hero, "benefit2",
-                flow.Strings.Get("shop.benefit2"), "caption", "text.secondary");
-            benefit2.alignment = TextAlignmentOptions.Left;
-            UiComponents.Place(benefit2.rectTransform, new Vector2(0.62f, 0.50f), new Vector2(580f, 48f));
-
-            screen.buy = UiComponents.ButtonPrimary(hero, "buy",
-                flow.Strings.Get("shop.price.removeAds"), screen.OnBuyRemoveAds);
-            UiComponents.Place((RectTransform)screen.buy.transform, new Vector2(0.5f, 0.18f), new Vector2(640f, 130f));
-
-            // COIN PACKS (research: scaling coin-pile art, big amounts, price
-            // capsules, BEST VALUE badge for hierarchy; one shared caption —
-            // the per-card caption was overflowing across its neighbors).
-            string[] packKeys = { "shop.pack.small", "shop.pack.medium", "shop.pack.large" };
-            string[] amountKeys = { "shop.pack.smallAmount", "shop.pack.mediumAmount", "shop.pack.largeAmount" };
-            string[] priceKeys = { "shop.price.small", "shop.price.medium", "shop.price.large" };
-            string[] iconIds = { "coins1", "coins2", "coins3" };
-            for (int i = 0; i < 3; i++)
-            {
-                RectTransform pack = UiComponents.Card(root, $"pack{i}", new Vector2(304f, 400f));
-                UiComponents.Place(pack, new Vector2(0.185f + 0.315f * i, 0.455f), new Vector2(304f, 400f));
-
-                RectTransform icon = UiComponents.Rect(pack, "icon", new Vector2(96f, 96f));
-                UiComponents.Place(icon, new Vector2(0.5f, 0.78f), new Vector2(96f, 96f));
-                var iconImage = icon.gameObject.AddComponent<Image>();
-                iconImage.sprite = MenuSprites.Icon(iconIds[i]);
-                iconImage.raycastTarget = false;
-                ThemedElement.Bind(icon.gameObject, "coin");
-
-                TextMeshProUGUI amount = UiText.Create(pack, "amount",
-                    flow.Strings.Get(amountKeys[i]), "score", "coin");
-                UiComponents.Place(amount.rectTransform, new Vector2(0.5f, 0.52f), new Vector2(280f, 60f));
-                TextMeshProUGUI packName = UiText.Create(pack, "name",
-                    flow.Strings.Get(packKeys[i]), "caption", "text.secondary");
-                UiComponents.Place(packName.rectTransform, new Vector2(0.5f, 0.36f), new Vector2(280f, 44f));
-
-                // Disabled price capsule until the IAP SDK lands.
-                RectTransform price = UiComponents.Rect(pack, "price", new Vector2(200f, 76f));
-                UiComponents.Place(price, new Vector2(0.5f, 0.14f), new Vector2(200f, 76f));
-                var priceImage = price.gameObject.AddComponent<Image>();
-                priceImage.sprite = MenuSprites.CapsuleGradient();
-                priceImage.type = Image.Type.Sliced;
-                priceImage.pixelsPerUnitMultiplier = 22f * (100f / 64f) / 28f;
-                priceImage.raycastTarget = false;
-                ThemedElement.Bind(price.gameObject, "bg.raised");
-                TextMeshProUGUI priceText = UiText.Create(price, "label",
-                    flow.Strings.Get(priceKeys[i]), "body", "text.muted");
-                UiComponents.Stretch(priceText.rectTransform);
-
-                if (i == 2)
-                {
-                    RectTransform best = UiComponents.Rect(pack, "bestValue", new Vector2(190f, 52f));
-                    UiComponents.Place(best, new Vector2(0.5f, 1.0f), new Vector2(190f, 52f));
-                    var bestImage = UiComponents.RoundedImage(best.gameObject, 26f);
-                    bestImage.raycastTarget = false;
-                    ThemedElement.Bind(best.gameObject, "warning");
-                    TextMeshProUGUI bestText = UiText.Create(best, "label",
-                        flow.Strings.Get("shop.bestValue"), "micro", "text.onAccent");
-                    UiComponents.Stretch(bestText.rectTransform);
-                }
-            }
-
-            TextMeshProUGUI soon = UiText.Create(root, "soon",
-                flow.Strings.Get("shop.comingSoon"), "micro", "text.muted");
-            UiComponents.Place(soon.rectTransform, new Vector2(0.5f, 0.30f), new Vector2(900f, 44f));
-
-            Button back = UiComponents.ButtonGhost(root, "back", flow.Strings.Get("common.back"),
-                () => flow.GoTo(FlowScreen.Home));
-            UiComponents.Place((RectTransform)back.transform, new Vector2(0.5f, 0.08f), new Vector2(400f, 90f));
-
-            screen.Refresh();
-            return root;
-        }
-
-        private void OnBuyRemoveAds()
-        {
-            flow.Iap?.PurchaseRemoveAds(success =>
-            {
-                manager.Toasts.Show(flow.Strings.Get(success ? "shop.thanks" : "errors.purchase_failed"));
-                Refresh();
-            });
-        }
-
-        public void Refresh()
-        {
-            bool owned = flow.Iap != null && flow.Iap.RemoveAdsOwned;
-            buy.interactable = !owned;
-            buy.GetComponentInChildren<TextMeshProUGUI>().text =
-                flow.Strings.Get(owned ? "shop.owned" : "shop.price.removeAds");
-            coinPill.SetInstant(flow.Meta.Coins);
-        }
-    }
-
-    /// <summary>
     /// Pause sheet (§4.3 pause slot, §6.2 resume-from-background): resume primary,
     /// quick sound toggle, quit-to-home. Never auto-abandons the run.
     /// </summary>
@@ -351,19 +20,19 @@ namespace Riptide.UI
 
         public static PauseSheet Build(RectTransform canvasRoot, GameFlow flow)
         {
-            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "PauseSheet", 760f);
+            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "PauseSheet", 880f);
             var pause = sheet.gameObject.AddComponent<PauseSheet>();
             pause.sheet = sheet;
             pause.flow = flow;
 
             RectTransform body = sheet.Body;
             TextMeshProUGUI title = UiText.Create(body, "title", flow.Strings.Get("pause.title"),
-                "heading", "text.primary");
+                "title", "text.ink");
             UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.86f), new Vector2(700f, 80f));
 
             Button resume = UiComponents.ButtonPrimary(body, "resume", flow.Strings.Get("pause.resume"),
                 pause.Dismiss);
-            UiComponents.Place((RectTransform)resume.transform, new Vector2(0.5f, 0.66f), new Vector2(640f, 124f));
+            UiComponents.Place((RectTransform)resume.transform, new Vector2(0.5f, 0.69f), new Vector2(680f, 150f));
 
             // Gate feedback: in-game had NO route to the level map — pause now
             // exits to it (same abandon semantics as quit-to-home).
@@ -372,17 +41,17 @@ namespace Riptide.UI
                 pause.Dismiss();
                 flow.GoTo(FlowScreen.ZoneMap);
             });
-            UiComponents.Place((RectTransform)map.transform, new Vector2(0.5f, 0.47f), new Vector2(640f, 110f));
+            UiComponents.Place((RectTransform)map.transform, new Vector2(0.5f, 0.53f), new Vector2(680f, 130f));
 
             pause.sound = UiComponents.ButtonSecondary(body, "sound", "", pause.ToggleSound);
-            UiComponents.Place((RectTransform)pause.sound.transform, new Vector2(0.5f, 0.30f), new Vector2(640f, 110f));
+            UiComponents.Place((RectTransform)pause.sound.transform, new Vector2(0.5f, 0.38f), new Vector2(680f, 130f));
 
             Button home = UiComponents.ButtonGhost(body, "home", flow.Strings.Get("pause.home"), () =>
             {
                 pause.Dismiss();
                 flow.GoTo(FlowScreen.Home);
             });
-            UiComponents.Place((RectTransform)home.transform, new Vector2(0.5f, 0.13f), new Vector2(640f, 90f));
+            UiComponents.Place((RectTransform)home.transform, new Vector2(0.5f, 0.23f), new Vector2(640f, 96f));
 
             return pause;
         }
@@ -433,33 +102,33 @@ namespace Riptide.UI
 
         public static ContinueSheet Build(RectTransform canvasRoot, GameFlow flow)
         {
-            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "ContinueSheet", 860f);
+            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "ContinueSheet", 960f);
             var offer = sheet.gameObject.AddComponent<ContinueSheet>();
             offer.sheet = sheet;
             offer.flow = flow;
 
             RectTransform bodyRt = sheet.Body;
             TextMeshProUGUI title = UiText.Create(bodyRt, "title", flow.Strings.Get("continue.title"),
-                "title", "text.primary");
+                "title", "text.ink");
             UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.88f), new Vector2(800f, 90f));
 
-            offer.body = UiText.Create(bodyRt, "body", "", "body", "text.secondary");
-            UiComponents.Place(offer.body.rectTransform, new Vector2(0.5f, 0.74f), new Vector2(820f, 60f));
+            offer.body = UiText.Create(bodyRt, "body", "", "body", "text.inkSoft");
+            UiComponents.Place(offer.body.rectTransform, new Vector2(0.5f, 0.77f), new Vector2(820f, 60f));
 
             offer.pips = UiComponents.ProgressPipsComponent(bodyRt, CountdownSeconds);
-            UiComponents.Place((RectTransform)offer.pips.transform, new Vector2(0.5f, 0.64f), new Vector2(260f, 40f));
+            UiComponents.Place((RectTransform)offer.pips.transform, new Vector2(0.5f, 0.69f), new Vector2(300f, 40f));
 
             offer.adButton = UiComponents.ButtonReward(bodyRt, "continueAd",
                 flow.Strings.Get("continue.ad"), offer.OnAd);
-            UiComponents.Place((RectTransform)offer.adButton.transform, new Vector2(0.5f, 0.47f), new Vector2(660f, 124f));
+            UiComponents.Place((RectTransform)offer.adButton.transform, new Vector2(0.5f, 0.55f), new Vector2(700f, 140f));
 
             offer.coinButton = UiComponents.ButtonSecondary(bodyRt, "continueCoins",
                 string.Format(flow.Strings.Get("continue.coins"), flow.Economy.Coins.ContinueCost), offer.OnCoins);
-            UiComponents.Place((RectTransform)offer.coinButton.transform, new Vector2(0.5f, 0.28f), new Vector2(660f, 110f));
+            UiComponents.Place((RectTransform)offer.coinButton.transform, new Vector2(0.5f, 0.40f), new Vector2(700f, 130f));
 
             Button decline = UiComponents.ButtonGhost(bodyRt, "decline",
                 flow.Strings.Get("continue.decline"), offer.OnDecline);
-            UiComponents.Place((RectTransform)decline.transform, new Vector2(0.5f, 0.10f), new Vector2(420f, 88f));
+            UiComponents.Place((RectTransform)decline.transform, new Vector2(0.5f, 0.25f), new Vector2(420f, 96f));
 
             return offer;
         }
@@ -553,25 +222,25 @@ namespace Riptide.UI
             UiComponents.Place(card, new Vector2(0.5f, 0.55f), new Vector2(880f, 820f));
 
             TextMeshProUGUI title = UiText.Create(card, "title",
-                flow.Strings.Get("consent.age.title"), "title", "text.primary");
+                flow.Strings.Get("consent.age.title"), "title", "text.ink");
             UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.84f), new Vector2(800f, 100f));
             TextMeshProUGUI body = UiText.Create(card, "body",
-                flow.Strings.Get("consent.age.body"), "body", "text.secondary");
+                flow.Strings.Get("consent.age.body"), "body", "text.inkSoft");
             UiComponents.Place(body.rectTransform, new Vector2(0.5f, 0.70f), new Vector2(800f, 60f));
 
             // Year row: steppers flank the numeral, not the screen edges.
             Button minus = UiComponents.IconButton(card, "minus", "‹", () => gate.Step(-1));
-            UiComponents.Place((RectTransform)minus.transform, new Vector2(0.5f, 0.50f), new Vector2(96f, 96f));
+            UiComponents.Place((RectTransform)minus.transform, new Vector2(0.5f, 0.50f), new Vector2(120f, 126f));
             ((RectTransform)minus.transform).anchoredPosition = new Vector2(-280f, 0f);
-            gate.yearLabel = UiText.Create(card, "year", "2000", "display", "text.primary");
+            gate.yearLabel = UiText.Create(card, "year", "2000", "display", "text.ink");
             UiComponents.Place(gate.yearLabel.rectTransform, new Vector2(0.5f, 0.50f), new Vector2(420f, 120f));
             Button plus = UiComponents.IconButton(card, "plus", "›", () => gate.Step(1));
-            UiComponents.Place((RectTransform)plus.transform, new Vector2(0.5f, 0.50f), new Vector2(96f, 96f));
+            UiComponents.Place((RectTransform)plus.transform, new Vector2(0.5f, 0.50f), new Vector2(120f, 126f));
             ((RectTransform)plus.transform).anchoredPosition = new Vector2(280f, 0f);
 
             Button confirm = UiComponents.ButtonPrimary(card, "confirm",
                 flow.Strings.Get("consent.age.confirm"), gate.Confirm);
-            UiComponents.Place((RectTransform)confirm.transform, new Vector2(0.5f, 0.18f), new Vector2(640f, 130f));
+            UiComponents.Place((RectTransform)confirm.transform, new Vector2(0.5f, 0.18f), new Vector2(680f, 160f));
 
             gate.Step(0);
             return gate;
@@ -614,13 +283,13 @@ namespace Riptide.UI
 
         public static ResumeSheet Build(RectTransform canvasRoot, GameFlow flow, ToastManager toasts)
         {
-            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "ResumeSheet", 640f);
+            Sheet sheet = UiComponents.SheetComponent(canvasRoot, "ResumeSheet", 720f);
             var resume = sheet.gameObject.AddComponent<ResumeSheet>();
             resume.sheet = sheet;
 
             RectTransform body = sheet.Body;
             TextMeshProUGUI title = UiText.Create(body, "title", flow.Strings.Get("resume.title"),
-                "heading", "text.primary");
+                "title", "text.ink");
             UiComponents.Place(title.rectTransform, new Vector2(0.5f, 0.84f), new Vector2(700f, 80f));
 
             Riptide.Core.RunRecord? record = flow.PendingRun;
@@ -631,7 +300,7 @@ namespace Riptide.UI
                 "Daily" => string.Format(flow.Strings.Get("resume.body.daily"), record.Moves.Count),
                 _ => string.Format(flow.Strings.Get("resume.body.endless"), record.Moves.Count),
             };
-            TextMeshProUGUI info = UiText.Create(body, "body", bodyText, "body", "text.secondary");
+            TextMeshProUGUI info = UiText.Create(body, "body", bodyText, "body", "text.inkSoft");
             UiComponents.Place(info.rectTransform, new Vector2(0.5f, 0.64f), new Vector2(780f, 60f));
 
             Button go = UiComponents.ButtonPrimary(body, "resume", flow.Strings.Get("resume.continue"),
@@ -643,7 +312,7 @@ namespace Riptide.UI
                         toasts.Show(flow.Strings.Get("resume.expired"));
                     }
                 });
-            UiComponents.Place((RectTransform)go.transform, new Vector2(0.5f, 0.40f), new Vector2(640f, 124f));
+            UiComponents.Place((RectTransform)go.transform, new Vector2(0.5f, 0.47f), new Vector2(680f, 150f));
 
             Button abandon = UiComponents.ButtonGhost(body, "abandon", flow.Strings.Get("resume.abandon"),
                 () =>
@@ -651,7 +320,7 @@ namespace Riptide.UI
                     flow.AbandonPendingRun();
                     resume.sheet.Dismiss();
                 });
-            UiComponents.Place((RectTransform)abandon.transform, new Vector2(0.5f, 0.15f), new Vector2(640f, 90f));
+            UiComponents.Place((RectTransform)abandon.transform, new Vector2(0.5f, 0.26f), new Vector2(640f, 96f));
 
             return resume;
         }
@@ -668,6 +337,110 @@ namespace Riptide.UI
     /// </summary>
     internal static class ScreenChrome
     {
+        /// <summary>Header band height (ref-px) every Tidal Pop screen reserves at the top.</summary>
+        public const float HeaderRefPx = 200f;
+
+        /// <summary>Content floor (ref-px above the safe bottom) for screens under the tab bar.</summary>
+        public const float TabFloorRefPx = TabBar.HeightRefPx + 70f;
+
+        /// <summary>
+        /// Tidal Pop header: optional chunky back button (left), the title in
+        /// sticker letters (center), optional coin pill (right; its plus opens
+        /// the shop). Returns the coin counter when one is shown.
+        /// </summary>
+        public static CoinCounter? Header(RectTransform root, GameFlow flow, string title, Action? onBack,
+            bool coins, bool coinPlus = true)
+        {
+            RectTransform header = UiComponents.Rect(root, "header", Vector2.zero);
+            header.anchorMin = new Vector2(0f, 1f);
+            header.anchorMax = new Vector2(1f, 1f);
+            header.pivot = new Vector2(0.5f, 1f);
+            header.offsetMin = new Vector2(0f, -HeaderRefPx);
+            header.offsetMax = Vector2.zero;
+
+            TextMeshProUGUI titleText = UiText.CreateOutlined(header, "title", title, "title",
+                "text.primary", "panel.edge", 0.26f);
+            UiComponents.Place(titleText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(600f, 100f));
+
+            if (onBack != null)
+            {
+                Button back = PopKit.IconButton(header, "back", "chevronLeft", PopTone.Blue, onBack,
+                    new Vector2(124f, 130f));
+                var backRt = (RectTransform)back.transform;
+                backRt.anchorMin = backRt.anchorMax = new Vector2(0f, 0.5f);
+                backRt.anchoredPosition = new Vector2(112f, 0f);
+            }
+
+            CoinCounter? counter = null;
+            if (coins)
+            {
+                counter = PopKit.CoinPill(header, coinPlus ? () => flow.GoTo(FlowScreen.Shop) : null);
+                var pill = (RectTransform)counter.transform.parent;
+                pill.anchorMin = pill.anchorMax = new Vector2(1f, 0.5f);
+                pill.anchoredPosition = new Vector2(-205f, 0f);
+            }
+
+            return counter;
+        }
+
+        /// <summary>
+        /// A vertical scroll column between the header and a floor (ref-px above the
+        /// safe bottom). Content stacks top-down via <see cref="Column.Add"/>; short
+        /// screens never scroll, 16:9 phones scroll instead of clipping.
+        /// </summary>
+        public static Column ScrollColumn(RectTransform root, float floorRefPx)
+        {
+            RectTransform viewport = UiComponents.Rect(root, "column", Vector2.zero);
+            UiComponents.Stretch(viewport);
+            viewport.offsetMin = new Vector2(0f, floorRefPx);
+            viewport.offsetMax = new Vector2(0f, -HeaderRefPx);
+            var hit = viewport.gameObject.AddComponent<Image>();
+            hit.sprite = SpriteFactory.Solid();
+            hit.color = new Color(0f, 0f, 0f, 0f);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            var scroll = viewport.gameObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+
+            RectTransform content = UiComponents.Rect(viewport, "content", Vector2.zero);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            scroll.content = content;
+            return new Column(content);
+        }
+
+        /// <summary>Top-down stacking inside a scroll column.</summary>
+        public sealed class Column
+        {
+            private float y = 24f;
+
+            public Column(RectTransform content)
+            {
+                Content = content;
+            }
+
+            public RectTransform Content { get; }
+
+            /// <summary>Blank space before the next item (e.g. room for a ribbon above a card).</summary>
+            public void Space(float px)
+            {
+                y += px;
+                Content.sizeDelta = new Vector2(0f, y);
+            }
+
+            public RectTransform Add(RectTransform item, float height, float gapAfter = 40f)
+            {
+                item.anchorMin = item.anchorMax = new Vector2(0.5f, 1f);
+                item.pivot = new Vector2(0.5f, 1f);
+                item.anchoredPosition = new Vector2(0f, -y);
+                y += height + gapAfter;
+                Content.sizeDelta = new Vector2(0f, y);
+                return item;
+            }
+        }
+
         public static RectTransform Root(RectTransform parent, string name)
         {
             RectTransform root = UiComponents.Rect(parent, name, Vector2.zero);
@@ -700,33 +473,49 @@ namespace Riptide.UI
             bg.sprite = SpriteFactory.Solid();
             ThemedElement.Bind(root.gameObject, "bg.deep");
 
-            // Brighter water toward the surface: a top-down gradient band.
-            RectTransform glowTop = UiComponents.Rect(root, "surfaceGlow", Vector2.zero);
-            glowTop.anchorMin = new Vector2(0f, 0.45f);
-            glowTop.anchorMax = new Vector2(1f, 1f);
-            glowTop.offsetMin = Vector2.zero;
-            glowTop.offsetMax = Vector2.zero;
-            glowTop.localScale = new Vector3(1f, -1f, 1f); // fade points down
-            var glowImage = glowTop.gameObject.AddComponent<Image>();
-            glowImage.sprite = SpriteFactory.VerticalFade();
-            glowImage.raycastTarget = false;
-            ThemedElement.Bind(glowTop.gameObject, "bg.oceanTop");
+            // Tidal Pop: a bright, sunlit ocean — turquoise at the surface, deep
+            // blue at the floor (DECISIONS 2026-10-18).
+            Band(root, "surfaceGlow", 0.38f, 1f, "bg.oceanTop", fadeDown: true);
+            Band(root, "floorShade", 0f, 0.42f, "bg.abyss", fadeDown: false);
 
-            // God rays angling in from the surface.
-            BuildRay(root, x: 0.30f, tiltDeg: 14f, widthRefPx: 320f);
-            BuildRay(root, x: 0.58f, tiltDeg: -9f, widthRefPx: 230f);
-            BuildRay(root, x: 0.80f, tiltDeg: 18f, widthRefPx: 170f);
+            // Soft white rays and caustic light patches near the surface.
+            BuildRay(root, x: 0.22f, tiltDeg: 16f, widthRefPx: 300f);
+            BuildRay(root, x: 0.55f, tiltDeg: -8f, widthRefPx: 220f);
+            BuildRay(root, x: 0.84f, tiltDeg: 20f, widthRefPx: 160f);
+            Caustic(root, new Vector2(0.18f, 0.93f), 640f);
+            Caustic(root, new Vector2(0.86f, 0.78f), 480f);
 
             CanvasSnow.Create(root);
-            RectTransform vignetteRt = UiComponents.Rect(root, "vignette", Vector2.zero);
-            UiComponents.Stretch(vignetteRt);
-            var vignette = vignetteRt.gameObject.AddComponent<Image>();
-            vignette.sprite = SpriteFactory.Vignette();
-            vignette.color = new Color(0f, 0f, 0f, 0.55f);
-            vignette.raycastTarget = false;
-
             root.SetAsFirstSibling();
             return root;
+        }
+
+        private static void Band(RectTransform root, string name, float yMin, float yMax, string token, bool fadeDown)
+        {
+            RectTransform band = UiComponents.Rect(root, name, Vector2.zero);
+            band.anchorMin = new Vector2(0f, yMin);
+            band.anchorMax = new Vector2(1f, yMax);
+            band.offsetMin = Vector2.zero;
+            band.offsetMax = Vector2.zero;
+            if (fadeDown)
+            {
+                band.localScale = new Vector3(1f, -1f, 1f); // fade points down from the top
+            }
+
+            var image = band.gameObject.AddComponent<Image>();
+            image.sprite = SpriteFactory.VerticalFade();
+            image.raycastTarget = false;
+            ThemedElement.Bind(band.gameObject, token);
+        }
+
+        private static void Caustic(RectTransform root, Vector2 anchor, float size)
+        {
+            RectTransform patch = UiComponents.Rect(root, "caustic", new Vector2(size, size * 0.55f));
+            patch.anchorMin = patch.anchorMax = anchor;
+            var image = patch.gameObject.AddComponent<Image>();
+            image.sprite = MenuSprites.SoftGlow();
+            image.raycastTarget = false;
+            ThemedElement.Bind(patch.gameObject, "ray.light");
         }
 
         private static void BuildRay(RectTransform root, float x, float tiltDeg, float widthRefPx)

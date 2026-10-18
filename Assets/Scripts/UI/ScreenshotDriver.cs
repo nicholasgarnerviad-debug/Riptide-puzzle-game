@@ -69,16 +69,52 @@ namespace Riptide.UI
                     screens.Driver.InstantMode = true; // resolve boards fast for capture
                 }
 
-                // 1) Home.
+                // 1) Home + the level map.
                 flow.GoTo(FlowScreen.Home);
                 yield return Settle();
                 yield return Shoot("home");
+                flow.GoTo(FlowScreen.ZoneMap);
+                yield return Settle();
+                yield return Shoot("zonemap");
 
-                // 2) Voyage win — z1-l1 is tutorial-easy for GreedyClear.
+                // 2) A live board mid-run (a few bot moves in, animations on).
+                if (screens.Driver != null)
+                {
+                    screens.Driver.InstantMode = false;
+                }
+
+                flow.StartVoyageLevel(1, 3);
+                yield return DriveMoves(flow, 7, 5);
+                yield return Settle();
+                yield return Shoot("game");
+                if (screens.Driver != null)
+                {
+                    screens.Driver.InstantMode = true;
+                }
+
+                // 3) Voyage win — z1-l1 is tutorial-easy for GreedyClear.
                 flow.StartVoyageLevel(1, 1);
                 yield return DriveToTerminal(flow, 5);
                 yield return WaitForScreen(flow, FlowScreen.Results);
                 yield return Shoot("results_voyage_win");
+
+                // 3b) Voyage loss — z1-l3 under a seed GreedyClear drowns in.
+                flow.StartVoyageLevel(1, 3);
+                yield return DriveToTerminal(flow, 3);
+                yield return WaitForOfferOrScreen(flow, FlowScreen.Results);
+                if (flow.ContinueOfferPending)
+                {
+                    flow.DeclineContinue();
+                    var offer = Object.FindFirstObjectByType<ContinueSheet>();
+                    if (offer != null)
+                    {
+                        offer.DismissForDriver();
+                    }
+
+                    yield return WaitForScreen(flow, FlowScreen.Results);
+                }
+
+                yield return Shoot("results_voyage_" + (flow.LastOutcome != null && flow.LastOutcome.Won ? "win2" : "lose"));
 
                 // 3) Endless drown → Continue offer (fresh profile, fake ad available).
                 flow.StartEndless();
@@ -100,7 +136,10 @@ namespace Riptide.UI
                     yield return Shoot("results_endless");
                 }
 
-                // 4) Daily results.
+                // 4) Daily intro, then daily results.
+                flow.GoTo(FlowScreen.DailyIntro);
+                yield return Settle();
+                yield return Shoot("daily_intro");
                 if (flow.StartDaily())
                 {
                     yield return DriveToTerminal(flow, 23);
@@ -114,8 +153,43 @@ namespace Riptide.UI
                 screens.ShowPause();
                 yield return Settle();
                 yield return Shoot("pause");
+                var pause = Object.FindFirstObjectByType<PauseSheet>();
+                if (pause != null)
+                {
+                    pause.Dismiss();
+                }
 
+                // 6) The tab screens.
+                foreach (FlowScreen tab in new[] { FlowScreen.Settings, FlowScreen.Shop, FlowScreen.Tidepool })
+                {
+                    flow.GoTo(tab);
+                    yield return Settle();
+                    yield return Shoot(tab.ToString().ToLowerInvariant());
+                }
+
+                flow.GoTo(FlowScreen.Home);
                 File.WriteAllText(Done, "OK\n");
+            }
+
+            private static IEnumerator DriveMoves(GameFlow flow, ulong seed, int moves)
+            {
+                var policy = new GreedyClearPolicy();
+                DeterministicRng rng = DeterministicRng.FromSeed(seed);
+                for (int i = 0; i < moves && flow.Store != null && !flow.Store.State.Status.IsTerminal(); i++)
+                {
+                    BotDecision decision = policy.Choose(flow.Store.State, rng);
+                    rng = decision.Rng;
+                    if (decision.Move == null)
+                    {
+                        break;
+                    }
+
+                    flow.Store.TryDispatch(decision.Move);
+                    for (int f = 0; f < 30; f++)
+                    {
+                        yield return null;
+                    }
+                }
             }
 
             private static IEnumerator DriveToTerminal(GameFlow flow, ulong seed)
@@ -173,6 +247,12 @@ namespace Riptide.UI
             private IEnumerator Shoot(string name)
             {
                 string path = $"Temp/riptide_screen_{name}.png";
+                // The dev seed/hash readout is not part of the design under review.
+                foreach (DebugOverlay overlay in Object.FindObjectsByType<DebugOverlay>(FindObjectsSortMode.None))
+                {
+                    overlay.gameObject.SetActive(false);
+                }
+
                 ScreenCapture.CaptureScreenshot(path);
                 // CaptureScreenshot lands at end of frame — give it time to flush.
                 for (int i = 0; i < 20; i++)

@@ -73,25 +73,32 @@ namespace Riptide.UI
             float height = BoardSpec.Height + 2f * pad;
             float centerY = (BoardLayout.BoardBottomY + BoardLayout.BoardTopY) * 0.5f;
 
-            var fillGo = new GameObject("frameFill");
-            fillGo.transform.SetParent(transform, false);
-            fillGo.transform.position = new Vector3(0f, centerY, 0f);
-            var fill = fillGo.AddComponent<SpriteRenderer>();
-            fill.sprite = SpriteFactory.RoundedFill();
-            fill.drawMode = SpriteDrawMode.Sliced;
-            fill.size = new Vector2(width, height);
-            fill.color = ThemeRuntime.Color("board.frameBg");
-            fill.sortingOrder = FrameSorting;
+            // Tidal Pop: a chunky navy tray for the grid — deep outline, a 3D lip
+            // beneath, a faint gloss along the top rim (DECISIONS 2026-10-18).
+            const float corner = 0.5f;
+            const float outline = 0.13f;
+            const float lip = 0.2f;
+            Slab("frameLip", new Vector3(0f, centerY - lip, 0f), new Vector2(width + 2f * outline, height + 2f * outline),
+                corner + outline, "board.edge", FrameSorting - 2);
+            Slab("frameEdge", new Vector3(0f, centerY, 0f), new Vector2(width + 2f * outline, height + 2f * outline),
+                corner + outline, "board.edge", FrameSorting - 1);
+            Slab("frameFill", new Vector3(0f, centerY, 0f), new Vector2(width, height), corner, "board.frameBg",
+                FrameSorting);
+            Slab("frameGloss", new Vector3(0f, centerY + height * 0.5f - 0.16f, 0f), new Vector2(width - 0.8f, 0.12f),
+                0.06f, "shine", FrameSorting + 1);
+        }
 
-            var strokeGo = new GameObject("frameStroke");
-            strokeGo.transform.SetParent(transform, false);
-            strokeGo.transform.position = new Vector3(0f, centerY, 0f);
-            var stroke = strokeGo.AddComponent<SpriteRenderer>();
-            stroke.sprite = SpriteFactory.RoundedStroke();
-            stroke.drawMode = SpriteDrawMode.Sliced;
-            stroke.size = new Vector2(width, height);
-            stroke.color = ThemeRuntime.Color("stroke.subtle");
-            stroke.sortingOrder = FrameSorting + 1;
+        private void Slab(string name, Vector3 position, Vector2 size, float corner, string colorToken, int order)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.position = position;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = PopSprites.RoundedWorld(corner);
+            sr.drawMode = SpriteDrawMode.Sliced;
+            sr.size = size;
+            sr.color = ThemeRuntime.Color(colorToken);
+            sr.sortingOrder = order;
         }
 
         private void BuildFloodLine()
@@ -109,7 +116,7 @@ namespace Riptide.UI
                 var go = new GameObject($"floodDash_{i}");
                 go.transform.SetParent(transform, false);
                 go.transform.position = new Vector3(leftX + dashWidth * (2f * i + 0.5f), floodLineY, 0f);
-                go.transform.localScale = new Vector3(dashWidth, 0.07f, 1f);
+                go.transform.localScale = new Vector3(dashWidth, 0.11f, 1f);
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = SpriteFactory.Solid();
                 sr.color = dashColor;
@@ -126,10 +133,10 @@ namespace Riptide.UI
             markerGo.transform.SetParent(transform, false);
             markerGo.transform.position = new Vector3(markerX, floodLineY, 0f);
             floodMarkerDot = markerGo.AddComponent<SpriteRenderer>();
-            floodMarkerDot.sprite = SpriteFactory.Dot();
+            floodMarkerDot.sprite = PopSprites.Circle();
             floodMarkerDot.color = dashColor;
             floodMarkerDot.sortingOrder = FloodSorting;
-            markerGo.transform.localScale = Vector3.one * 0.45f;
+            markerGo.transform.localScale = Vector3.one * (0.58f * PopSprites.PixelsPerUnit / 256f); // 0.58 world units
 
             floodMarkerText = UiText.CreateWorld(transform, "floodMarkerText", "!",
                 "micro", "text.onAccent", FloodSorting + 1);

@@ -1,6 +1,6 @@
-﻿using System.Text;
 using Riptide.Core;
 using Riptide.Game;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -8,21 +8,25 @@ using UnityEngine.UI;
 namespace Riptide.UI
 {
     /// <summary>
-    /// GDD 9 in-game HUD: goal chips top-left, score top-right, menu button.
-    /// Renders from store state on every applied move; never re-derives rules.
+    /// GDD 9 in-game HUD, Tidal Pop edition (UI spec §13): white goal chips
+    /// top-left, the sticker-letter score center (combo pill + endless best chip
+    /// beside it), a yellow pause button top-right; chunky colored boosters with
+    /// price tags in the band under the tray; praise / milestone / armed-booster
+    /// beats over the board. Renders from store state on every applied move;
+    /// never re-derives rules.
     /// </summary>
     public sealed class HudOverlay : MonoBehaviour
     {
         private GameFlow flow = null!;
-        private Text goals = null!;
-        private Text score = null!;
-        private Text coins = null!;
-        private Text popHint = null!;
-        private Text milestoneLabel = null!;
-        private Button drainButton = null!;
-        private Button popButton = null!;
-        private Button rerollButton = null!;
-        private Button swapButton = null!;
+        private readonly GoalChip[] goalChips = new GoalChip[4];
+        private TextMeshProUGUI score = null!;
+        private TextMeshProUGUI coins = null!;
+        private TextMeshProUGUI popHint = null!;
+        private TextMeshProUGUI milestoneLabel = null!;
+        private Booster drain = null!;
+        private Booster pop = null!;
+        private Booster reroll = null!;
+        private Booster swap = null!;
         private Button freeDrain = null!;
         private Button freeReroll = null!;
         private bool popArmed;
@@ -31,45 +35,38 @@ namespace Riptide.UI
         private float milestoneUntil;
 
         // Genre pass (spec §12.4): praise flash, combo chip, endless best chip.
-        private Text praise = null!;
-        private Text comboChip = null!;
-        private Text bestChip = null!;
+        private TextMeshProUGUI praise = null!;
+        private RectTransform comboChip = null!;
+        private TextMeshProUGUI comboLabel = null!;
+        private RectTransform bestChip = null!;
+        private TextMeshProUGUI bestLabel = null!;
         private float praiseUntil;
         private int lastComboChain;
         private bool bestOvertaken;
 
         // Booster rail world geometry (gate feedback: the rail must never cover
-        // the board) — a reserved band BELOW the tray card; CameraFit holds the
+        // the board) — the reserved band BELOW the tray card; CameraFit holds the
         // theme's boosterRailBandRefPx open for it on every device.
-        private const float RailRowY = -9.55f;
-        private const float ChipRowY = -8.85f;
+        private static float RailRowY => BoardLayout.ContentBottomY - 1.32f;
         private const float DrainX = -3.45f;
         private const float PopX = -1.15f;
         private const float RerollX = 1.15f;
         private const float SwapX = 3.45f;
+        private static readonly Vector2 BoosterSize = new Vector2(196f, 168f);
 
-        private static void PinRail(Button button, Vector2 sizeRefPx, float worldX, float worldY)
+        private sealed class GoalChip
         {
-            var rt = (RectTransform)button.transform;
-            rt.sizeDelta = sizeRefPx;
-            StyleChrome(button, 20f);
-            WorldAnchor.Pin(rt, new Vector3(worldX, worldY, 0f));
+            public RectTransform Root = null!;
+            public Image Icon = null!;
+            public TextMeshProUGUI Label = null!;
         }
 
-        /// <summary>Visual pass: HUD buttons join the themed rounded language
-        /// instead of the legacy gray panels.</summary>
-        private static void StyleChrome(Button button, float cornerRefPx)
+        private sealed class Booster
         {
-            var image = button.GetComponent<UnityEngine.UI.Image>();
-            if (image != null)
-            {
-                image.sprite = SpriteFactory.RoundedFill();
-                image.type = UnityEngine.UI.Image.Type.Sliced;
-                image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / Mathf.Max(8f, cornerRefPx);
-                ThemedElement.Bind(button.gameObject, "bg.raised");
-            }
-
-            UiComponents.RoundedStrokeImage((RectTransform)button.transform, "stroke.subtle", cornerRefPx);
+            public Button Button = null!;
+            public PopSurface Surface = null!;
+            public PopTone Tone;
+            public TextMeshProUGUI Price = null!;
         }
 
         public static HudOverlay Create(RectTransform canvasRoot, GameFlow flow, System.Action? onPause = null)
@@ -79,107 +76,15 @@ namespace Riptide.UI
             var hud = root.gameObject.AddComponent<HudOverlay>();
             hud.flow = flow;
 
-            // Universal fit: the top bar lives inside the safe area (notches /
-            // punch-holes); world-tracking elements (booster rail, milestone) pin
-            // to world positions in full-screen space instead — the camera fit
-            // already keeps those out of unsafe territory.
+            // Universal fit: the top bar lives inside the safe area; world-tracking
+            // pieces (boosters, coins, praise, milestone) pin to world positions.
             RectTransform safe = UiKit.Container(root, "safe");
             UiKit.Stretch(safe);
             safe.gameObject.AddComponent<SafeArea>();
 
-            // Spec §4.3 top bar: goal chips LEFT, score CENTER, pause/menu RIGHT.
-            hud.goals = UiKit.Label(safe, "goals", "", 36, UiKit.TextColor, TextAnchor.UpperLeft);
-            UiKit.Place(hud.goals.rectTransform, new Vector2(0.05f, 0.97f), new Vector2(560f, 220f), new Vector2(280f, -110f));
-
-            // Visual pass: the score is the headline number — big, bold, tabular.
-            hud.score = UiKit.Label(safe, "score", "", 58, UiKit.TextColor, TextAnchor.UpperCenter);
-            hud.score.fontStyle = FontStyle.Bold;
-            UiKit.Place(hud.score.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(440f, 90f), new Vector2(0f, -45f));
-
-            // Spec §4.3: the top-right slot is the pause control; without a pause
-            // sheet wired (CreateGame test rigs) it falls back to Home.
-            Button menu = UiKit.TextButton(safe, "menu", "", 30,
-                () =>
-                {
-                    if (onPause != null)
-                    {
-                        onPause();
-                    }
-                    else
-                    {
-                        flow.GoTo(FlowScreen.Home);
-                    }
-                });
-            UiKit.Place((RectTransform)menu.transform, new Vector2(0.92f, 0.97f), new Vector2(96f, 96f), new Vector2(0f, -48f));
-            StyleChrome(menu, 24f);
-            var pauseIconGo = new GameObject("pauseIcon", typeof(RectTransform));
-            pauseIconGo.transform.SetParent(menu.transform, false);
-            var pauseIconRt = (RectTransform)pauseIconGo.transform;
-            pauseIconRt.sizeDelta = new Vector2(44f, 44f);
-            var pauseIcon = pauseIconGo.AddComponent<UnityEngine.UI.Image>();
-            pauseIcon.sprite = MenuSprites.Icon("pause");
-            pauseIcon.raycastTarget = false;
-            ThemedElement.Bind(pauseIconGo, "text.secondary");
-
-            // Coins live by the rail — that's where they're spent (gate feedback:
-            // the old 0.925-height label landed inside the board frame).
-            hud.coins = UiKit.Label(root, "coins", "", 34, ThemeRuntime.Color("coin"), TextAnchor.MiddleCenter);
-            hud.coins.rectTransform.sizeDelta = new Vector2(280f, 54f);
-            WorldAnchor.Pin(hud.coins.rectTransform, new Vector3(SwapX, ChipRowY, 0f));
-
-            // Booster rail: one row in the reserved band BELOW the tray (gate
-            // feedback — the old pins covered the board's right edge).
-            hud.drainButton = UiKit.TextButton(root, "drain", "", 28, () => hud.UseSimpleBooster(BoosterKind.DrainPump));
-            PinRail(hud.drainButton, new Vector2(230f, 80f), DrainX, RailRowY);
-            hud.popButton = UiKit.TextButton(root, "pop", "", 28, hud.TogglePopMode);
-            PinRail(hud.popButton, new Vector2(230f, 80f), PopX, RailRowY);
-            hud.rerollButton = UiKit.TextButton(root, "reroll", "", 28, () => hud.UseSimpleBooster(BoosterKind.NewTide));
-            PinRail(hud.rerollButton, new Vector2(230f, 80f), RerollX, RailRowY);
-            hud.swapButton = UiKit.TextButton(root, "swap", "", 28, hud.ToggleSwapMode);
-            PinRail(hud.swapButton, new Vector2(230f, 80f), SwapX, RailRowY);
-
-            // ROADMAP M4: endless milestone pop — over the board's lower half.
-            hud.milestoneLabel = UiKit.Label(root, "milestone", "", 34, Palette.MeterFilled);
-            hud.milestoneLabel.rectTransform.sizeDelta = new Vector2(800f, 60f);
-            WorldAnchor.Pin(hud.milestoneLabel.rectTransform, new Vector3(0f, -3.5f, 0f));
-            hud.milestoneLabel.gameObject.SetActive(false);
-            flow.MilestoneReached += hud.OnMilestone;
-
-            // GDD 5.3: one free Drain Pump and one free New Tide per game via
-            // rewarded ad — mini chips directly above their boosters.
-            hud.freeDrain = UiKit.TextButton(root, "freeDrain", "▶ ad", 24,
-                () => { flow.TryFreeBoosterViaAd(BoosterKind.DrainPump); hud.RefreshFromState(); });
-            PinRail(hud.freeDrain, new Vector2(90f, 60f), DrainX, ChipRowY);
-            hud.freeReroll = UiKit.TextButton(root, "freeReroll", "▶ ad", 24,
-                () => { flow.TryFreeBoosterViaAd(BoosterKind.NewTide); hud.RefreshFromState(); });
-            PinRail(hud.freeReroll, new Vector2(90f, 60f), RerollX, ChipRowY);
-
-            // Armed-booster instruction floats over the board's top rows —
-            // contextual, transient, and out of the (full) top bar.
-            hud.popHint = UiKit.Label(root, "popHint", flow.Strings.Get("booster.popHint"), 32, Palette.MeterDanger);
-            hud.popHint.rectTransform.sizeDelta = new Vector2(800f, 60f);
-            WorldAnchor.Pin(hud.popHint.rectTransform, new Vector3(0f, 5.4f, 0f));
-            hud.popHint.gameObject.SetActive(false);
-
-            // Genre pass (spec §12.4, research: Block Blast's praise loop) — type
-            // only, accent-cyan, over the board's upper half; no particle bursts
-            // (anti-goals hold). Shown for multi-row clears.
-            hud.praise = UiKit.Label(root, "praise", "", 64, ThemeRuntime.Color("accent.primary"));
-            hud.praise.fontStyle = FontStyle.Bold;
-            hud.praise.rectTransform.sizeDelta = new Vector2(900f, 120f);
-            WorldAnchor.Pin(hud.praise.rectTransform, new Vector3(0f, 2.4f, 0f));
-            hud.praise.gameObject.SetActive(false);
-
-            // Visible combo multiplier beside the score (inside the top band —
-            // gate feedback: nothing static may sit over the board).
-            hud.comboChip = UiKit.Label(safe, "combo", "", 30, ThemeRuntime.Color("accent.primary"));
-            UiKit.Place(hud.comboChip.rectTransform, new Vector2(0.5f, 0.97f), new Vector2(220f, 46f), new Vector2(260f, -40f));
-            hud.comboChip.gameObject.SetActive(false);
-
-            // Endless: the personal best is the run's target (the genre's crown).
-            hud.bestChip = UiKit.Label(safe, "best", "", 28, UiKit.TextDim, TextAnchor.UpperLeft);
-            UiKit.Place(hud.bestChip.rectTransform, new Vector2(0.05f, 0.97f), new Vector2(560f, 60f), new Vector2(280f, -30f));
-            hud.bestChip.gameObject.SetActive(false);
+            hud.BuildTopBar(safe, onPause);
+            hud.BuildRail(root);
+            hud.BuildBeats(root);
 
             if (flow.Store != null)
             {
@@ -187,9 +92,173 @@ namespace Riptide.UI
                 flow.Store.GameReset += hud.OnReset;
             }
 
+            flow.MilestoneReached += hud.OnMilestone;
             flow.RunStarted += hud.RefreshFromState;
             hud.RefreshFromState();
             return hud;
+        }
+
+        private void BuildTopBar(RectTransform safe, System.Action? onPause)
+        {
+            // Spec §4.3 top bar: goal chips LEFT, score CENTER, pause RIGHT.
+            RectTransform goals = UiComponents.Rect(safe, "goals", new Vector2(330f, 360f));
+            goals.anchorMin = goals.anchorMax = new Vector2(0f, 1f);
+            goals.pivot = new Vector2(0f, 1f);
+            goals.anchoredPosition = new Vector2(22f, -22f);
+            for (int i = 0; i < goalChips.Length; i++)
+            {
+                RectTransform chip = PopKit.Panel(goals, $"chip{i}", new Vector2(300f, 84f), PopTone.White, 42f, 7f);
+                chip.anchorMin = chip.anchorMax = new Vector2(0f, 1f);
+                chip.pivot = new Vector2(0f, 1f);
+                chip.anchoredPosition = new Vector2(0f, -i * 92f);
+                Image icon = PopKit.Icon(chip, "icon", "fish", "pop.coral", 56f, "panel.edge", 6);
+                var iconRt = (RectTransform)icon.transform.parent;
+                iconRt.anchorMin = iconRt.anchorMax = new Vector2(0f, 0.5f);
+                iconRt.anchoredPosition = new Vector2(48f, 0f);
+                TextMeshProUGUI label = UiText.Create(chip, "label", "", "heading", "text.ink",
+                    TextAlignmentOptions.MidlineLeft);
+                UiComponents.Stretch(label.rectTransform);
+                label.rectTransform.offsetMin = new Vector2(88f, 0f);
+                goalChips[i] = new GoalChip { Root = chip, Icon = icon, Label = label };
+            }
+
+            // The score is the headline number — big sticker letters, tabular.
+            score = UiText.CreateOutlined(safe, "score", "0", "score", "text.primary", "panel.edge", 0.3f);
+            score.fontSize = 96f;
+            score.rectTransform.anchorMin = score.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            score.rectTransform.sizeDelta = new Vector2(440f, 110f);
+            score.rectTransform.anchoredPosition = new Vector2(0f, -78f);
+
+            // Endless: the personal best is the run's target (the genre's crown).
+            bestChip = PopKit.Panel(safe, "best", new Vector2(250f, 64f), PopTone.Navy, 32f, 6f);
+            bestChip.anchorMin = bestChip.anchorMax = new Vector2(0.5f, 1f);
+            bestChip.anchoredPosition = new Vector2(0f, -160f);
+            Image crown = PopKit.Icon(bestChip, "crown", "crown", "pop.yellow", 42f, "pop.yellow.edge", 6);
+            ((RectTransform)crown.transform.parent).anchoredPosition = new Vector2(-82f, 2f);
+            bestLabel = UiText.CreateOutlined(bestChip, "label", "", "caption", "text.primary", "panel.edge");
+            UiComponents.Stretch(bestLabel.rectTransform);
+            bestLabel.rectTransform.offsetMin = new Vector2(52f, 0f);
+            bestChip.gameObject.SetActive(false);
+
+            // Visible combo multiplier beside the score (inside the top band —
+            // gate feedback: nothing static may sit over the board).
+            comboChip = PopKit.Panel(safe, "combo", new Vector2(220f, 70f), PopTone.Coral, 26f, 6f);
+            comboChip.anchorMin = comboChip.anchorMax = new Vector2(0.5f, 1f);
+            comboChip.anchoredPosition = new Vector2(286f, -80f);
+            comboChip.localRotation = Quaternion.Euler(0f, 0f, -6f);
+            comboLabel = UiText.CreateOutlined(comboChip, "label", "", "body", "text.primary", "pop.coral.edge");
+            UiComponents.Stretch(comboLabel.rectTransform);
+            comboChip.gameObject.SetActive(false);
+
+            // Spec §4.3: the top-right slot is the pause control; without a pause
+            // sheet wired (CreateGame test rigs) it falls back to Home.
+            Button menu = PopKit.IconButton(safe, "menu", "pause", PopTone.Yellow, () =>
+            {
+                if (onPause != null)
+                {
+                    onPause();
+                }
+                else
+                {
+                    flow.GoTo(FlowScreen.Home);
+                }
+            }, new Vector2(118f, 124f));
+            var menuRt = (RectTransform)menu.transform;
+            menuRt.anchorMin = menuRt.anchorMax = new Vector2(1f, 1f);
+            menuRt.pivot = new Vector2(1f, 1f);
+            menuRt.anchoredPosition = new Vector2(-24f, -22f);
+        }
+
+        private void BuildRail(RectTransform root)
+        {
+            drain = BuildBooster(root, "drain", "drop", PopTone.Blue, "booster.drainName", DrainX,
+                () => UseSimpleBooster(BoosterKind.DrainPump));
+            pop = BuildBooster(root, "pop", "bomb", PopTone.Coral, "booster.popName", PopX, TogglePopMode);
+            reroll = BuildBooster(root, "reroll", "reroll", PopTone.Purple, "booster.rerollName", RerollX,
+                () => UseSimpleBooster(BoosterKind.NewTide));
+            swap = BuildBooster(root, "swap", "swap", PopTone.Green, "booster.swapName", SwapX, ToggleSwapMode);
+
+            // GDD 5.3: one free Drain Pump and one free New Tide per game via
+            // rewarded ad — purple stickers on their boosters' corners.
+            freeDrain = FreeSticker(drain, "freeDrain", BoosterKind.DrainPump);
+            freeReroll = FreeSticker(reroll, "freeReroll", BoosterKind.NewTide);
+
+            // Coins live by the rail — that's where they're spent: a navy pill
+            // stuck on the tray card's top-right corner.
+            RectTransform pill = PopKit.Panel(root, "coins", new Vector2(230f, 80f), PopTone.Navy, 40f, 6f);
+            WorldAnchor.Pin(pill, new Vector3(3.55f, BoardLayout.TrayCenter.y + BoardLayout.TrayCardHeight * 0.5f + 0.08f, 0f));
+            Image coin = PopKit.Icon(pill, "coin", "coin", "coin", 50f, "pop.yellow.edge", 6);
+            ((RectTransform)coin.transform.parent).anchoredPosition = new Vector2(-76f, 0f);
+            coins = UiText.CreateOutlined(pill, "value", "", "body", "text.primary", "panel.edge");
+            UiComponents.Stretch(coins.rectTransform);
+            coins.rectTransform.offsetMin = new Vector2(56f, 0f);
+        }
+
+        private Booster BuildBooster(RectTransform root, string name, string icon, PopTone tone, string nameKey,
+            float worldX, System.Action onClick)
+        {
+            Button button = PopKit.Tile(root, name, tone, onClick, BoosterSize, PopKit.Radius("r.m"));
+            var rt = (RectTransform)button.transform;
+            WorldAnchor.Pin(rt, new Vector3(worldX, RailRowY, 0f));
+            RectTransform face = PopKit.FaceOf(button);
+            Image glyph = PopKit.Icon(face, "icon", icon, "text.primary", 70f, PopKit.Edge(tone), 8);
+            ((RectTransform)glyph.transform.parent).anchoredPosition = new Vector2(0f, 18f);
+            TextMeshProUGUI label = UiText.CreateOutlined(face, "name", flow.Strings.Get(nameKey), "micro",
+                "text.primary", PopKit.Edge(tone), 0.22f);
+            UiComponents.Place(label.rectTransform, new Vector2(0.5f, 0.17f), new Vector2(180f, 32f));
+
+            RectTransform tag = PopKit.Panel(rt, "tag", new Vector2(132f, 58f), PopTone.Navy, 29f, 5f);
+            tag.anchorMin = tag.anchorMax = new Vector2(0.5f, 0f);
+            tag.anchoredPosition = new Vector2(0f, -14f);
+            Image coin = PopKit.Icon(tag, "coin", "coin", "coin", 34f, "pop.yellow.edge", 5);
+            ((RectTransform)coin.transform.parent).anchoredPosition = new Vector2(-38f, 0f);
+            TextMeshProUGUI price = UiText.CreateOutlined(tag, "price", "", "caption", "text.primary", "panel.edge");
+            UiComponents.Stretch(price.rectTransform);
+            price.rectTransform.offsetMin = new Vector2(30f, 0f);
+
+            return new Booster
+            {
+                Button = button,
+                Surface = button.GetComponent<PopSurface>(),
+                Tone = tone,
+                Price = price,
+            };
+        }
+
+        private Button FreeSticker(Booster host, string name, BoosterKind kind)
+        {
+            Button sticker = PopKit.Button((RectTransform)host.Button.transform, name, flow.Strings.Get("booster.free"),
+                PopTone.Purple, () => { flow.TryFreeBoosterViaAd(kind); RefreshFromState(); },
+                new Vector2(140f, 74f), "micro", "play");
+            var rt = (RectTransform)sticker.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
+            rt.anchoredPosition = new Vector2(-20f, 4f);
+            rt.localRotation = Quaternion.Euler(0f, 0f, -8f);
+            return sticker;
+        }
+
+        private void BuildBeats(RectTransform root)
+        {
+            // ROADMAP M4: endless milestone pop — over the board's lower half.
+            milestoneLabel = UiText.CreateOutlined(root, "milestone", "", "heading", "pop.yellow.top", "panel.edge", 0.28f);
+            milestoneLabel.rectTransform.sizeDelta = new Vector2(900f, 70f);
+            WorldAnchor.Pin(milestoneLabel.rectTransform, new Vector3(0f, -3.5f, 0f));
+            milestoneLabel.gameObject.SetActive(false);
+
+            // Armed-booster instruction floats over the board's top rows.
+            popHint = UiText.CreateOutlined(root, "popHint", flow.Strings.Get("booster.popHint"), "body",
+                "text.primary", "pop.coral.edge", 0.28f);
+            popHint.rectTransform.sizeDelta = new Vector2(900f, 60f);
+            WorldAnchor.Pin(popHint.rectTransform, new Vector3(0f, 5.4f, 0f));
+            popHint.gameObject.SetActive(false);
+
+            // Genre pass (spec §12.4, research: Block Blast's praise loop) — big
+            // sticker letters over the board's upper half on multi-row clears.
+            praise = UiText.CreateOutlined(root, "praise", "", "display", "pop.yellow.top", "pop.coral.edge", 0.34f);
+            praise.fontSize = 124f;
+            praise.rectTransform.sizeDelta = new Vector2(1000f, 160f);
+            WorldAnchor.Pin(praise.rectTransform, new Vector3(0f, 2.4f, 0f));
+            praise.gameObject.SetActive(false);
         }
 
         private void OnDestroy()
@@ -227,6 +296,7 @@ namespace Riptide.UI
             popArmed = false;
             popHint.text = flow.Strings.Get(swapArmed ? "booster.swapHint" : "booster.popHint");
             popHint.gameObject.SetActive(swapArmed);
+            RefreshArmed();
         }
 
         private void OnMove(Move move, MoveResult result)
@@ -240,7 +310,7 @@ namespace Riptide.UI
             RefreshFromState();
         }
 
-        /// <summary>Spec §12.4 praise beat: scale-in (t.base), hold, then hide.
+        /// <summary>Spec §12.4 praise beat: pop-in with overshoot, hold, then hide.
         /// Public as test surface (PlayMode asserts copy + activation).</summary>
         public void ShowPraise(int rows)
         {
@@ -249,9 +319,10 @@ namespace Riptide.UI
             praise.gameObject.SetActive(true);
             praiseUntil = Time.realtimeSinceStartup + 1.1f;
             RectTransform rt = praise.rectTransform;
-            rt.localScale = Vector3.one * 0.7f;
-            Tween.Run(this, "t.base", "easeOutQuart",
-                u => rt.localScale = Vector3.one * (0.7f + 0.3f * u),
+            rt.localScale = Vector3.one * 0.4f;
+            rt.localRotation = Quaternion.Euler(0f, 0f, rows >= 4 ? -6f : 4f);
+            Tween.Run(this, "t.base", "easeOutBack",
+                u => rt.localScale = Vector3.one * Mathf.LerpUnclamped(0.4f, 1f, u),
                 () => rt.localScale = Vector3.one);
         }
 
@@ -263,6 +334,7 @@ namespace Riptide.UI
             praise.gameObject.SetActive(false);
             lastComboChain = 0;
             bestOvertaken = false;
+            RefreshArmed();
             RefreshFromState();
         }
 
@@ -272,6 +344,7 @@ namespace Riptide.UI
             swapArmed = false;
             popHint.gameObject.SetActive(false);
             flow.TryUseBooster(kind);
+            RefreshArmed();
             RefreshFromState();
         }
 
@@ -286,6 +359,14 @@ namespace Riptide.UI
             swapArmed = false;
             popHint.text = flow.Strings.Get("booster.popHint");
             popHint.gameObject.SetActive(popArmed);
+            RefreshArmed();
+        }
+
+        /// <summary>An armed booster glows yellow until it fires or is cancelled.</summary>
+        private void RefreshArmed()
+        {
+            pop.Surface.SetTone(popArmed ? PopTone.Yellow : pop.Tone);
+            swap.Surface.SetTone(swapArmed ? PopTone.Yellow : swap.Tone);
         }
 
         private void Update()
@@ -323,6 +404,7 @@ namespace Riptide.UI
                     {
                         popArmed = false;
                         popHint.gameObject.SetActive(false);
+                        RefreshArmed();
                         RefreshFromState();
                     }
                 }
@@ -337,6 +419,7 @@ namespace Riptide.UI
                             {
                                 swapArmed = false;
                                 popHint.gameObject.SetActive(false);
+                                RefreshArmed();
                                 RefreshFromState();
                             }
 
@@ -358,62 +441,69 @@ namespace Riptide.UI
 
             GameState state = flow.Store.State;
             score.text = ShareCard.GroupThousands(state.Score);
-            coins.text = string.Format(flow.Strings.Get("hud.coins"), ShareCard.GroupThousands(flow.Meta.Coins));
+            coins.text = ShareCard.GroupThousands(flow.Meta.Coins);
 
             RefreshComboChip(state);
             RefreshBestChip(state);
 
             bool boosters = state.Config.BoostersAllowed && !state.Status.IsTerminal();
-            drainButton.gameObject.SetActive(boosters);
-            popButton.gameObject.SetActive(boosters);
-            rerollButton.gameObject.SetActive(boosters);
-            swapButton.gameObject.SetActive(boosters);
-            if (boosters)
-            {
-                drainButton.GetComponentInChildren<Text>().text =
-                    string.Format(flow.Strings.Get("booster.drainPump"), flow.BoosterCost(BoosterKind.DrainPump));
-                popButton.GetComponentInChildren<Text>().text =
-                    string.Format(flow.Strings.Get("booster.bubblePop"), flow.BoosterCost(BoosterKind.BubblePop));
-                rerollButton.GetComponentInChildren<Text>().text =
-                    string.Format(flow.Strings.Get("booster.newTide"), flow.BoosterCost(BoosterKind.NewTide));
-                swapButton.GetComponentInChildren<Text>().text =
-                    string.Format(flow.Strings.Get("booster.pieceSwap"), flow.BoosterCost(BoosterKind.PieceSwap));
-                drainButton.interactable = flow.CanUseBooster(BoosterKind.DrainPump);
-                popButton.interactable = flow.CanUseBooster(BoosterKind.BubblePop);
-                rerollButton.interactable = flow.CanUseBooster(BoosterKind.NewTide);
-                swapButton.interactable = flow.CanUseBooster(BoosterKind.PieceSwap);
-            }
-
+            RefreshBooster(drain, BoosterKind.DrainPump, boosters);
+            RefreshBooster(pop, BoosterKind.BubblePop, boosters);
+            RefreshBooster(reroll, BoosterKind.NewTide, boosters);
+            RefreshBooster(swap, BoosterKind.PieceSwap, boosters);
+            coins.transform.parent.gameObject.SetActive(boosters);
             freeDrain.gameObject.SetActive(boosters && flow.FreeBoosterAvailable(BoosterKind.DrainPump));
             freeReroll.gameObject.SetActive(boosters && flow.FreeBoosterAvailable(BoosterKind.NewTide));
 
-            var sb = new StringBuilder();
+            int chip = 0;
             GoalSet goalSet = state.Config.Goals;
             if (goalSet.RescueAllTarget.HasValue)
             {
-                sb.AppendLine(string.Format(flow.Strings.Get("hud.goal.rescue"),
+                SetChip(chip++, "fish", "pop.coral", string.Format(flow.Strings.Get("hud.chip"),
                     state.Goals.Rescued, goalSet.RescueAllTarget.Value));
             }
 
             if (goalSet.ClearRowsTarget.HasValue)
             {
-                sb.AppendLine(string.Format(flow.Strings.Get("hud.goal.rows"),
+                SetChip(chip++, "rows", "pop.blue", string.Format(flow.Strings.Get("hud.chip"),
                     state.Goals.RowsCleared, goalSet.ClearRowsTarget.Value));
             }
 
             if (goalSet.SurviveTidesTarget.HasValue)
             {
-                sb.AppendLine(string.Format(flow.Strings.Get("hud.goal.tides"),
+                SetChip(chip++, "waves", "accent.deep", string.Format(flow.Strings.Get("hud.chip"),
                     state.Goals.TidesSurvived, goalSet.SurviveTidesTarget.Value));
             }
 
             if (goalSet.ScoreTarget.HasValue)
             {
-                sb.AppendLine(string.Format(flow.Strings.Get("hud.goal.score"),
-                    ShareCard.GroupThousands(goalSet.ScoreTarget.Value)));
+                SetChip(chip++, "star", "pop.yellow", ShareCard.GroupThousands(goalSet.ScoreTarget.Value));
             }
 
-            goals.text = sb.ToString();
+            for (int i = chip; i < goalChips.Length; i++)
+            {
+                goalChips[i].Root.gameObject.SetActive(false);
+            }
+        }
+
+        private void RefreshBooster(Booster booster, BoosterKind kind, bool shown)
+        {
+            booster.Button.gameObject.SetActive(shown);
+            if (shown)
+            {
+                booster.Price.text = flow.BoosterCost(kind).ToString();
+                booster.Button.interactable = flow.CanUseBooster(kind);
+            }
+        }
+
+        private void SetChip(int index, string iconId, string iconToken, string text)
+        {
+            GoalChip chip = goalChips[index];
+            chip.Root.gameObject.SetActive(true);
+            chip.Icon.sprite = PopSprites.Icon(iconId);
+            chip.Icon.color = ThemeRuntime.Color(iconToken);
+            chip.Icon.transform.parent.Find("outline").GetComponent<Image>().sprite = PopSprites.IconOutline(iconId, 6);
+            chip.Label.text = text;
         }
 
         /// <summary>Spec §12.4: the chain multiplier is visible, not just felt.</summary>
@@ -427,17 +517,17 @@ namespace Riptide.UI
                 ScoringConfig sc = state.Config.Scoring;
                 int halves = System.Math.Min(
                     sc.ComboStartHalves + (chain - 1) * sc.ComboStepHalves, sc.ComboCapHalves);
-                comboChip.text = string.Format(flow.Strings.Get("hud.combo"), FormatHalves(halves));
+                comboLabel.text = string.Format(flow.Strings.Get("hud.combo"), FormatHalves(halves));
                 if (chain > lastComboChain)
                 {
-                    Pulse(comboChip.rectTransform);
+                    Pulse(comboChip);
                 }
             }
 
             lastComboChain = chain;
         }
 
-        /// <summary>Endless personal best in-run; flips to coin color the moment it's beaten.</summary>
+        /// <summary>Endless personal best in-run; flips to coin gold the moment it's beaten.</summary>
         private void RefreshBestChip(GameState state)
         {
             bool endless = flow.Mode == GameMode.Endless && flow.Meta.EndlessBest > 0;
@@ -448,16 +538,16 @@ namespace Riptide.UI
             }
 
             long shown = System.Math.Max(flow.Meta.EndlessBest, state.Score);
-            bestChip.text = string.Format(flow.Strings.Get("hud.best"), ShareCard.GroupThousands(shown));
+            bestLabel.text = string.Format(flow.Strings.Get("hud.best"), ShareCard.GroupThousands(shown));
             if (state.Score > flow.Meta.EndlessBest && !bestOvertaken)
             {
                 bestOvertaken = true;
-                bestChip.color = ThemeRuntime.Color("coin");
-                Pulse(bestChip.rectTransform);
+                bestLabel.color = ThemeRuntime.Color("coin");
+                Pulse(bestChip);
             }
             else if (!bestOvertaken)
             {
-                bestChip.color = UiKit.TextDim;
+                bestLabel.color = ThemeRuntime.Color("text.primary");
             }
         }
 
@@ -470,7 +560,7 @@ namespace Riptide.UI
         private void Pulse(RectTransform target)
         {
             Tween.Run(this, "t.fast", "linear",
-                u => target.localScale = Vector3.one * (1f + 0.15f * Mathf.Sin(u * Mathf.PI)),
+                u => target.localScale = Vector3.one * (1f + 0.18f * Mathf.Sin(u * Mathf.PI)),
                 () => target.localScale = Vector3.one);
         }
     }

@@ -276,8 +276,8 @@ namespace Riptide.UI
 
         // ------------------------- rasterizers -------------------------
 
-        private static Texture2D NewTex(int w, int h) =>
-            new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+        internal static Texture2D NewTex(int w, int h) =>
+            new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
 
         private static float RoundedAlpha(int x, int y, int size, int corner)
         {
@@ -287,7 +287,7 @@ namespace Riptide.UI
             return Mathf.Clamp01(corner - d + 0.5f) * (corner > 0 ? 1f : 1f);
         }
 
-        private static void Blend(float[,] a, int x, int y, float v)
+        internal static void Blend(float[,] a, int x, int y, float v)
         {
             if (x >= 0 && y >= 0 && x < a.GetLength(0) && y < a.GetLength(1))
             {
@@ -295,7 +295,7 @@ namespace Riptide.UI
             }
         }
 
-        private static void Disc(float[,] a, float cx, float cy, float r)
+        internal static void Disc(float[,] a, float cx, float cy, float r)
         {
             for (int y = (int)(cy - r - 2); y <= cy + r + 2; y++)
             {
@@ -307,7 +307,7 @@ namespace Riptide.UI
             }
         }
 
-        private static void Oval(float[,] a, float cx, float cy, float rx, float ry)
+        internal static void Oval(float[,] a, float cx, float cy, float rx, float ry)
         {
             for (int y = (int)(cy - ry - 2); y <= cy + ry + 2; y++)
             {
@@ -321,7 +321,7 @@ namespace Riptide.UI
             }
         }
 
-        private static void Ring(float[,] a, float cx, float cy, float r, float w)
+        internal static void Ring(float[,] a, float cx, float cy, float r, float w)
         {
             for (int y = (int)(cy - r - w - 2); y <= cy + r + w + 2; y++)
             {
@@ -334,7 +334,7 @@ namespace Riptide.UI
         }
 
         /// <summary>Upper arc of a ring only — the bag handle.</summary>
-        private static void HandleArc(float[,] a, float cx, float cy, float r, float w, float minY)
+        internal static void HandleArc(float[,] a, float cx, float cy, float r, float w, float minY)
         {
             for (int y = (int)minY; y <= cy + r + w + 2; y++)
             {
@@ -346,7 +346,7 @@ namespace Riptide.UI
             }
         }
 
-        private static void Seg(float[,] a, float x1, float y1, float x2, float y2, float w)
+        internal static void Seg(float[,] a, float x1, float y1, float x2, float y2, float w)
         {
             var p1 = new Vector2(x1, y1);
             var d = new Vector2(x2 - x1, y2 - y1);
@@ -364,7 +364,7 @@ namespace Riptide.UI
         }
 
         /// <summary>A wavy kelp strand rising from the icon's base.</summary>
-        private static void Strand(float[,] a, float baseX, float height)
+        internal static void Strand(float[,] a, float baseX, float height)
         {
             float prevX = baseX;
             float prevY = 6f;
@@ -381,13 +381,13 @@ namespace Riptide.UI
         }
 
         /// <summary>A coin: solid disc with a slot-line glint cut across it.</summary>
-        private static void Coin(float[,] a, float cx, float cy, float r)
+        internal static void Coin(float[,] a, float cx, float cy, float r)
         {
             Disc(a, cx, cy, r);
             CutLine(a, cy, cx - r * 0.55f, cx + r * 0.55f, 2.4f);
         }
 
-        private static void Wave(float[,] a, float cy, float w)
+        internal static void Wave(float[,] a, float cy, float w)
         {
             float prevX = 16f;
             float prevY = cy;
@@ -401,7 +401,7 @@ namespace Riptide.UI
             }
         }
 
-        private static void RoundedBlock(float[,] a, float x1, float y1, float x2, float y2, float r)
+        internal static void RoundedBlock(float[,] a, float x1, float y1, float x2, float y2, float r)
         {
             for (int y = (int)y1 - 2; y <= y2 + 2; y++)
             {
@@ -415,7 +415,7 @@ namespace Riptide.UI
             }
         }
 
-        private static void Cut(float[,] a, float cx, float cy, float r)
+        internal static void Cut(float[,] a, float cx, float cy, float r)
         {
             for (int y = (int)(cy - r - 2); y <= cy + r + 2; y++)
             {
@@ -430,7 +430,7 @@ namespace Riptide.UI
             }
         }
 
-        private static void CutLine(float[,] a, float cy, float x1, float x2, float halfH)
+        internal static void CutLine(float[,] a, float cy, float x1, float x2, float halfH)
         {
             for (int y = (int)(cy - halfH - 1); y <= cy + halfH + 1; y++)
             {

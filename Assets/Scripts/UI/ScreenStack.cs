@@ -15,6 +15,11 @@ namespace Riptide.UI
         private readonly List<(string id, RectTransform root, CanvasGroup group)> stack
             = new List<(string, RectTransform, CanvasGroup)>();
 
+        // In-flight exit tweens per root: a screen re-shown before its exit
+        // finishes must not be deactivated by that stale exit's completion.
+        private readonly Dictionary<RectTransform, (TweenHandle handle, Vector2 home)> exits
+            = new Dictionary<RectTransform, (TweenHandle, Vector2)>();
+
         public int Depth => stack.Count;
 
         public string? TopId => stack.Count > 0 ? stack[stack.Count - 1].id : null;
@@ -66,8 +71,35 @@ namespace Riptide.UI
             return true;
         }
 
+        /// <summary>
+        /// Removes the top screen instantly with no reveal (tab-to-tab switches: the
+        /// next push floats in over it). False at the root.
+        /// </summary>
+        public bool DropTop()
+        {
+            if (stack.Count <= 1)
+            {
+                return false;
+            }
+
+            (string _, RectTransform root, CanvasGroup group) = stack[stack.Count - 1];
+            stack.RemoveAt(stack.Count - 1);
+            root.gameObject.SetActive(false);
+            group.alpha = 1f;
+            group.interactable = true;
+            return true;
+        }
+
         private void AnimateIn(RectTransform root, CanvasGroup group)
         {
+            if (exits.TryGetValue(root, out (TweenHandle handle, Vector2 home) stale))
+            {
+                // Restore the resting position the cancelled exit was drifting from.
+                stale.handle.Cancel();
+                root.anchoredPosition = stale.home;
+                exits.Remove(root);
+            }
+
             float drift = 24f;
             Vector2 home = root.anchoredPosition;
             root.anchoredPosition = home + new Vector2(0f, -drift);
@@ -89,12 +121,13 @@ namespace Riptide.UI
         {
             Vector2 home = screen.root.anchoredPosition;
             screen.group.interactable = false;
-            Tween.Run(this, "t.screen", "easeInCubic", u =>
+            TweenHandle exit = Tween.Run(this, "t.screen", "easeInCubic", u =>
             {
                 screen.group.alpha = 1f - u;
                 screen.root.anchoredPosition = home + new Vector2(0f, -24f * u);
             }, () =>
             {
+                exits.Remove(screen.root);
                 screen.root.anchoredPosition = home;
                 if (deactivate)
                 {
@@ -106,6 +139,7 @@ namespace Riptide.UI
                     Destroy(screen.root.gameObject);
                 }
             });
+            exits[screen.root] = (exit, home);
         }
 
         /// <summary>The screen ids bottom→top (BackRouter derives "previous" from this).</summary>

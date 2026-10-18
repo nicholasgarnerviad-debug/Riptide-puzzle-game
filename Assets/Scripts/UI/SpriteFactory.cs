@@ -54,7 +54,7 @@ namespace Riptide.UI
             if (verticalFade == null)
             {
                 const int h = 64;
-                var tex = new Texture2D(4, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+                var tex = new Texture2D(4, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
                 for (int y = 0; y < h; y++)
                 {
                     float a = 1f - (float)y / (h - 1);
@@ -123,14 +123,102 @@ namespace Riptide.UI
                 PixelsPerUnit, 0, SpriteMeshType.FullRect, new Vector4(border, border, border, border));
         }
 
+        /// <summary>
+        /// Tidal Pop candy block (DECISIONS 2026-10-18): a darker same-hue rim, a
+        /// top-lit body, a shaded bottom bevel — grayscale so the block hue stays
+        /// tint/theme-sourced. Pair with <see cref="CellGloss"/> for the white shine.
+        /// </summary>
         public static Sprite Cell()
         {
             if (cell == null)
             {
-                cell = BuildRounded(64, 10, glow: true);
+                cell = BuildCandy(96, 16);
             }
 
             return cell;
+        }
+
+        private static Sprite? cellGloss;
+
+        /// <summary>White gloss overlay for a candy block (multiply tinting can't add white).</summary>
+        public static Sprite CellGloss()
+        {
+            if (cellGloss == null)
+            {
+                const int size = 96;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+                {
+                    filterMode = FilterMode.Bilinear,
+                    wrapMode = TextureWrapMode.Clamp,
+                };
+                for (int y = 0; y < size; y++)
+                {
+                    float t = (float)y / (size - 1);
+                    for (int x = 0; x < size; x++)
+                    {
+                        float a = 0f;
+                        // Gloss band across the upper body, fading downward.
+                        if (t > 0.56f && t < 0.86f && x > 11 && x < size - 12)
+                        {
+                            float band = Mathf.InverseLerp(0.56f, 0.86f, t);
+                            float edge = Mathf.Clamp01(Mathf.Min(x - 11, size - 12 - x) / 6f);
+                            a = Mathf.Lerp(0.10f, 0.50f, band) * edge;
+                        }
+
+                        // Specular dot, upper-left.
+                        float dx = x - 24f;
+                        float dy = y - 72f;
+                        float dot = Mathf.Clamp01(6.5f - Mathf.Sqrt(dx * dx + dy * dy));
+                        a = Mathf.Max(a, dot * 0.85f);
+                        tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                    }
+                }
+
+                tex.Apply();
+                cellGloss = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+            }
+
+            return cellGloss;
+        }
+
+        private static Sprite BuildCandy(int size, int corner)
+        {
+            const int rim = 5;
+            const int bevel = 10;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+            for (int y = 0; y < size; y++)
+            {
+                float t = (float)y / (size - 1);
+                for (int x = 0; x < size; x++)
+                {
+                    float alpha = RoundedAlpha(x, y, size, corner);
+                    float lum = Mathf.Lerp(0.80f, 1f, t);
+                    bool inRim = RoundedAlpha(x - rim, y, size, corner) < 1f || RoundedAlpha(x + rim, y, size, corner) < 1f
+                        || RoundedAlpha(x, y - rim, size, corner) < 1f || RoundedAlpha(x, y + rim, size, corner) < 1f;
+                    if (inRim)
+                    {
+                        lum = 0.56f;
+                    }
+                    else if (y < rim + bevel)
+                    {
+                        lum = 0.68f; // bottom bevel — the block's thickness
+                    }
+                    else if (y > size - rim - 7)
+                    {
+                        lum = 1f; // lit top lip
+                    }
+
+                    tex.SetPixel(x, y, new Color(lum, lum, lum, alpha));
+                }
+            }
+
+            tex.Apply();
+            // PPU = size: one sprite = one world unit, same footprint as before.
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         }
 
         public static Sprite Creature()

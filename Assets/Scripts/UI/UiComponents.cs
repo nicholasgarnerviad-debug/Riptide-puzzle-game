@@ -1,5 +1,4 @@
 using System;
-using Riptide.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -8,73 +7,86 @@ using UnityEngine.UI;
 namespace Riptide.UI
 {
     /// <summary>
-    /// Spec §3 component library, 1–13 + 16 — theme-driven builders. Editor
-    /// tooling serializes these into Assets/Prefabs (DECISIONS: generated, never
-    /// hand-authored). Every interactable is padded to the 120 ref-px target.
+    /// Spec §3 component library — Tidal Pop edition (UI spec §13): the same
+    /// builders every screen calls, now producing the chunky sticker kit
+    /// (<see cref="PopKit"/>). Editor tooling serializes these into Assets/Prefabs
+    /// (DECISIONS: generated, never hand-authored). Every interactable is padded
+    /// to the 120 ref-px target.
     /// </summary>
     public static class UiComponents
     {
         // ---------------- §3.1–3.5 buttons ----------------
 
+        /// <summary>§3.1 the one action per screen: green candy button.</summary>
         public static Button ButtonPrimary(RectTransform parent, string name, string label, Action onClick) =>
-            BuildButton(parent, name, label, onClick, "accent.primary", "text.onAccent", glow: true);
+            PopKit.Button(parent, name, label, PopTone.Green, onClick, new Vector2(640f, 150f));
 
+        /// <summary>§3.2: white chunky button, ink label.</summary>
         public static Button ButtonSecondary(RectTransform parent, string name, string label, Action onClick) =>
-            BuildButton(parent, name, label, onClick, "bg.raised", "text.primary", glow: false);
+            PopKit.Button(parent, name, label, PopTone.White, onClick, new Vector2(560f, 130f), "body");
 
+        /// <summary>§3.3 tertiary: sticker text only (white with navy outline — reads on blue and white).</summary>
         public static Button ButtonGhost(RectTransform parent, string name, string label, Action onClick)
         {
-            Button button = BuildButton(parent, name, label + "  ›", onClick, "bg.abyss", "text.secondary", glow: false);
-            button.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // text-only
-            return button;
-        }
-
-        /// <summary>§3.4: always shows what you get — caller passes the reward text.</summary>
-        public static Button ButtonReward(RectTransform parent, string name, string rewardLabel, Action onClick)
-        {
-            Button button = BuildButton(parent, name, rewardLabel, onClick, "bg.raised", "text.primary", glow: false);
-            var badge = new GameObject("adBadge", typeof(RectTransform));
-            badge.transform.SetParent(button.transform, false);
-            var badgeRt = (RectTransform)badge.transform;
-            badgeRt.anchorMin = new Vector2(0f, 0.5f);
-            badgeRt.anchorMax = new Vector2(0f, 0.5f);
-            badgeRt.sizeDelta = new Vector2(56f, 56f);
-            badgeRt.anchoredPosition = new Vector2(52f, 0f);
-            var badgeImage = badge.AddComponent<Image>();
-            badgeImage.sprite = SpriteFactory.Dot();
-            badgeImage.raycastTarget = false;
-            ThemedElement.Bind(badge, "warning");
-            // "AD" in plain text: LiberationSans has no ▶ glyph (renders a box).
-            TextMeshProUGUI ad = UiText.Create(badgeRt, "ad", "AD", "micro", "text.onAccent");
-            Stretch(ad.rectTransform);
-            return button;
-        }
-
-        public static Button IconButton(RectTransform parent, string name, string glyph, Action onClick)
-        {
-            RectTransform root = Rect(parent, name, new Vector2(96f, 96f));
-            PadHitTarget(root);
-            Image image = RoundedImage(root.gameObject, 12f); // r.s
-            ThemedElement.Bind(root.gameObject, "bg.raised");
-            RoundedStrokeImage(root, "stroke.bright", 12f);
+            RectTransform root = Rect(parent, name, new Vector2(420f, 96f));
+            var hit = root.gameObject.AddComponent<Image>();
+            hit.sprite = SpriteFactory.Solid();
+            hit.color = new Color(0f, 0f, 0f, 0f);
             var button = root.gameObject.AddComponent<Button>();
-            button.targetGraphic = image;
+            button.targetGraphic = hit;
+            button.transition = Selectable.Transition.None;
             button.onClick.AddListener(() => onClick());
             root.gameObject.AddComponent<PressEffect>();
-            TextMeshProUGUI glyphText = UiText.Create(root, "glyph", glyph, "title", "text.primary");
-            Stretch(glyphText.rectTransform);
+            // On a light sheet the link is ink; over the ocean it is a sticker.
+            bool onLight = parent.GetComponentInParent<Sheet>(true) != null;
+            TextMeshProUGUI text = onLight
+                ? UiText.Create(root, "label", label, "body", "text.inkSoft")
+                : UiText.CreateOutlined(root, "label", label, "body", "text.primary", "panel.edge");
+            Stretch(text.rectTransform);
+            PadHitTarget(root);
             return button;
         }
 
-        /// <summary>Sliced rounded fill at a radius token (§1.3) — never stretch the corners.</summary>
+        /// <summary>§3.4: always shows what you get — purple reward button with a play badge.</summary>
+        public static Button ButtonReward(RectTransform parent, string name, string rewardLabel, Action onClick)
+        {
+            Button button = PopKit.Button(parent, name, rewardLabel, PopTone.Purple, onClick,
+                new Vector2(620f, 130f), "body");
+            RectTransform face = button.GetComponent<PopSurface>().Face;
+            TextMeshProUGUI label = face.Find("label").GetComponent<TextMeshProUGUI>();
+
+            RectTransform badge = Rect(face, "adBadge", new Vector2(76f, 58f));
+            badge.anchorMin = badge.anchorMax = new Vector2(0f, 0.5f);
+            badge.anchoredPosition = new Vector2(PopKit.Border + 56f, 0f);
+            PopKit.Well(badge, "plate", "panel.light", 16f);
+            Image play = PopKit.Img(badge, "play", PopSprites.Icon("play"), "pop.purple");
+            Place(play.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(34f, 34f));
+            label.rectTransform.offsetMin = new Vector2(PopKit.Border + 104f, 0f);
+            label.rectTransform.offsetMax = new Vector2(-(PopKit.Border + 16f), 0f);
+            return button;
+        }
+
+        /// <summary>§3.5: 96px chunky icon button. Text glyphs map onto the icon set.</summary>
+        public static Button IconButton(RectTransform parent, string name, string glyph, Action onClick)
+        {
+            string iconId = glyph switch
+            {
+                "‹" => "chevronLeft",
+                "›" => "chevronRight",
+                "✕" => "close",
+                "+" => "plus",
+                _ => glyph,
+            };
+            return PopKit.IconButton(parent, name, iconId, PopTone.Blue, onClick, new Vector2(110f, 110f));
+        }
+
+        /// <summary>Rounded fill at a radius token (§1.3) — never stretch the corners.</summary>
         internal static Image RoundedImage(GameObject go, float cornerRefPx)
         {
             var image = go.AddComponent<Image>();
-            image.sprite = SpriteFactory.RoundedFill();
+            image.sprite = PopSprites.Rounded();
             image.type = Image.Type.Sliced;
-            // Sprite border is 14px at 64ppu against the canvas's 100 reference:
-            // multiplier maps it onto the requested ref-px corner radius.
-            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / Mathf.Max(8f, cornerRefPx);
+            image.pixelsPerUnitMultiplier = PopSprites.CornerMultiplier(cornerRefPx);
             return image;
         }
 
@@ -92,85 +104,13 @@ namespace Riptide.UI
             return image;
         }
 
-        private static Button BuildButton(RectTransform parent, string name, string label, Action onClick,
-            string fillToken, string textToken, bool glow)
-        {
-            RectTransform root = Rect(parent, name, new Vector2(560f, 130f));
-            PadHitTarget(root);
-
-            Image image;
-            if (glow)
-            {
-                // Visual pass: primaries are lit capsules — baked luminance
-                // gradient tinted by the accent token, soft drop shadow beneath,
-                // rim glow around (research: dynamic shadows + depth read as
-                // "real mobile game"; hue still single-sourced from the theme).
-                AddSoftShadow(root);
-                image = root.gameObject.AddComponent<Image>();
-                image.sprite = MenuSprites.CapsuleGradient();
-                image.type = Image.Type.Sliced;
-                image.pixelsPerUnitMultiplier = 22f * (100f / 64f) / 28f;
-                ThemedElement.Bind(root.gameObject, fillToken);
-            }
-            else
-            {
-                image = RoundedImage(root.gameObject, 20f); // r.m
-                ThemedElement.Bind(root.gameObject, fillToken);
-            }
-
-            var button = root.gameObject.AddComponent<Button>();
-            button.targetGraphic = image;
-            button.onClick.AddListener(() => onClick());
-            root.gameObject.AddComponent<PressEffect>();
-            if (glow)
-            {
-                AddGlow(root);
-            }
-            else
-            {
-                RoundedStrokeImage(root, "stroke.bright", 20f);
-            }
-
-            TextMeshProUGUI text = UiText.Create(root, "label", label, glow ? "heading" : "body", textToken);
-            Stretch(text.rectTransform);
-            return button;
-        }
-
-        /// <summary>Soft drop shadow under elevated elements (visual pass).</summary>
-        internal static void AddSoftShadow(RectTransform root)
-        {
-            var shadow = new GameObject("shadow", typeof(RectTransform));
-            shadow.transform.SetParent(root, false);
-            shadow.transform.SetAsFirstSibling();
-            var rt = (RectTransform)shadow.transform;
-            Stretch(rt);
-            rt.offsetMin = new Vector2(-6f, -22f);
-            rt.offsetMax = new Vector2(6f, -6f);
-            var image = shadow.AddComponent<Image>();
-            image.sprite = SpriteFactory.RoundedFill();
-            image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 30f;
-            image.raycastTarget = false;
-            ThemedElement.Bind(shadow, "shadow.soft");
-        }
-
         // ---------------- §3.6–3.9 surfaces ----------------
 
-        public static RectTransform Card(RectTransform parent, string name, Vector2 size)
-        {
-            RectTransform root = Rect(parent, name, size);
-            // Visual pass: cards carry a subtle top-lit gradient — flat slabs were
-            // the core of the "doesn't look like a mobile game" verdict.
-            var image = root.gameObject.AddComponent<Image>();
-            image.sprite = MenuSprites.PanelGradient();
-            image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 32f; // r.l
-            ThemedElement.Bind(root.gameObject, "bg.surface");
-            RoundedStrokeImage(root, "stroke.subtle", 32f);
-            return root;
-        }
+        /// <summary>§3.6 card: white chunky panel. Content uses the ink text tokens.</summary>
+        public static RectTransform Card(RectTransform parent, string name, Vector2 size) =>
+            PopKit.Card(parent, name, size);
 
-        /// <summary>§3.7 bottom sheet with drag-handle bar and scrim; SlideIn() to present.</summary>
+        /// <summary>§3.7 bottom sheet: white body with a navy rim and handle; scrim behind.</summary>
         public static Sheet SheetComponent(RectTransform parent, string name, float heightRefPx)
         {
             RectTransform scrim = Rect(parent, name + "_scrim", Vector2.zero);
@@ -179,22 +119,27 @@ namespace Riptide.UI
             scrimImage.sprite = SpriteFactory.Solid();
             ThemedElement.Bind(scrim.gameObject, "scrim");
 
+            // The rounded body runs past the screen's bottom edge so only the
+            // top corners show (r.l, §1.3: sheets).
+            const float tuck = 90f;
             RectTransform body = Rect(scrim, name, new Vector2(0f, heightRefPx));
             body.anchorMin = new Vector2(0f, 0f);
             body.anchorMax = new Vector2(1f, 0f);
             body.pivot = new Vector2(0.5f, 0f);
-            body.offsetMin = new Vector2(0f, 0f);
+            body.offsetMin = new Vector2(0f, -tuck);
             body.offsetMax = new Vector2(0f, heightRefPx);
-            RoundedImage(body.gameObject, 32f); // r.l (§1.3: sheets)
-            ThemedElement.Bind(body.gameObject, "bg.surface");
+            Image rim = RoundedImage(body.gameObject, PopKit.Radius("r.l"));
+            ThemedElement.Bind(body.gameObject, "panel.edge");
+            Image fill = PopKit.Well(body, "fill", "panel.light", PopKit.Radius("r.l") - PopKit.Border);
+            fill.rectTransform.offsetMin = new Vector2(PopKit.Border, PopKit.Border);
+            fill.rectTransform.offsetMax = new Vector2(-PopKit.Border, -PopKit.Border);
+            rim.raycastTarget = true;
 
-            RectTransform handle = Rect(body, "handle", new Vector2(120f, 10f));
+            RectTransform handle = Rect(body, "handle", new Vector2(140f, 14f));
             handle.anchorMin = new Vector2(0.5f, 1f);
             handle.anchorMax = new Vector2(0.5f, 1f);
-            handle.anchoredPosition = new Vector2(0f, -24f);
-            var handleImage = handle.gameObject.AddComponent<Image>();
-            handleImage.sprite = SpriteFactory.Solid();
-            ThemedElement.Bind(handle.gameObject, "stroke.bright");
+            handle.anchoredPosition = new Vector2(0f, -36f);
+            PopKit.Well(handle, "bar", "panel.shade", 7f);
 
             var sheet = scrim.gameObject.AddComponent<Sheet>();
             sheet.Init(body, heightRefPx);
@@ -210,11 +155,11 @@ namespace Riptide.UI
             scrimImage.sprite = SpriteFactory.Solid();
             ThemedElement.Bind(scrim.gameObject, "scrim");
 
-            RectTransform card = Card(scrim, name, new Vector2(820f, 520f));
-            TextMeshProUGUI heading = UiText.Create(card, "title", title, "heading", "text.primary");
-            Place(heading.rectTransform, new Vector2(0.5f, 0.82f), new Vector2(720f, 80f));
-            TextMeshProUGUI copy = UiText.Create(card, "body", bodyCopy, "body", "text.secondary");
-            Place(copy.rectTransform, new Vector2(0.5f, 0.58f), new Vector2(720f, 160f));
+            RectTransform card = Card(scrim, name, new Vector2(860f, 560f));
+            TextMeshProUGUI heading = UiText.Create(card, "title", title, "heading", "text.ink");
+            Place(heading.rectTransform, new Vector2(0.5f, 0.82f), new Vector2(760f, 80f));
+            TextMeshProUGUI copy = UiText.Create(card, "body", bodyCopy, "body", "text.inkSoft");
+            Place(copy.rectTransform, new Vector2(0.5f, 0.58f), new Vector2(760f, 160f));
             return card;
         }
 
@@ -230,7 +175,7 @@ namespace Riptide.UI
 
         public static StarTriplet StarTripletComponent(RectTransform parent)
         {
-            RectTransform root = Rect(parent, "StarTriplet", new Vector2(420f, 130f));
+            RectTransform root = Rect(parent, "StarTriplet", new Vector2(520f, 200f));
             var stars = root.gameObject.AddComponent<StarTriplet>();
             stars.Build(root);
             return stars;
@@ -304,60 +249,35 @@ namespace Riptide.UI
                 img.raycastTarget = true;
             }
         }
-
-        private static void AddGlow(RectTransform root)
-        {
-            // Elevation = glow (§1.3), but as a tight rim light — never a halo
-            // blob (the stretched-dot version was the first thing Nick flagged).
-            var glow = new GameObject("glow", typeof(RectTransform));
-            glow.transform.SetParent(root, false);
-            glow.transform.SetAsFirstSibling();
-            var glowRt = (RectTransform)glow.transform;
-            Stretch(glowRt);
-            glowRt.offsetMin = new Vector2(-7f, -7f);
-            glowRt.offsetMax = new Vector2(7f, 7f);
-            var image = glow.AddComponent<Image>();
-            image.sprite = SpriteFactory.RoundedFill();
-            image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 14f * (100f / 64f) / 26f;
-            image.raycastTarget = false;
-            ThemedElement.Bind(glow, "glow.primary");
-        }
     }
 
-    /// <summary>§3 pressed state: scale 0.97 + brightness −8%, t.instant.</summary>
-    public sealed class PressEffect : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
+    /// <summary>§3 pressed state for non-chunky tappables (cards, ghost links): scale 0.97, t.instant.</summary>
+    public sealed class PressEffect : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
-        private Vector3 baseScale;
-        private Graphic? graphic;
-        private Color baseColor;
+        private Vector3 baseScale = Vector3.one;
+        private bool down;
 
         private void Awake()
         {
             baseScale = transform.localScale;
-            graphic = GetComponent<Graphic>();
-            if (graphic != null)
-            {
-                baseColor = graphic.color;
-            }
         }
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            down = true;
             transform.localScale = baseScale * 0.97f;
-            if (graphic != null)
-            {
-                baseColor = graphic.color;
-                graphic.color = new Color(baseColor.r * 0.92f, baseColor.g * 0.92f, baseColor.b * 0.92f, baseColor.a);
-            }
         }
 
-        public void OnPointerUp(PointerEventData eventData)
+        public void OnPointerUp(PointerEventData eventData) => Release();
+
+        public void OnPointerExit(PointerEventData eventData) => Release();
+
+        private void Release()
         {
-            transform.localScale = baseScale;
-            if (graphic != null)
+            if (down)
             {
-                graphic.color = baseColor;
+                down = false;
+                transform.localScale = baseScale;
             }
         }
     }

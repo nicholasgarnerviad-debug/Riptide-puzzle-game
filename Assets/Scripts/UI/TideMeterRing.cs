@@ -16,7 +16,7 @@ namespace Riptide.UI
     public sealed class TideMeterRing : MonoBehaviour
     {
         private const int Segments = 60;
-        private const float DiameterRefPx = 132f; // §5.2
+        private const float DiameterRefPx = 168f; // §5.2 (132), Tidal Pop: chunkier
 
         private readonly SpriteRenderer[] segments = new SpriteRenderer[Segments];
         private TextMeshPro numeral = null!;
@@ -45,15 +45,10 @@ namespace Riptide.UI
         {
             radius = ThemeRuntime.WorldFromRefPx(DiameterRefPx) * 0.5f;
 
-            // Visual pass: the flagship element gets presence — a soft inner glow
-            // disc behind the ring so it reads as the instrument it is (§5.2).
-            var glowGo = new GameObject("innerGlow");
-            glowGo.transform.SetParent(transform, false);
-            glowGo.transform.localScale = Vector3.one * (radius * 2.6f / 2f);
-            var glow = glowGo.AddComponent<SpriteRenderer>();
-            glow.sprite = MenuSprites.SoftGlow();
-            glow.color = ThemeRuntime.Color("glow.primary");
-            glow.sortingOrder = 33;
+            // Tidal Pop: the flagship sits on a chunky navy dial — outline rim,
+            // navy face — so every fill color reads on the white tray (§5.2).
+            Disc("rim", radius * 1.40f, "panel.edge", 32);
+            Disc("face", radius * 1.27f, "pop.navy", 33);
 
             float segLength = 2f * Mathf.PI * radius / Segments;
             for (int i = 0; i < Segments; i++)
@@ -66,7 +61,7 @@ namespace Riptide.UI
                 go.transform.localPosition =
                     new Vector3(Mathf.Cos(angleRad), Mathf.Sin(angleRad), 0f) * radius;
                 go.transform.localRotation = Quaternion.Euler(0f, 0f, angleDeg + 90f);
-                go.transform.localScale = new Vector3(segLength * 1.25f, radius * 0.22f, 1f);
+                go.transform.localScale = new Vector3(segLength * 1.25f, radius * 0.30f, 1f);
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = SpriteFactory.Solid();
                 sr.color = ThemeRuntime.Color("meter.track");
@@ -75,9 +70,20 @@ namespace Riptide.UI
             }
 
             waveGlyph = UiText.CreateWorld(transform, "wave", "~", "caption", "accent.primary", 36);
-            waveGlyph.transform.localPosition = new Vector3(0f, radius * 0.34f, 0f);
-            numeral = UiText.CreateWorld(transform, "remaining", "", "micro", "text.primary", 36);
-            numeral.transform.localPosition = new Vector3(0f, -radius * 0.18f, 0f);
+            waveGlyph.transform.localPosition = new Vector3(0f, radius * 0.40f, 0f);
+            numeral = UiText.CreateWorld(transform, "remaining", "", "heading", "text.primary", 36);
+            numeral.transform.localPosition = new Vector3(0f, -radius * 0.12f, 0f);
+        }
+
+        private void Disc(string name, float r, string colorToken, int order)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localScale = Vector3.one * (2f * r * PopSprites.PixelsPerUnit / 256f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = PopSprites.Circle();
+            sr.color = ThemeRuntime.Color(colorToken);
+            sr.sortingOrder = order;
         }
 
         /// <summary>State-driven render: fill from tideCounter, color from remaining.</summary>

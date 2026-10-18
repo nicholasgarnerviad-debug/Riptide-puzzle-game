@@ -85,12 +85,13 @@ namespace Riptide.UI
             while (queue.Count > 0)
             {
                 string message = queue.Dequeue();
-                RectTransform card = UiComponents.Card(canvasRoot, "toast", new Vector2(760f, 110f));
+                RectTransform card = UiComponents.Card(canvasRoot, "toast", new Vector2(820f, 140f));
                 card.anchorMin = new Vector2(0.5f, 1f);
                 card.anchorMax = new Vector2(0.5f, 1f);
-                card.anchoredPosition = new Vector2(0f, -140f);
-                TextMeshProUGUI text = UiText.Create(card, "msg", message, "body", "text.primary");
+                card.anchoredPosition = new Vector2(0f, -170f);
+                TextMeshProUGUI text = UiText.Create(card, "msg", message, "body", "text.ink");
                 UiComponents.Stretch(text.rectTransform);
+                text.rectTransform.offsetMin = new Vector2(24f, PopKit.Lip);
 
                 var group = card.gameObject.AddComponent<CanvasGroup>();
                 group.alpha = 0f;
@@ -120,16 +121,27 @@ namespace Riptide.UI
 
         internal void Build(RectTransform root)
         {
-            // Coin glyph as an Image: the font has no ● (boxes read as broken UI).
-            var glyphGo = new GameObject("glyph", typeof(RectTransform));
-            glyphGo.transform.SetParent(root, false);
-            var glyph = glyphGo.AddComponent<Image>();
-            glyph.sprite = SpriteFactory.Dot();
-            glyph.raycastTarget = false;
-            ThemedElement.Bind(glyphGo, "coin");
-            UiComponents.Place((RectTransform)glyphGo.transform, new Vector2(0.14f, 0.5f), new Vector2(44f, 44f));
-            label = UiText.Create(root, "value", "0", "score", "text.primary", TextAlignmentOptions.MidlineLeft);
-            UiComponents.Place(label.rectTransform, new Vector2(0.62f, 0.5f), new Vector2(220f, 64f));
+            // Tidal Pop: a stickered gold coin and an outlined tabular number.
+            Image glyph = PopKit.Icon(root, "glyph", "coin", "coin", 60f, "pop.yellow.edge", 8);
+            var glyphHolder = (RectTransform)glyph.transform.parent;
+            glyphHolder.anchorMin = glyphHolder.anchorMax = new Vector2(0f, 0.5f);
+            glyphHolder.anchoredPosition = new Vector2(34f, 0f);
+            label = UiText.CreateOutlined(root, "value", "0", "heading", "text.primary", "panel.edge", 0.24f,
+                TextAlignmentOptions.MidlineLeft);
+            UiComponents.Stretch(label.rectTransform);
+            label.rectTransform.offsetMin = new Vector2(76f, 0f);
+        }
+
+        /// <summary>A hidden screen kills the fly-in coroutine — never leave coins frozen mid-air.</summary>
+        private void OnDisable()
+        {
+            foreach (Transform child in transform)
+            {
+                if (child.name == "coinFly")
+                {
+                    Destroy(child.gameObject);
+                }
+            }
         }
 
         public void SetInstant(long value)
@@ -148,6 +160,13 @@ namespace Riptide.UI
                 return;
             }
 
+            if (!isActiveAndEnabled)
+            {
+                // Hidden counters land instantly — coroutines can't run on them.
+                label.text = Riptide.Core.ShareCard.GroupThousands(value);
+                return;
+            }
+
             Tween.Run(this, "t.countUp", "easeOutCubic",
                 u => label.text = Riptide.Core.ShareCard.GroupThousands(from + (long)((value - from) * u)));
             if (value > from)
@@ -160,46 +179,76 @@ namespace Riptide.UI
         {
             for (int i = 0; i < count; i++)
             {
-                var go = new GameObject("coinFly", typeof(RectTransform));
-                go.transform.SetParent(transform, false);
-                var rt = (RectTransform)go.transform;
-                rt.sizeDelta = new Vector2(28f, 28f);
-                var image = go.AddComponent<Image>();
-                image.sprite = SpriteFactory.Dot();
-                image.raycastTarget = false;
-                ThemedElement.Bind(go, "coin");
+                Image image = PopKit.Img((RectTransform)transform, "coinFly", PopSprites.Icon("coin"), "coin");
+                GameObject go = image.gameObject;
+                var rt = image.rectTransform;
+                rt.sizeDelta = new Vector2(40f, 40f);
                 Vector2 start = new Vector2(Random.Range(-260f, -120f), Random.Range(-160f, 160f));
                 rt.anchoredPosition = start;
+                // The coin glyph sits 34 ref-px in from the counter's left edge.
+                var target = new Vector2(-((RectTransform)transform).rect.width * 0.5f + 34f, 0f);
                 TweenHandle handle = Tween.RunSeconds(this, 0.6f, ThemeRuntime.Curve("easeOutQuart"),
-                    u => rt.anchoredPosition = Vector2.Lerp(start, Vector2.zero, u),
+                    u => rt.anchoredPosition = Vector2.Lerp(start, target, u),
                     () => Destroy(go));
                 yield return new WaitForSeconds(0.05f);
             }
         }
     }
 
-    /// <summary>§3.11: three stars, fill staggered 120ms, unearned = stroke-only (dim).</summary>
+    /// <summary>
+    /// §3.11: three stars, fill staggered 120ms. Tidal Pop: stickered gold stars in
+    /// a raised arc (middle star bigger and higher); unearned stars are hollow blue
+    /// sockets. Each earned star pops in with an overshoot.
+    /// </summary>
     public sealed class StarTriplet : MonoBehaviour
     {
         private readonly Image[] stars = new Image[3];
+        private readonly Image[] rims = new Image[3];
 
         public int Filled { get; private set; }
 
         internal void Build(RectTransform root)
         {
+            float[] xs = { 0.19f, 0.5f, 0.81f };
+            float[] ys = { 0.40f, 0.56f, 0.40f };
+            float[] sizes = { 136f, 178f, 136f };
+            float[] tilt = { 12f, 0f, -12f };
             for (int i = 0; i < 3; i++)
             {
-                RectTransform star = UiComponents.Rect(root, $"star{i}", new Vector2(110f, 110f));
-                UiComponents.Place(star, new Vector2(0.2f + 0.3f * i, 0.5f), new Vector2(110f, 110f));
-                stars[i] = star.gameObject.AddComponent<Image>();
-                stars[i].sprite = SpriteFactory.Dot();
-                ThemedElement.Bind(star.gameObject, "stroke.bright");
+                stars[i] = PopKit.Icon(root, $"star{i}", "star", "pop.navy", sizes[i], "panel.edge", 10);
+                var holder = (RectTransform)stars[i].transform.parent;
+                UiComponents.Place(holder, new Vector2(xs[i], ys[i]), new Vector2(sizes[i], sizes[i]));
+                holder.localRotation = Quaternion.Euler(0f, 0f, tilt[i]);
+                rims[i] = holder.Find("outline").GetComponent<Image>();
+            }
+        }
+
+        /// <summary>A pop interrupted by the screen hiding must not leave a star shrunk.</summary>
+        private void OnDisable()
+        {
+            foreach (Image star in stars)
+            {
+                if (star != null)
+                {
+                    star.transform.parent.localScale = Vector3.one;
+                }
             }
         }
 
         public void Show(int earned, System.Action<int>? onFill = null)
         {
             Filled = Mathf.Clamp(earned, 0, 3);
+            if (!isActiveAndEnabled)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    stars[i].color = ThemeRuntime.Color(i < Filled ? "pop.yellow" : "pop.navy");
+                    rims[i].color = ThemeRuntime.Color(i < Filled ? "pop.yellow.edge" : "panel.edge");
+                }
+
+                return;
+            }
+
             StartCoroutine(FillSequence(onFill));
         }
 
@@ -217,15 +266,18 @@ namespace Riptide.UI
                         yield return new WaitForSeconds(stagger * index);
                     }
 
-                    stars[index].color = ThemeRuntime.Color("positive");
+                    stars[index].color = ThemeRuntime.Color("pop.yellow");
+                    rims[index].color = ThemeRuntime.Color("pop.yellow.edge");
                     onFill?.Invoke(index);
-                    Vector3 baseScale = stars[index].transform.localScale;
-                    Tween.Run(this, "t.fast", "easeOutQuart",
-                        u => stars[index].transform.localScale = baseScale * (0.6f + 0.4f * u));
+                    Transform holder = stars[index].transform.parent;
+                    Tween.Run(this, "t.base", "easeOutBack",
+                        u => holder.localScale = Vector3.one * Mathf.LerpUnclamped(0.2f, 1f, u),
+                        () => holder.localScale = Vector3.one);
                 }
                 else
                 {
-                    stars[index].color = ThemeRuntime.Color("stroke.bright");
+                    stars[index].color = ThemeRuntime.Color("pop.navy");
+                    rims[index].color = ThemeRuntime.Color("panel.edge");
                 }
             }
         }
@@ -242,11 +294,12 @@ namespace Riptide.UI
         {
             for (int i = 0; i < count; i++)
             {
-                RectTransform pip = UiComponents.Rect(root, $"pip{i}", new Vector2(20f, 20f));
-                UiComponents.Place(pip, new Vector2((i + 0.5f) / count, 0.5f), new Vector2(20f, 20f));
-                var image = pip.gameObject.AddComponent<Image>();
-                image.sprite = SpriteFactory.Dot();
-                ThemedElement.Bind(pip.gameObject, "stroke.subtle");
+                RectTransform pip = UiComponents.Rect(root, $"pip{i}", new Vector2(30f, 30f));
+                UiComponents.Place(pip, new Vector2((i + 0.5f) / count, 0.5f), new Vector2(30f, 30f));
+                Image rim = PopKit.Img(pip, "rim", PopSprites.Circle(), "panel.edge");
+                UiComponents.Stretch(rim.rectTransform);
+                Image image = PopKit.Img(pip, "dot", PopSprites.Circle(), "pop.locked");
+                UiComponents.Place(image.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(20f, 20f));
                 pips.Add(image);
             }
         }
@@ -255,7 +308,7 @@ namespace Riptide.UI
         {
             for (int i = 0; i < pips.Count; i++)
             {
-                pips[i].color = ThemeRuntime.Color(i < filled ? "accent.primary" : "stroke.subtle");
+                pips[i].color = ThemeRuntime.Color(i < filled ? "pop.green.top" : "pop.locked");
             }
         }
     }
@@ -268,15 +321,11 @@ namespace Riptide.UI
 
         internal void Build(RectTransform root)
         {
-            var flameGo = new GameObject("flame", typeof(RectTransform));
-            flameGo.transform.SetParent(root, false);
-            var flame = flameGo.AddComponent<Image>();
-            flame.sprite = SpriteFactory.Dot();
-            flame.raycastTarget = false;
-            ThemedElement.Bind(flameGo, "danger");
-            UiComponents.Place((RectTransform)flameGo.transform, new Vector2(0.22f, 0.5f), new Vector2(34f, 44f));
+            Image flame = PopKit.Icon(root, "flame", "flame", "warning", 60f, "pop.coral.edge", 8);
+            UiComponents.Place((RectTransform)flame.transform.parent, new Vector2(0.22f, 0.5f), new Vector2(60f, 60f));
 
-            label = UiText.Create(root, "label", "0", "heading", "danger", TextAlignmentOptions.MidlineLeft);
+            label = UiText.CreateOutlined(root, "label", "0", "heading", "text.primary", "pop.coral.edge", 0.24f,
+                TextAlignmentOptions.MidlineLeft);
             UiComponents.Place(label.rectTransform, new Vector2(0.62f, 0.5f), new Vector2(120f, 60f));
         }
 
@@ -373,9 +422,17 @@ namespace Riptide.UI
         public void Apply(State state)
         {
             Current = state;
-            portrait.color = state == State.Silhouette
-                ? ThemeRuntime.Color("bg.raised")
-                : Palette.CreatureColor(creatureId);
+            if (state == State.Silhouette)
+            {
+                // Locked species: a theme-bound navy silhouette.
+                ThemedElement.Bind(portrait.gameObject, "pop.navy");
+            }
+            else
+            {
+                // Met species wear their generated-art tint (Palette provenance note).
+                ThemedElement.Bind(portrait.gameObject, "");
+                portrait.color = Palette.CreatureColor(creatureId);
+            }
             if (state == State.RescuedSparkle)
             {
                 Vector3 baseScale = portrait.transform.localScale;

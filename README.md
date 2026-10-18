@@ -7,14 +7,14 @@ drowning timer — clear rows to drain the water, rescue trapped sea creatures, 
 **Status:** all code phases complete (sim, modes, economy, monetization seams, full UI),
 plus the post-gate product passes: universal screen fit (iPhone 16 Pro Max 19.5:9 basis,
 camera + canvas solved for every portrait phone), mid-run save & resume (kill the app,
-resume the exact board), and a full visual overhaul of every screen — glossy beveled
-blocks, god-ray atmosphere, gradient capsule CTAs, icon navigation, real settings
-switches, a merchandised shop, a Tidepool diorama with an actual seabed, and eight
-distinct procedural sea-creature sprites. A full pre-release audit is on record
+resume the exact board), and the **Tidal Pop** UI overhaul (2026-10-18, UI spec §13) — a
+bright sunlit-ocean look with chunky sticker components (outlined, lipped, press-to-sink
+buttons), candy blocks, the Fredoka typeface, a persistent bottom tab bar, a winding
+seabed level map, and eight distinct procedural sea-creature sprites. A full pre-release audit is on record
 (`docs/AUDIT_REPORT.md`, verdict *ship after human gates*): 10,000-game determinism fuzz
 with cross-pipeline pins, balance re-verified against the §4 targets, every deferred
 visual gate consolidated into `docs/HUMAN_GATE_CHECKLIST.md`.
-On-device visual gates, store SDKs, the licensed typeface, and Play signing are pending —
+On-device visual gates, store SDKs, and Play signing are pending —
 see `docs/DECISIONS.md` for every open item and every judgment call made along the way.
 
 ## Game modes
@@ -32,12 +32,12 @@ see `docs/DECISIONS.md` for every open item and every judgment call made along t
   Preview in a portrait **Game** view or the **Device Simulator** (layout adapts to any
   portrait device); note the Simulator only routes input while it is the focused view.
 - **.NET SDK** (net10.0) for the headless test pipeline.
-- No third-party binary assets: every sprite (blocks, the 8 creatures, icons, atmosphere),
-  sound, and the placeholder font are generated in code; the only bundled font is Unity's
-  TMP LiberationSans (SIL Open Font License, ships with its `OFL.txt`). To use the real
-  typeface, drop one `.ttf`/`.otf` into `Assets/Resources/Fonts/` — it reskins the whole
-  game at runtime (see that folder's README and `docs/ASSETS.md`). Use an OFL/CC0 font only;
-  nothing proprietary is committed.
+- The only third-party binary assets are fonts, both SIL Open Font License and shipped
+  with their `OFL.txt`: **Fredoka** (Medium/SemiBold/Bold, `Assets/Resources/Fonts/`) and
+  the TMP LiberationSans fallback. Every sprite (blocks, the 8 creatures, icons, panels,
+  atmosphere) and every sound is generated in code. The fonts load at runtime per weight —
+  swap the family by replacing the files (see that folder's README and `docs/ASSETS.md`).
+  Use an OFL/CC0 font only; nothing proprietary is committed.
 
 ## Architecture
 
@@ -95,7 +95,7 @@ polls `Temp/` so external tooling can drive a machine where auto-refresh is off:
 | `Temp/riptide_stop.txt` | exit Play (rescues a stranded-in-Play editor) | — |
 | `Temp/riptide_genprefabs.txt` | regenerate UI component prefabs + touch audit | `riptide_prefabs_result.txt` |
 | `Temp/riptide_creatures.txt` | export the 8 creature sprites as a contact sheet | `riptide_creatures.png` |
-| `Temp/riptide_capture_pending.txt` (+ play) | bot-drive + screenshot the state-dependent screens | `riptide_screen_*.png` |
+| `Temp/riptide_capture_pending.txt` (+ play) | bot-drive + screenshot every screen (menus, map, live board, results, sheets, tabs) | `riptide_screen_*.png` |
 | `Temp/riptide_build.txt` (`android`) | build the AAB | `riptide_build_result.txt` |
 
 ## Building

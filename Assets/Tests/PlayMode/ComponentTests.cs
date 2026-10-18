@@ -26,10 +26,16 @@ namespace Riptide.PlayMode.Tests
             RectTransform host = Host();
             float min = ThemeRuntime.Theme.MinTouchTargetRefPx;
 
+            // Spec §3.1 as amended by §13 (Tidal Pop): the primary is the green
+            // chunky surface — gradient face and outline both theme-bound.
             Button primary = UiComponents.ButtonPrimary(host, "p", "Play", () => { });
-            Assert.That(primary.GetComponent<ThemedElement>().colorKey, Is.EqualTo("accent.primary"), "spec §3.1");
-            Assert.That(primary.GetComponent<Image>().color,
-                Is.EqualTo(ThemeRuntime.Color("accent.primary")), "theme applied");
+            PopSurface surface = primary.GetComponent<PopSurface>();
+            Assert.That(surface, Is.Not.Null, "primary is a chunky surface");
+            Assert.That(surface.Tone, Is.EqualTo(PopTone.Green), "spec §13: primary = green");
+            Assert.That(surface.Gradient.TopKey, Is.EqualTo("pop.green.top"));
+            Assert.That(surface.Gradient.BottomKey, Is.EqualTo("pop.green"));
+            Assert.That(surface.EdgeImage.GetComponent<ThemedElement>().colorKey, Is.EqualTo("pop.green.edge"));
+            Assert.That(surface.EdgeImage.color, Is.EqualTo(ThemeRuntime.Color("pop.green.edge")), "theme applied");
 
             Button icon = UiComponents.IconButton(host, "i", "✕", () => { });
             float hitW = 0f;

@@ -26,28 +26,42 @@ namespace Riptide.UI
             return view;
         }
 
-        /// <summary>Spec §4.3 item 4: the slots sit on a bg.surface card; the ring wraps its left end.</summary>
+        /// <summary>
+        /// Spec §4.3 item 4, Tidal Pop: the slots sit in wells on a white chunky
+        /// card (navy outline + lip); the ring wraps its left end.
+        /// </summary>
         private void BuildCard()
         {
-            var cardGo = new GameObject("trayCard");
-            cardGo.transform.SetParent(transform, false);
-            cardGo.transform.position = BoardLayout.TrayCenter;
-            var card = cardGo.AddComponent<SpriteRenderer>();
-            card.sprite = SpriteFactory.RoundedFill();
-            card.drawMode = SpriteDrawMode.Sliced;
-            card.size = new Vector2(BoardSpec.Width + 1f, BoardLayout.TrayCardHeight);
-            card.color = ThemeRuntime.Color("bg.surface");
-            card.sortingOrder = 25;
+            float width = BoardSpec.Width + 1f;
+            float height = BoardLayout.TrayCardHeight;
+            Vector3 center = BoardLayout.TrayCenter;
+            const float outline = 0.1f;
+            const float corner = 0.45f;
+            Slab("trayLip", center + new Vector3(0f, -0.16f, 0f), new Vector2(width + 2f * outline, height + 2f * outline),
+                corner + outline, "panel.edge", 22);
+            Slab("trayEdge", center, new Vector2(width + 2f * outline, height + 2f * outline), corner + outline,
+                "panel.edge", 23);
+            Slab("trayShade", center, new Vector2(width, height), corner, "panel.shade", 24);
+            Slab("trayCard", center + new Vector3(0f, 0.06f, 0f), new Vector2(width, height - 0.12f), corner,
+                "panel.light", 25);
+            for (int slot = 0; slot < BoardSpec.TraySize; slot++)
+            {
+                Slab($"slotWell_{slot}", BoardLayout.TraySlotCenter(slot), new Vector2(1.85f, 2.05f), 0.32f,
+                    "panel.well", 26);
+            }
+        }
 
-            var strokeGo = new GameObject("trayCardStroke");
-            strokeGo.transform.SetParent(transform, false);
-            strokeGo.transform.position = BoardLayout.TrayCenter;
-            var stroke = strokeGo.AddComponent<SpriteRenderer>();
-            stroke.sprite = SpriteFactory.RoundedStroke();
-            stroke.drawMode = SpriteDrawMode.Sliced;
-            stroke.size = new Vector2(BoardSpec.Width + 1f, BoardLayout.TrayCardHeight);
-            stroke.color = ThemeRuntime.Color("stroke.subtle");
-            stroke.sortingOrder = 26;
+        private void Slab(string name, Vector3 position, Vector2 size, float corner, string colorToken, int order)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.position = position;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = PopSprites.RoundedWorld(corner);
+            sr.drawMode = SpriteDrawMode.Sliced;
+            sr.size = size;
+            sr.color = ThemeRuntime.Color(colorToken);
+            sr.sortingOrder = order;
         }
 
         public void Render(GameState state)
@@ -82,8 +96,7 @@ namespace Riptide.UI
             foreach (GameObject go in slotSprites[slot])
             {
                 go.SetActive(true);
-                var sr = go.GetComponent<SpriteRenderer>();
-                if (sr != null)
+                foreach (SpriteRenderer sr in go.GetComponentsInChildren<SpriteRenderer>())
                 {
                     Color c = sr.color;
                     c.a = ghosted ? 0.3f : 1f;
@@ -130,6 +143,13 @@ namespace Riptide.UI
                 sr.color = Palette.BlockColor(piece.ColorId);
                 sr.sortingOrder = 30;
                 slotSprites[slot].Add(go);
+
+                var gloss = new GameObject("gloss");
+                gloss.transform.SetParent(go.transform, false);
+                var glossSr = gloss.AddComponent<SpriteRenderer>();
+                glossSr.sprite = SpriteFactory.CellGloss();
+                glossSr.color = ThemeRuntime.Color("panel.light");
+                glossSr.sortingOrder = 31;
             }
         }
     }

@@ -369,6 +369,12 @@ namespace Riptide.UI
                 carrySr.color = Palette.BlockColor(dragPiece.ColorId);
                 carrySr.sortingOrder = 90;
                 carrySprites.Add(carrySr);
+                var gloss = new GameObject("gloss");
+                gloss.transform.SetParent(carry.transform, false);
+                var glossSr = gloss.AddComponent<SpriteRenderer>();
+                glossSr.sprite = SpriteFactory.CellGloss();
+                glossSr.color = ThemeRuntime.Color("panel.light");
+                glossSr.sortingOrder = 91;
 
                 var ghost = new GameObject("ghost");
                 ghost.transform.SetParent(transform, false);

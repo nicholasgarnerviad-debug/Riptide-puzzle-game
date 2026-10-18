@@ -5,12 +5,13 @@ using UnityEngine.UI;
 namespace Riptide.UI
 {
     /// <summary>
-    /// 8-UI menu ambience: the canvas cousin of MarineSnow — faint drifting dots
-    /// behind screen content, parked under reduced motion.
+    /// Menu ambience, Tidal Pop edition: hollow bubbles rising behind screen
+    /// content (the canvas cousin of <see cref="MarineSnow"/>), parked under
+    /// reduced motion.
     /// </summary>
     public sealed class CanvasSnow : MonoBehaviour
     {
-        private const int Count = 14;
+        private const int Count = 16;
         private readonly RectTransform[] flakes = new RectTransform[Count];
         private readonly float[] speeds = new float[Count];
         private readonly float[] phases = new float[Count];
@@ -35,22 +36,20 @@ namespace Riptide.UI
 
         private void Build()
         {
-            // Visual pass: soft bokeh motes instead of hard pixels — suspended
-            // particles in the water column, not screen dirt.
-            Color tint = ThemeRuntime.Color("block.ice");
+            Color tint = ThemeRuntime.Color("bubble");
             for (int i = 0; i < Count; i++)
             {
-                var flakeGo = new GameObject($"flake_{i}", typeof(RectTransform));
+                var flakeGo = new GameObject($"bubble_{i}", typeof(RectTransform));
                 flakeGo.transform.SetParent(area, false);
                 var image = flakeGo.AddComponent<Image>();
-                image.sprite = MenuSprites.SoftGlow();
-                image.color = new Color(tint.r, tint.g, tint.b, Random.Range(0.05f, 0.14f));
+                image.sprite = PopSprites.Bubble();
+                image.color = new Color(tint.r, tint.g, tint.b, tint.a * Random.Range(0.35f, 1f));
                 image.raycastTarget = false;
                 var rt = (RectTransform)flakeGo.transform;
-                rt.sizeDelta = Vector2.one * Random.Range(10f, 34f);
+                rt.sizeDelta = Vector2.one * Random.Range(16f, 52f);
                 rt.anchorMin = rt.anchorMax = new Vector2(Random.value, Random.value);
                 flakes[i] = rt;
-                speeds[i] = Random.Range(12f, 34f);
+                speeds[i] = Random.Range(40f, 110f);
                 phases[i] = Random.Range(0f, Mathf.PI * 2f);
             }
         }
@@ -68,11 +67,11 @@ namespace Riptide.UI
                 }
 
                 Vector2 anchor = flakes[i].anchorMin;
-                anchor.y -= speeds[i] * Time.deltaTime / 2400f;
-                anchor.x += Mathf.Sin(time * 0.5f + phases[i]) * 0.00006f;
-                if (anchor.y < -0.02f)
+                anchor.y += speeds[i] * Time.deltaTime / 2400f;
+                anchor.x += Mathf.Sin(time * 1.2f + phases[i]) * 0.00012f;
+                if (anchor.y > 1.03f)
                 {
-                    anchor = new Vector2(Random.value, 1.02f);
+                    anchor = new Vector2(Random.value, -0.03f);
                 }
 
                 flakes[i].anchorMin = flakes[i].anchorMax = anchor;
@@ -81,13 +80,13 @@ namespace Riptide.UI
     }
 
     /// <summary>
-    /// 8-UI ambience (GDD 7.1): faint marine snow drifting down the board scene.
-    /// Eighteen pooled dots, slow fall with a sine sway, wrapping — and parked
-    /// entirely when reduced motion is on.
+    /// In-game ambience: bubbles rising through the water column BEHIND the board
+    /// (never over cells — clarity first). Pooled, wrapping, parked entirely when
+    /// reduced motion is on.
     /// </summary>
     public sealed class MarineSnow : MonoBehaviour
     {
-        private const int Count = 18;
+        private const int Count = 14;
         private readonly SpriteRenderer[] flakes = new SpriteRenderer[Count];
         private readonly float[] speeds = new float[Count];
         private readonly float[] phases = new float[Count];
@@ -104,28 +103,28 @@ namespace Riptide.UI
 
         private void Build()
         {
-            Color tint = ThemeRuntime.Color("text.muted");
+            Color tint = ThemeRuntime.Color("bubble");
             for (int i = 0; i < Count; i++)
             {
-                var flakeGo = new GameObject($"flake_{i}");
+                var flakeGo = new GameObject($"bubble_{i}");
                 flakeGo.transform.SetParent(transform, false);
                 var sr = flakeGo.AddComponent<SpriteRenderer>();
-                sr.sprite = SpriteFactory.Dot();
-                sr.color = new Color(tint.r, tint.g, tint.b, 0.12f);
-                sr.sortingOrder = 7; // over the frame fill, under gauge and cells
+                sr.sprite = PopSprites.Bubble();
+                sr.color = new Color(tint.r, tint.g, tint.b, tint.a * Random.Range(0.3f, 0.8f));
+                sr.sortingOrder = -12; // behind the board frame, over the backdrop
                 flakeGo.transform.position = RandomStart(anywhere: true);
-                flakeGo.transform.localScale = Vector3.one * Random.Range(0.05f, 0.12f);
+                flakeGo.transform.localScale = Vector3.one * Random.Range(0.18f, 0.5f);
                 flakes[i] = sr;
-                speeds[i] = Random.Range(0.12f, 0.35f);
+                speeds[i] = Random.Range(0.5f, 1.3f);
                 phases[i] = Random.Range(0f, Mathf.PI * 2f);
             }
         }
 
         private static Vector3 RandomStart(bool anywhere)
         {
-            float x = Random.Range(-BoardSpec.Width * 0.5f - 1f, BoardSpec.Width * 0.5f + 1f);
-            float top = BoardLayout.BoardTopY + 1.5f;
-            float y = anywhere ? Random.Range(BoardLayout.BoardBottomY - 1f, top) : top;
+            float x = Random.Range(-BoardSpec.Width * 0.5f - 1.2f, BoardSpec.Width * 0.5f + 1.2f);
+            float bottom = BoardLayout.ContentBottomY - 3f;
+            float y = anywhere ? Random.Range(bottom, BoardLayout.BoardTopY + 2f) : bottom;
             return new Vector3(x, y, 0f);
         }
 
@@ -142,9 +141,9 @@ namespace Riptide.UI
                 }
 
                 Vector3 pos = flakes[i].transform.position;
-                pos.y -= speeds[i] * Time.deltaTime;
-                pos.x += Mathf.Sin(time * 0.6f + phases[i]) * 0.08f * Time.deltaTime;
-                if (pos.y < BoardLayout.BoardBottomY - 1.5f)
+                pos.y += speeds[i] * Time.deltaTime;
+                pos.x += Mathf.Sin(time * 1.1f + phases[i]) * 0.15f * Time.deltaTime;
+                if (pos.y > BoardLayout.BoardTopY + 3f)
                 {
                     pos = RandomStart(anywhere: false);
                 }
