@@ -112,6 +112,22 @@ namespace Riptide.Tools.ContentCheck
 
                 Console.WriteLine($"OK pals.json ({pals.Lines.Count} lines, {pals.Eggs.Count} eggs)");
 
+                // GDD §16.8: originality guardrail over form names and player-facing copy.
+                JsonObject stringsJson = JsonParser.Parse(File.ReadAllText(Path.Combine(root, "strings.json"))).AsObject();
+                List<string> originality = OriginalityGate.Check(pals, stringsJson);
+                if (originality.Count > 0)
+                {
+                    foreach (string problem in originality)
+                    {
+                        Console.Error.WriteLine(problem);
+                    }
+
+                    return 1;
+                }
+
+                Console.WriteLine($"OK originality gate ({pals.Lines.Count * PalsLoader.StageCount} Tideling names, " +
+                    $"{stringsJson.Count} strings)");
+
                 string themePath = Path.Combine(root, "ui_theme.json");
                 UiTheme theme = UiThemeLoader.Load(File.ReadAllText(themePath), "ui_theme.json");
                 int audit = AuditTheme(theme);

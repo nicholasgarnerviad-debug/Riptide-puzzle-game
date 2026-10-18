@@ -6,7 +6,7 @@ using System.Text;
 namespace Riptide.Core
 {
     /// <summary>
-    /// GDD §16 Sea Pals save state (save v5), its own JSON object inside the save so
+    /// GDD §16 Tidelings save state (save v5), its own JSON object inside the save so
     /// SaveData stays readable. Per line: bond, stage (0 = not owned), Sparkle owned /
     /// shown, Dex line reward paid. Eggs: the nest queue, the incubating egg and its
     /// warmth (hundredths of a row). The Pod, egg-source keys, once-a-day guards, the

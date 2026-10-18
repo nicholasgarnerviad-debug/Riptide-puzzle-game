@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace Riptide.Core.Tests
 {
     /// <summary>
-    /// GDD §16 Sea Pals: the loader, owning and bond, evolution, the Pod and perks,
+    /// GDD §16 Tidelings: the loader, owning and bond, growing up, the Pod and perks,
     /// eggs (grant / nest / warmth / deterministic hatch / odds / Deep Luck), egg
     /// sources, Second Wind, the v4 → v5 migration, the v5 save, and the
     /// board-touching perks on LevelConfig.
@@ -25,9 +25,9 @@ namespace Riptide.Core.Tests
     { ""id"": 8, ""key"": ""angler"", ""name"": ""Angler"", ""rarity"": ""epic"", ""boardSpecies"": -1, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""deepLuck"", ""perkValues"": [2, 3, 4], ""perkValues2"": [5, 10, 100] },
     { ""id"": 9, ""key"": ""dragon"", ""name"": ""Dragon"", ""rarity"": ""legendary"", ""boardSpecies"": -1, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""bondBoost"", ""perkValues"": [150, 200, 300] }
   ],
-  ""evolveBond"": { ""common"": [15, 50], ""uncommon"": [12, 40], ""rare"": [10, 30], ""epic"": [8, 24], ""legendary"": [6, 18] },
+  ""growBond"": { ""common"": [15, 50], ""uncommon"": [12, 40], ""rare"": [10, 30], ""epic"": [8, 24], ""legendary"": [6, 18] },
   ""duplicateBond"": { ""common"": 3, ""uncommon"": 4, ""rare"": 6, ""epic"": 8, ""legendary"": 10 },
-  ""rescueBond"": 1, ""runBond"": 1, ""leaderRunBond"": 2, ""shinyOneIn"": 64, ""nestCapacity"": 2,
+  ""rescueBond"": 1, ""runBond"": 1, ""leaderRunBond"": 2, ""sparkleOneIn"": 64, ""nestCapacity"": 2,
   ""podUnlocks"": [0, 4, 8], ""giftCoinsPerStage"": 3, ""giftCap"": 120, ""lineCompleteCoins"": 100,
   ""eggs"": [
     { ""id"": ""tide"", ""rowsToHatch"": 15, ""overflowCoins"": 30, ""weights"": { ""crab"": 50, ""star"": 30, ""horse"": 20 } },
@@ -72,7 +72,7 @@ namespace Riptide.Core.Tests
         [TestCase(@"""key"": ""star""", @"""key"": ""crab""", TestName = "Loader_Rejects_DuplicateKey")]
         [TestCase(@"""boardSpecies"": 7", @"""boardSpecies"": 6", TestName = "Loader_Rejects_ReusedBoardSpecies")]
         [TestCase(@"""horse"": 20", @"""ghost"": 20", TestName = "Loader_Rejects_UnknownWeightKey")]
-        [TestCase(@"""common"": [15, 50]", @"""common"": [50, 15]", TestName = "Loader_Rejects_DescendingEvolveBond")]
+        [TestCase(@"""common"": [15, 50]", @"""common"": [50, 15]", TestName = "Loader_Rejects_DescendingGrowBond")]
         [TestCase(@"""podUnlocks"": [0, 4, 8]", @"""podUnlocks"": [1, 4, 8]", TestName = "Loader_Rejects_ClosedFirstPodSlot")]
         [TestCase(@"""welcome"": ""tide""", @"""welcome"": ""golden""", TestName = "Loader_Rejects_UnknownEggSource")]
         [TestCase(@"""rarity"": ""epic"", ""boardSpecies"": 7", @"""rarity"": ""mega"", ""boardSpecies"": 7", TestName = "Loader_Rejects_UnknownRarity")]
@@ -118,25 +118,25 @@ namespace Riptide.Core.Tests
             Assert.That(pals.BondOf(1), Is.EqualTo(3), "1 × 1.5 rounds up to 2");
         }
 
-        // ------------------------------------------------------------ evolution
+        // --------------------------------------------------------- growing up
 
         [Test]
-        public void Evolution_FollowsRarityThresholds_AndStopsAtIII()
+        public void Growing_FollowsRarityThresholds_AndStopsAtGrand()
         {
             PalsConfig cfg = Cfg();
             PalSave pals = Owning(cfg, 0, 9);
             Assert.That(PalRules.NextThreshold(cfg, 0, 1), Is.EqualTo(15));
             Assert.That(PalRules.NextThreshold(cfg, 9, 2), Is.EqualTo(18));
             pals.Bond[0] = 14;
-            Assert.That(PalRules.TryEvolve(pals, cfg, 0), Is.False);
+            Assert.That(PalRules.TryGrow(pals, cfg, 0), Is.False);
             pals.Bond[0] = 50;
-            Assert.That(PalRules.TryEvolve(pals, cfg, 0), Is.True);
-            Assert.That(PalRules.TryEvolve(pals, cfg, 0), Is.True);
+            Assert.That(PalRules.TryGrow(pals, cfg, 0), Is.True);
+            Assert.That(PalRules.TryGrow(pals, cfg, 0), Is.True);
             Assert.That(pals.StageOf(0), Is.EqualTo(3));
             Assert.That(PalRules.NextThreshold(cfg, 0, 3), Is.Null);
-            Assert.That(PalRules.TryEvolve(pals, cfg, 0), Is.False);
+            Assert.That(PalRules.TryGrow(pals, cfg, 0), Is.False);
             Assert.That(PalRules.LineRewardDue(pals, 0), Is.True);
-            Assert.That(PalRules.TryEvolve(pals, cfg, 5), Is.False, "unowned pals never evolve");
+            Assert.That(PalRules.TryGrow(pals, cfg, 5), Is.False, "unowned Tidelings never grow");
         }
 
         // ---------------------------------------------------------- pod & perks
@@ -167,7 +167,7 @@ namespace Riptide.Core.Tests
             pals.Pod = new[] { 0, 8, 9 };
             PalPerks perks = PalRules.Perks(pals, cfg);
             Assert.That(perks.CoinsPercent, Is.EqualTo(15));
-            Assert.That(perks.ShinyMultiplier, Is.EqualTo(4));
+            Assert.That(perks.SparkleMultiplier, Is.EqualTo(4));
             Assert.That(perks.EggUpgradePercent, Is.EqualTo(100));
             Assert.That(perks.BondPercent, Is.EqualTo(150));
             Assert.That(perks.TideIntervalBonus, Is.EqualTo(0), "the seahorse isn't in the Pod");
@@ -243,20 +243,20 @@ namespace Riptide.Core.Tests
             PalsConfig cfg = Cfg();
             Assert.That(PalRules.Roll(cfg, 0, 42UL, 5, 1), Is.EqualTo(PalRules.Roll(cfg, 0, 42UL, 5, 1)));
             var counts = new int[cfg.Lines.Count];
-            int shinies = 0;
+            int sparkles = 0;
             const int n = 20000;
             for (int i = 1; i <= n; i++)
             {
-                (int line, bool shiny) = PalRules.Roll(cfg, 0, 42UL, i, 1);
+                (int line, bool sparkle) = PalRules.Roll(cfg, 0, 42UL, i, 1);
                 counts[line]++;
-                shinies += shiny ? 1 : 0;
+                sparkles += sparkle ? 1 : 0;
             }
 
             Assert.That(counts[0] / (double)n, Is.EqualTo(0.50).Within(0.02));
             Assert.That(counts[1] / (double)n, Is.EqualTo(0.30).Within(0.02));
             Assert.That(counts[2] / (double)n, Is.EqualTo(0.20).Within(0.02));
             Assert.That(counts[5], Is.Zero, "weight-0 lines never hatch");
-            Assert.That(shinies / (double)n, Is.EqualTo(1 / 64.0).Within(0.005));
+            Assert.That(sparkles / (double)n, Is.EqualTo(1 / 64.0).Within(0.005));
 
             IReadOnlyList<(int line, float percent)> odds = PalRules.Odds(cfg, 0);
             Assert.That(odds.Count, Is.EqualTo(3));
@@ -267,13 +267,13 @@ namespace Riptide.Core.Tests
         public void DeepLuck_MultipliesSparkles_AndLiftsEggs()
         {
             PalsConfig cfg = Cfg();
-            int shinies = 0;
+            int sparkles = 0;
             for (int i = 1; i <= 20000; i++)
             {
-                shinies += PalRules.Roll(cfg, 0, 3UL, i, 4).shiny ? 1 : 0;
+                sparkles += PalRules.Roll(cfg, 0, 3UL, i, 4).sparkle ? 1 : 0;
             }
 
-            Assert.That(shinies / 20000.0, Is.EqualTo(4 / 64.0).Within(0.008));
+            Assert.That(sparkles / 20000.0, Is.EqualTo(4 / 64.0).Within(0.008));
             Assert.That(PalRules.UpgradeRoll(cfg, 0, 3UL, 1, 0), Is.EqualTo(0));
             Assert.That(PalRules.UpgradeRoll(cfg, 0, 3UL, 1, 100), Is.EqualTo(1));
             Assert.That(PalRules.UpgradeRoll(cfg, 1, 3UL, 1, 100), Is.EqualTo(1), "the top tier can't lift");
@@ -315,7 +315,7 @@ namespace Riptide.Core.Tests
             Assert.That(pals.BondOf(0), Is.EqualTo(20));
             Assert.That(pals.Owns(1), Is.False);
             Assert.That(pals.Leader, Is.EqualTo(2));
-            Assert.That(PalRules.CanEvolve(pals, cfg, 0), Is.True, "20 rescues already earn stage II");
+            Assert.That(PalRules.CanGrow(pals, cfg, 0), Is.True, "20 rescues already earn stage II");
         }
 
         [Test]

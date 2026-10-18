@@ -58,7 +58,7 @@ namespace Riptide.Core
         /// <summary>Sanity ceiling for the per-day quest arrays (a tampered save can't balloon them).</summary>
         public const int MaxQuestsPerDay = 8;
 
-        // v5: GDD §16 Sea Pals (its own object — see PalSave).
+        // v5: GDD §16 Tidelings (its own object — see PalSave).
         public PalSave Pals = new PalSave();
 
         /// <summary>Set when a pre-v5 save was read: the Game layer seeds pals from rescues + buddy (§16.7). Not serialized.</summary>

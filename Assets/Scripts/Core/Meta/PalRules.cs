@@ -16,12 +16,12 @@ namespace Riptide.Core
         public int FreeContinuesPerDay { get; }
         public int GiftPercent { get; }
         public int QuestPercent { get; }
-        public int ShinyMultiplier { get; }
+        public int SparkleMultiplier { get; }
         public int EggUpgradePercent { get; }
         public int BondPercent { get; }
 
         public PalPerks(int coins, int starCoins, int tide, int discount, int water, int pops, int incubation,
-            int continues, int gift, int quest, int shinyMultiplier, int eggUpgrade, int bondPercent)
+            int continues, int gift, int quest, int sparkleMultiplier, int eggUpgrade, int bondPercent)
         {
             CoinsPercent = coins;
             StarCoins = starCoins;
@@ -33,7 +33,7 @@ namespace Riptide.Core
             FreeContinuesPerDay = continues;
             GiftPercent = gift;
             QuestPercent = quest;
-            ShinyMultiplier = Math.Max(1, shinyMultiplier);
+            SparkleMultiplier = Math.Max(1, sparkleMultiplier);
             EggUpgradePercent = Math.Min(eggUpgrade, 100);
             BondPercent = Math.Max(100, bondPercent);
         }
@@ -46,22 +46,22 @@ namespace Riptide.Core
     {
         public int Egg { get; }
         public int Line { get; }
-        public bool Shiny { get; }
+        public bool Sparkle { get; }
         public bool IsNew { get; }
         public int BondGained { get; }
 
-        public HatchResult(int egg, int line, bool shiny, bool isNew, int bondGained)
+        public HatchResult(int egg, int line, bool sparkle, bool isNew, int bondGained)
         {
             Egg = egg;
             Line = line;
-            Shiny = shiny;
+            Sparkle = sparkle;
             IsNew = isNew;
             BondGained = bondGained;
         }
     }
 
     /// <summary>
-    /// GDD §16 Sea Pals rules: owning, bond, evolution, the Pod and its perks, the
+    /// GDD §16 Tidelings rules (internally "pals"): owning, bond, growing up, the Pod and its perks, the
     /// nest/incubator, deterministic hatches. Pure — callers persist the PalSave.
     /// </summary>
     public static class PalRules
@@ -131,9 +131,9 @@ namespace Riptide.Core
 
         private static int Boosted(int amount, int percent) => (amount * percent + 99) / 100;
 
-        // ------------------------------------------------------------- evolution
+        // ------------------------------------------------------------ growing up
 
-        /// <summary>Bond needed to reach the next stage, or null at stage III (or unowned).</summary>
+        /// <summary>Bond needed to grow to the next stage, or null at Grand (or unowned).</summary>
         public static int? NextThreshold(PalsConfig cfg, int line, int stage)
         {
             if (stage < 1 || stage >= PalsLoader.StageCount)
@@ -141,18 +141,18 @@ namespace Riptide.Core
                 return null;
             }
 
-            return cfg.EvolveBond[(int)cfg.Lines[line].Rarity][stage - 1];
+            return cfg.GrowBond[(int)cfg.Lines[line].Rarity][stage - 1];
         }
 
-        public static bool CanEvolve(PalSave pals, PalsConfig cfg, int line)
+        public static bool CanGrow(PalSave pals, PalsConfig cfg, int line)
         {
             int? next = NextThreshold(cfg, line, pals.StageOf(line));
             return next.HasValue && pals.BondOf(line) >= next.Value;
         }
 
-        public static bool TryEvolve(PalSave pals, PalsConfig cfg, int line)
+        public static bool TryGrow(PalSave pals, PalsConfig cfg, int line)
         {
-            if (!CanEvolve(pals, cfg, line))
+            if (!CanGrow(pals, cfg, line))
             {
                 return false;
             }
@@ -216,7 +216,7 @@ namespace Riptide.Core
         public static PalPerks Perks(PalSave pals, PalsConfig cfg)
         {
             int coins = 0, starCoins = 0, tide = 0, discount = 0, water = 0, pops = 0, incubation = 0;
-            int continues = 0, gift = 0, quest = 0, shiny = 1, upgrade = 0, bond = 100;
+            int continues = 0, gift = 0, quest = 0, sparkle = 1, upgrade = 0, bond = 100;
             int open = PodSlotsOpen(cfg, pals.OwnedCount());
             for (int slot = 0; slot < Math.Min(open, pals.Pod.Length); slot++)
             {
@@ -242,7 +242,7 @@ namespace Riptide.Core
                     case PalPerk.GiftBoost: gift += value; break;
                     case PalPerk.QuestBoost: quest += value; break;
                     case PalPerk.DeepLuck:
-                        shiny = Math.Max(shiny, value);
+                        sparkle = Math.Max(sparkle, value);
                         upgrade += line.Perk2At(stage);
                         break;
                     case PalPerk.BondBoost: bond = Math.Max(bond, value); break;
@@ -250,7 +250,7 @@ namespace Riptide.Core
             }
 
             return new PalPerks(coins, starCoins, tide, discount, water, pops, incubation, continues, gift, quest,
-                shiny, upgrade, bond);
+                sparkle, upgrade, bond);
         }
 
         /// <summary>§16.4: Σ stages × coins per stage, capped, then Pal Gifts.</summary>
@@ -318,7 +318,7 @@ namespace Riptide.Core
             }
 
             int egg = pals.Incubating;
-            (int line, bool shiny) = Roll(cfg, egg, pals.Seed, pals.EggsHatched + 1, perks.ShinyMultiplier);
+            (int line, bool sparkle) = Roll(cfg, egg, pals.Seed, pals.EggsHatched + 1, perks.SparkleMultiplier);
             pals.EggsHatched++;
             pals.EnsureLines(cfg.Lines.Count);
             bool isNew = pals.Stage[line] == 0;
@@ -337,7 +337,7 @@ namespace Riptide.Core
                 pals.Bond[line] += bond;
             }
 
-            if (shiny && !pals.Sparkle[line])
+            if (sparkle && !pals.Sparkle[line])
             {
                 pals.Sparkle[line] = true;
                 pals.SparkleOn[line] = true;
@@ -351,11 +351,11 @@ namespace Riptide.Core
                 pals.Nest.RemoveAt(0);
             }
 
-            return new HatchResult(egg, line, shiny, isNew, bond);
+            return new HatchResult(egg, line, sparkle, isNew, bond);
         }
 
         /// <summary>The pure hatch roll: a weighted line draw, then the Sparkle draw.</summary>
-        public static (int line, bool shiny) Roll(PalsConfig cfg, int egg, ulong seed, int hatchIndex, int shinyMultiplier)
+        public static (int line, bool sparkle) Roll(PalsConfig cfg, int egg, ulong seed, int hatchIndex, int sparkleMultiplier)
         {
             EggType type = cfg.Eggs[egg];
             DeterministicRng rng = DeterministicRng.FromSeed(seed ^ unchecked((ulong)hatchIndex * Golden));
@@ -373,8 +373,8 @@ namespace Riptide.Core
                 roll -= type.Weights[i];
             }
 
-            RngIntDraw sparkle = pick.Rng.NextInt(cfg.ShinyOneIn);
-            return (line, sparkle.Value < Math.Max(1, shinyMultiplier));
+            RngIntDraw sparkle = pick.Rng.NextInt(cfg.SparkleOneIn);
+            return (line, sparkle.Value < Math.Max(1, sparkleMultiplier));
         }
 
         /// <summary>Deep Luck: a percent chance an earned egg lifts one tier.</summary>

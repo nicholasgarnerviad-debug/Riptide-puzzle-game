@@ -30,7 +30,7 @@ namespace Riptide.Core
         BondBoost,
     }
 
-    /// <summary>One pal line: three named stages, a rarity, a perk (§16.1).</summary>
+    /// <summary>One Tideling line (internally "pal"): three named stages — Baby, Grown, Grand — a rarity, a perk (§16.1).</summary>
     public sealed class PalLine
     {
         public int Id { get; }
@@ -38,7 +38,7 @@ namespace Riptide.Core
         public string Name { get; }
         public PalRarity Rarity { get; }
 
-        /// <summary>The board species this line is (0..7), or −1 for an egg-only Deep Pal.</summary>
+        /// <summary>The board species this line is (0..7), or −1 for an egg-only Deep Tideling.</summary>
         public int BoardSpecies { get; }
 
         public IReadOnlyList<string> Stages { get; }
@@ -114,20 +114,20 @@ namespace Riptide.Core
         public int EndlessMaxPerRun { get; set; }
     }
 
-    /// <summary>All of pals.json (GDD §16).</summary>
+    /// <summary>All of pals.json (GDD §16 Tidelings).</summary>
     public sealed class PalsConfig
     {
         public IReadOnlyList<PalLine> Lines { get; set; } = Array.Empty<PalLine>();
         public IReadOnlyList<EggType> Eggs { get; set; } = Array.Empty<EggType>();
 
-        /// <summary>[rarity][0] bond to reach stage II, [rarity][1] to reach III.</summary>
-        public int[][] EvolveBond { get; set; } = Array.Empty<int[]>();
+        /// <summary>[rarity][0] bond to grow to stage II (Grown), [rarity][1] to III (Grand).</summary>
+        public int[][] GrowBond { get; set; } = Array.Empty<int[]>();
 
         public int[] DuplicateBond { get; set; } = Array.Empty<int>();
         public int RescueBond { get; set; }
         public int RunBond { get; set; }
         public int LeaderRunBond { get; set; }
-        public int ShinyOneIn { get; set; }
+        public int SparkleOneIn { get; set; }
         public int NestCapacity { get; set; }
 
         /// <summary>Pals owned needed to open Pod slot i (slot 0 is always open).</summary>
@@ -223,27 +223,27 @@ namespace Riptide.Core
 
                 cfg.Lines = lines;
                 int rarities = Enum.GetValues(typeof(PalRarity)).Length;
-                JsonObject evolve = root.Require("evolveBond").AsObject();
+                JsonObject grow = root.Require("growBond").AsObject();
                 JsonObject dupes = root.Require("duplicateBond").AsObject();
-                cfg.EvolveBond = new int[rarities][];
+                cfg.GrowBond = new int[rarities][];
                 cfg.DuplicateBond = new int[rarities];
                 for (int r = 0; r < rarities; r++)
                 {
                     string name = ((PalRarity)r).ToString().ToLowerInvariant();
-                    int[] pair = Ints(evolve, name, StageCount - 1);
+                    int[] pair = Ints(grow, name, StageCount - 1);
                     if (pair[0] < 1 || pair[1] <= pair[0])
                     {
-                        throw new JsonParseException($"evolveBond.{name} must be ascending and >= 1", evolve.Line, evolve.Column);
+                        throw new JsonParseException($"growBond.{name} must be ascending and >= 1", grow.Line, grow.Column);
                     }
 
-                    cfg.EvolveBond[r] = pair;
+                    cfg.GrowBond[r] = pair;
                     cfg.DuplicateBond[r] = NonNegative(dupes, name);
                 }
 
                 cfg.RescueBond = NonNegative(root, "rescueBond");
                 cfg.RunBond = NonNegative(root, "runBond");
                 cfg.LeaderRunBond = NonNegative(root, "leaderRunBond");
-                cfg.ShinyOneIn = Positive(root, "shinyOneIn");
+                cfg.SparkleOneIn = Positive(root, "sparkleOneIn");
                 cfg.NestCapacity = Positive(root, "nestCapacity");
                 cfg.PodUnlocks = Ints(root, "podUnlocks", -1);
                 if (cfg.PodUnlocks.Length < 1 || cfg.PodUnlocks[0] != 0)
