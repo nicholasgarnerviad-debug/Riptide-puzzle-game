@@ -98,6 +98,12 @@ polls `Temp/` so external tooling can drive a machine where auto-refresh is off:
 | `Temp/riptide_capture_pending.txt` (+ play) | bot-drive + screenshot the state-dependent screens | `riptide_screen_*.png` |
 | `Temp/riptide_build.txt` (`android`) | build the AAB | `riptide_build_result.txt` |
 
+For live editor control, the project also ships MCP for Unity (`com.coplaydev.unity-mcp`):
+start its server from the **MCP for Unity** window (Window menu) and any Claude Code session run locally in
+this folder picks it up from `.mcp.json` (VS Code reads `.vscode/mcp.json`). Both point at
+`http://127.0.0.1:8080/mcp`, so a cloud session can't reach it — use a local session or
+`claude remote-control`.
+
 ## Building
 
 Android App Bundle (IL2CPP/ARM64) via the trigger above or `Riptide` menu in the editor;
