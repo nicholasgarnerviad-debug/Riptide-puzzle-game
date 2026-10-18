@@ -3,74 +3,80 @@ using System.Collections.Generic;
 
 namespace Riptide.Core
 {
-    /// <summary>The Pod's combined perks at current stages (GDD §16.4). Neutral = no Pod.</summary>
-    public readonly struct PalPerks
+    /// <summary>The Pod's combined abilities at current stages (GDD §16.4). A new instance is neutral.</summary>
+    public sealed class PalPerks
     {
-        public int CoinsPercent { get; }
-        public int StarCoins { get; }
-        public int TideIntervalBonus { get; }
-        public int BoosterDiscountPercent { get; }
-        public int StartWaterReduction { get; }
-        public int FreePops { get; }
-        public int IncubationPercent { get; }
-        public int FreeContinuesPerDay { get; }
-        public int GiftPercent { get; }
-        public int QuestPercent { get; }
-        public int SparkleMultiplier { get; }
-        public int EggUpgradePercent { get; }
-        public int BondPercent { get; }
+        public int CoinsPercent { get; set; }
+        public int StarCoins { get; set; }
+        public int QuestPercent { get; set; }
+        public int BoosterDiscountPercent { get; set; }
+        public int GiftPercent { get; set; }
+        public int RescueCoins { get; set; }
+        public int EggRowPercent { get; set; }
+        public int TideIntervalBonus { get; set; }
+        public int FreePops { get; set; }
+        public int FreeRerolls { get; set; }
+        public int FreeDrains { get; set; }
+        public int FreeContinuesPerDay { get; set; }
+        public int SparkleMultiplier { get; set; } = 1;
+        public int LegendaryPityCut { get; set; }
+        public int StartWaterReduction { get; set; }
+        public int BondPercent { get; set; } = 100;
 
-        public PalPerks(int coins, int starCoins, int tide, int discount, int water, int pops, int incubation,
-            int continues, int gift, int quest, int sparkleMultiplier, int eggUpgrade, int bondPercent)
-        {
-            CoinsPercent = coins;
-            StarCoins = starCoins;
-            TideIntervalBonus = tide;
-            BoosterDiscountPercent = Math.Min(discount, 90);
-            StartWaterReduction = water;
-            FreePops = pops;
-            IncubationPercent = incubation;
-            FreeContinuesPerDay = continues;
-            GiftPercent = gift;
-            QuestPercent = quest;
-            SparkleMultiplier = Math.Max(1, sparkleMultiplier);
-            EggUpgradePercent = Math.Min(eggUpgrade, 100);
-            BondPercent = Math.Max(100, bondPercent);
-        }
-
-        public static PalPerks None => new PalPerks(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 100);
+        public static PalPerks None => new PalPerks();
     }
 
-    /// <summary>One hatch's outcome (§16.3).</summary>
-    public readonly struct HatchResult
+    /// <summary>What one board rescue did for the Tidelings (§16.2).</summary>
+    public readonly struct RescueOutcome
     {
-        public int Egg { get; }
         public int Line { get; }
+        public bool Befriended { get; }
+        public int Eggs { get; }
+
+        public RescueOutcome(int line, bool befriended, int eggs)
+        {
+            Line = line;
+            Befriended = befriended;
+            Eggs = eggs;
+        }
+    }
+
+    /// <summary>One Call's arrival (§16.3).</summary>
+    public readonly struct CallResult
+    {
+        public int Line { get; }
+        public PalRarity Tier { get; }
         public bool Sparkle { get; }
         public bool IsNew { get; }
         public int BondGained { get; }
 
-        public HatchResult(int egg, int line, bool sparkle, bool isNew, int bondGained)
+        /// <summary>A pity counter (or the ten-call guarantee) decided this arrival's tier.</summary>
+        public bool Guaranteed { get; }
+
+        public CallResult(int line, PalRarity tier, bool sparkle, bool isNew, int bondGained, bool guaranteed)
         {
-            Egg = egg;
             Line = line;
+            Tier = tier;
             Sparkle = sparkle;
             IsNew = isNew;
             BondGained = bondGained;
+            Guaranteed = guaranteed;
         }
     }
 
     /// <summary>
-    /// GDD §16 Tidelings rules (internally "pals"): owning, bond, growing up, the Pod and its perks, the
-    /// nest/incubator, deterministic hatches. Pure — callers persist the PalSave.
+    /// GDD §16 Tidelings rules (internally "pals"): befriending Commons by rescue, eggs
+    /// from rows and sources, the Call (tier odds, pity, ten-call guarantee — all
+    /// deterministic from the save's seed), bond and growing up, the Pod and its
+    /// abilities. Pure — callers persist the PalSave.
     /// </summary>
     public static class PalRules
     {
         private const ulong Golden = 0x9E3779B97F4A7C15UL;
 
-        // ---------------------------------------------------------------- owning
+        // ---------------------------------------------------------- befriending
 
-        /// <summary>§16.7: a v4 save's rescues become bond, met species are owned, the buddy leads.</summary>
+        /// <summary>§16.7: every species a v4 save had met is kept (grandfathered); rescues become bond; the buddy leads.</summary>
         public static void MigrateLegacy(PalSave pals, PalsConfig cfg, int[] speciesRescues, int buddySpecies)
         {
             pals.EnsureLines(cfg.Lines.Count);
@@ -91,32 +97,49 @@ namespace Riptide.Core
             }
         }
 
-        /// <summary>A board rescue: owns the line (true when new) and adds rescue bond.</summary>
-        public static bool RecordRescue(PalSave pals, PalsConfig cfg, int species, PalPerks perks)
+        /// <summary>
+        /// A board rescue: a Common is befriended on its first rescue; a rarer creature on
+        /// the board leaves eggs instead (rare Tidelings arrive only by Call). Owned
+        /// Tidelings gain rescue bond either way.
+        /// </summary>
+        public static RescueOutcome RecordRescue(PalSave pals, PalsConfig cfg, int species, PalPerks perks)
         {
             int line = cfg.LineForSpecies(species);
             if (line < 0)
             {
-                return false;
+                return new RescueOutcome(-1, false, 0);
             }
 
             pals.EnsureLines(cfg.Lines.Count);
-            bool isNew = pals.Stage[line] == 0;
-            if (isNew)
+            bool befriended = false;
+            int eggs = 0;
+            if (cfg.Lines[line].Rarity == PalRarity.Common)
             {
-                pals.Stage[line] = 1;
+                if (pals.Stage[line] == 0)
+                {
+                    pals.Stage[line] = 1;
+                    befriended = true;
+                    if (pals.Pod[0] < 0)
+                    {
+                        pals.Pod[0] = line;
+                    }
+                }
+            }
+            else
+            {
+                eggs = cfg.Eggs.RareRescue;
+                pals.Eggs += eggs;
             }
 
-            pals.Bond[line] += Boosted(cfg.RescueBond, perks.BondPercent);
-            if (isNew && pals.Pod[0] < 0)
+            if (pals.Owns(line))
             {
-                pals.Pod[0] = line;
+                pals.Bond[line] += Boosted(cfg.RescueBond, perks.BondPercent);
             }
 
-            return isNew;
+            return new RescueOutcome(line, befriended, eggs);
         }
 
-        /// <summary>A finished run: every Pod pal gains run bond, the leader more.</summary>
+        /// <summary>A finished run: every Pod Tideling gains run bond, the leader more.</summary>
         public static void RecordRun(PalSave pals, PalsConfig cfg, PalPerks perks)
         {
             for (int slot = 0; slot < pals.Pod.Length; slot++)
@@ -161,11 +184,11 @@ namespace Riptide.Core
             return true;
         }
 
-        /// <summary>§16.5: the Dex line reward is due (all three stages reached, not yet paid).</summary>
+        /// <summary>§16.5: the Journal line reward is due (all three stages reached, not yet paid).</summary>
         public static bool LineRewardDue(PalSave pals, int line) =>
             pals.StageOf(line) >= PalsLoader.StageCount && line < pals.LineRewarded.Length && !pals.LineRewarded[line];
 
-        // ------------------------------------------------------------- the Pod
+        // --------------------------------------------------------------- the Pod
 
         public static int PodSlotsOpen(PalsConfig cfg, int ownedCount)
         {
@@ -178,7 +201,7 @@ namespace Riptide.Core
             return Math.Min(open, PalSave.MaxPod);
         }
 
-        /// <summary>Puts an owned pal in an open slot (swapping if it sat elsewhere); −1 empties a slot (never the leader).</summary>
+        /// <summary>Puts an owned Tideling in an open slot (swapping if it sat elsewhere); −1 empties a slot (never the leader).</summary>
         public static bool TrySetPod(PalSave pals, PalsConfig cfg, int slot, int line)
         {
             if (slot < 0 || slot >= PodSlotsOpen(cfg, pals.OwnedCount()))
@@ -212,11 +235,10 @@ namespace Riptide.Core
             return true;
         }
 
-        /// <summary>The Pod's perks at their current stages (§16.4; callers skip the Daily).</summary>
+        /// <summary>The Pod's abilities at their current stages (§16.4; callers skip the Daily).</summary>
         public static PalPerks Perks(PalSave pals, PalsConfig cfg)
         {
-            int coins = 0, starCoins = 0, tide = 0, discount = 0, water = 0, pops = 0, incubation = 0;
-            int continues = 0, gift = 0, quest = 0, sparkle = 1, upgrade = 0, bond = 100;
+            var p = new PalPerks();
             int open = PodSlotsOpen(cfg, pals.OwnedCount());
             for (int slot = 0; slot < Math.Min(open, pals.Pod.Length); slot++)
             {
@@ -228,32 +250,38 @@ namespace Riptide.Core
 
                 PalLine line = cfg.Lines[id];
                 int stage = pals.StageOf(id);
-                int value = line.PerkAt(stage);
+                int v = line.PerkAt(stage);
                 switch (line.Perk)
                 {
-                    case PalPerk.Coins: coins += value; break;
-                    case PalPerk.StarCoins: starCoins += value; break;
-                    case PalPerk.TideInterval: tide += value; break;
-                    case PalPerk.BoosterDiscount: discount += value; break;
-                    case PalPerk.StartWater: water += value; break;
-                    case PalPerk.FreePops: pops += value; break;
-                    case PalPerk.Incubation: incubation += value; break;
-                    case PalPerk.FreeContinues: continues += value; break;
-                    case PalPerk.GiftBoost: gift += value; break;
-                    case PalPerk.QuestBoost: quest += value; break;
+                    case PalPerk.Coins: p.CoinsPercent += v; break;
+                    case PalPerk.StarCoins: p.StarCoins += v; break;
+                    case PalPerk.QuestBoost: p.QuestPercent += v; break;
+                    case PalPerk.BoosterDiscount: p.BoosterDiscountPercent = Math.Min(90, p.BoosterDiscountPercent + v); break;
+                    case PalPerk.GiftBoost: p.GiftPercent += v; break;
+                    case PalPerk.RescueCoins: p.RescueCoins += v; break;
+                    case PalPerk.EggRows: p.EggRowPercent += v; break;
+                    case PalPerk.TideInterval: p.TideIntervalBonus += v; break;
+                    case PalPerk.FreePops: p.FreePops += v; break;
+                    case PalPerk.FreeRerolls: p.FreeRerolls += v; break;
+                    case PalPerk.FreeDrains: p.FreeDrains += v; break;
+                    case PalPerk.FreeContinues: p.FreeContinuesPerDay += v; break;
+                    case PalPerk.StartWater: p.StartWaterReduction += v; break;
+                    case PalPerk.BondBoost: p.BondPercent = Math.Max(p.BondPercent, v); break;
                     case PalPerk.DeepLuck:
-                        sparkle = Math.Max(sparkle, value);
-                        upgrade += line.Perk2At(stage);
+                        p.SparkleMultiplier = Math.Max(p.SparkleMultiplier, v);
+                        p.LegendaryPityCut += line.Perk2At(stage);
                         break;
-                    case PalPerk.BondBoost: bond = Math.Max(bond, value); break;
+                    case PalPerk.WhaleSong:
+                        p.TideIntervalBonus += v;
+                        p.StartWaterReduction += line.Perk2At(stage);
+                        break;
                 }
             }
 
-            return new PalPerks(coins, starCoins, tide, discount, water, pops, incubation, continues, gift, quest,
-                sparkle, upgrade, bond);
+            return p;
         }
 
-        /// <summary>§16.4: Σ stages × coins per stage, capped, then Pal Gifts.</summary>
+        /// <summary>§16.4: Σ stages × coins per stage, capped, then the Turtle's gift boost.</summary>
         public static int GiftCoins(PalSave pals, PalsConfig cfg, PalPerks perks)
         {
             int stages = 0;
@@ -266,140 +294,45 @@ namespace Riptide.Core
             return coins * (100 + perks.GiftPercent) / 100;
         }
 
-        // ---------------------------------------------------------------- eggs
+        // ------------------------------------------------------------------ eggs
 
-        /// <summary>
-        /// Grants an egg (Deep Luck may lift it a tier first). It starts incubating when the
-        /// incubator is empty, else joins the nest; a full nest pays its overflow coins
-        /// instead (the return value; 0 when the egg was kept).
-        /// </summary>
-        public static int GrantEgg(PalSave pals, PalsConfig cfg, int egg, PalPerks perks, out int granted)
+        /// <summary>Cleared rows fill the nest; every rowsPerEgg rows (faster with Jellyfish) lays an egg. Returns eggs laid.</summary>
+        public static int AddRows(PalSave pals, PalsConfig cfg, int rows, PalPerks perks)
         {
-            pals.EggsGranted++;
-            granted = UpgradeRoll(cfg, egg, pals.Seed, pals.EggsGranted, perks.EggUpgradePercent);
-            if (pals.Incubating < 0)
+            if (rows <= 0)
             {
-                pals.Incubating = granted;
-                pals.Warmth = 0;
                 return 0;
             }
 
-            if (pals.Nest.Count >= cfg.NestCapacity)
-            {
-                return cfg.Eggs[granted].OverflowCoins;
-            }
-
-            pals.Nest.Add(granted);
-            return 0;
+            pals.EggRowProgress += rows * (100 + perks.EggRowPercent);
+            int per = cfg.Eggs.RowsPerEgg * 100;
+            int laid = pals.EggRowProgress / per;
+            pals.EggRowProgress -= laid * per;
+            pals.Eggs += laid;
+            return laid;
         }
 
-        /// <summary>Cleared rows warm the incubating egg (Warm Glow speeds it).</summary>
-        public static void Warm(PalSave pals, int rows, PalPerks perks)
+        /// <summary>Progress toward the next row-laid egg, 0..1.</summary>
+        public static float EggRowFraction(PalSave pals, PalsConfig cfg) =>
+            Math.Min(1f, pals.EggRowProgress / (cfg.Eggs.RowsPerEgg * 100f));
+
+        public static void GrantEggs(PalSave pals, int count)
         {
-            if (pals.Incubating >= 0 && rows > 0)
+            if (count > 0)
             {
-                pals.Warmth += rows * (100 + perks.IncubationPercent);
+                pals.Eggs += count;
             }
         }
 
-        /// <summary>Incubation progress 0..1.</summary>
-        public static float WarmthFraction(PalSave pals, PalsConfig cfg) =>
-            pals.Incubating < 0 ? 0f : Math.Min(1f, pals.Warmth / (cfg.Eggs[pals.Incubating].RowsToHatch * 100f));
-
-        public static bool HatchReady(PalSave pals, PalsConfig cfg) =>
-            pals.Incubating >= 0 && pals.Warmth >= cfg.Eggs[pals.Incubating].RowsToHatch * 100;
-
-        /// <summary>Hatches the warm egg: a new pal (stage I) or a duplicate's bond; the next nest egg starts warming.</summary>
-        public static HatchResult? Hatch(PalSave pals, PalsConfig cfg, PalPerks perks)
+        /// <summary>Eggs a Voyage first clear earns (§16.3), 0 when the level isn't a milestone.</summary>
+        public static int VoyageMilestoneEggs(PalsConfig cfg, int zone, int levelIndex)
         {
-            if (!HatchReady(pals, cfg))
+            if (!cfg.Eggs.VoyageMilestones.TryGetValue(levelIndex, out int eggs))
             {
-                return null;
+                return 0;
             }
 
-            int egg = pals.Incubating;
-            (int line, bool sparkle) = Roll(cfg, egg, pals.Seed, pals.EggsHatched + 1, perks.SparkleMultiplier);
-            pals.EggsHatched++;
-            pals.EnsureLines(cfg.Lines.Count);
-            bool isNew = pals.Stage[line] == 0;
-            int bond = 0;
-            if (isNew)
-            {
-                pals.Stage[line] = 1;
-                if (pals.Pod[0] < 0)
-                {
-                    pals.Pod[0] = line;
-                }
-            }
-            else
-            {
-                bond = cfg.DuplicateBond[(int)cfg.Lines[line].Rarity];
-                pals.Bond[line] += bond;
-            }
-
-            if (sparkle && !pals.Sparkle[line])
-            {
-                pals.Sparkle[line] = true;
-                pals.SparkleOn[line] = true;
-            }
-
-            pals.Incubating = -1;
-            pals.Warmth = 0;
-            if (pals.Nest.Count > 0)
-            {
-                pals.Incubating = pals.Nest[0];
-                pals.Nest.RemoveAt(0);
-            }
-
-            return new HatchResult(egg, line, sparkle, isNew, bond);
-        }
-
-        /// <summary>The pure hatch roll: a weighted line draw, then the Sparkle draw.</summary>
-        public static (int line, bool sparkle) Roll(PalsConfig cfg, int egg, ulong seed, int hatchIndex, int sparkleMultiplier)
-        {
-            EggType type = cfg.Eggs[egg];
-            DeterministicRng rng = DeterministicRng.FromSeed(seed ^ unchecked((ulong)hatchIndex * Golden));
-            RngIntDraw pick = rng.NextInt(type.TotalWeight);
-            int roll = pick.Value;
-            int line = 0;
-            for (int i = 0; i < type.Weights.Count; i++)
-            {
-                if (roll < type.Weights[i])
-                {
-                    line = i;
-                    break;
-                }
-
-                roll -= type.Weights[i];
-            }
-
-            RngIntDraw sparkle = pick.Rng.NextInt(cfg.SparkleOneIn);
-            return (line, sparkle.Value < Math.Max(1, sparkleMultiplier));
-        }
-
-        /// <summary>Deep Luck: a percent chance an earned egg lifts one tier.</summary>
-        public static int UpgradeRoll(PalsConfig cfg, int egg, ulong seed, int grantIndex, int percent)
-        {
-            if (percent <= 0 || egg >= cfg.Eggs.Count - 1)
-            {
-                return egg;
-            }
-
-            DeterministicRng rng = DeterministicRng.FromSeed(~seed ^ unchecked((ulong)grantIndex * Golden));
-            return rng.NextInt(100).Value < percent ? egg + 1 : egg;
-        }
-
-        // --------------------------------------------------------- egg sources
-
-        /// <summary>The egg a Voyage first clear earns (§16.3), or −1.</summary>
-        public static int VoyageMilestoneEgg(PalsConfig cfg, int zone, int levelIndex)
-        {
-            if (!cfg.Sources.VoyageMilestones.TryGetValue(levelIndex, out int egg))
-            {
-                return -1;
-            }
-
-            return levelIndex == 20 && zone >= cfg.Sources.DeepZoneFrom ? cfg.Sources.DeepZoneLevel20 : egg;
+            return levelIndex == 20 && zone >= cfg.Eggs.DeepZoneFrom ? cfg.Eggs.DeepZoneLevel20 : eggs;
         }
 
         /// <summary>Claims a one-time egg key; false when already claimed (or the key list is full).</summary>
@@ -414,7 +347,149 @@ namespace Riptide.Core
             return true;
         }
 
-        /// <summary>Second Wind: a free continue is left today.</summary>
+        // ------------------------------------------------------------- the Call
+
+        /// <summary>The Legendary pity after the Anglerfish's cut (never below the Epic pity).</summary>
+        public static int LegendaryPity(PalsConfig cfg, PalPerks perks) =>
+            Math.Max(cfg.Call.EpicPity, cfg.Call.LegendaryPity - perks.LegendaryPityCut);
+
+        /// <summary>Calls left until a guaranteed Legendary (shown on the Call screen).</summary>
+        public static int CallsUntilLegendary(PalSave pals, PalsConfig cfg, PalPerks perks) =>
+            Math.Max(1, LegendaryPity(cfg, perks) - pals.SinceLegendary);
+
+        /// <summary>One Call for <c>call.cost</c> eggs; null when the nest is short.</summary>
+        public static CallResult? Call(PalSave pals, PalsConfig cfg, PalPerks perks)
+        {
+            if (pals.Eggs < cfg.Call.Cost)
+            {
+                return null;
+            }
+
+            pals.Eggs -= cfg.Call.Cost;
+            return RollOne(pals, cfg, perks, PalRarity.Common);
+        }
+
+        /// <summary>Ten Calls for <c>call.tenCost</c> eggs, with at least one Rare-or-better when configured.</summary>
+        public static IReadOnlyList<CallResult>? CallTen(PalSave pals, PalsConfig cfg, PalPerks perks)
+        {
+            if (pals.Eggs < cfg.Call.TenCost)
+            {
+                return null;
+            }
+
+            pals.Eggs -= cfg.Call.TenCost;
+            var results = new List<CallResult>(10);
+            bool rareSeen = false;
+            for (int i = 0; i < 10; i++)
+            {
+                PalRarity floor = i == 9 && cfg.Call.TenCallGuaranteesRare && !rareSeen ? PalRarity.Rare : PalRarity.Common;
+                CallResult result = RollOne(pals, cfg, perks, floor);
+                rareSeen |= result.Tier >= PalRarity.Rare;
+                results.Add(result);
+            }
+
+            return results;
+        }
+
+        private static CallResult RollOne(PalSave pals, PalsConfig cfg, PalPerks perks, PalRarity floor)
+        {
+            pals.Calls++;
+            DeterministicRng rng = DeterministicRng.FromSeed(pals.Seed ^ unchecked((ulong)pals.Calls * Golden));
+            int[] rates = cfg.Call.TierRatesPermille;
+            bool guaranteed;
+            PalRarity tier;
+            if (pals.SinceLegendary + 1 >= LegendaryPity(cfg, perks))
+            {
+                tier = PalRarity.Legendary;
+                guaranteed = true;
+            }
+            else
+            {
+                PalRarity minimum = pals.SinceEpic + 1 >= cfg.Call.EpicPity ? PalRarity.Epic : floor;
+                RngIntDraw draw = rng.NextInt(RateFrom(rates, minimum));
+                rng = draw.Rng;
+                tier = TierFor(draw.Value, rates, minimum);
+                guaranteed = minimum > PalRarity.Common;
+            }
+
+            IReadOnlyList<int> pool = cfg.LinesOfTier(tier);
+            RngIntDraw pick = rng.NextInt(pool.Count);
+            int line = pool[pick.Value];
+            bool sparkle = pick.Rng.NextInt(cfg.SparkleOneIn).Value < Math.Max(1, perks.SparkleMultiplier);
+
+            pals.SinceLegendary = tier == PalRarity.Legendary ? 0 : pals.SinceLegendary + 1;
+            pals.SinceEpic = tier >= PalRarity.Epic ? 0 : pals.SinceEpic + 1;
+
+            pals.EnsureLines(cfg.Lines.Count);
+            bool isNew = pals.Stage[line] == 0;
+            int bond = 0;
+            if (isNew)
+            {
+                pals.Stage[line] = 1;
+                if (pals.Pod[0] < 0)
+                {
+                    pals.Pod[0] = line;
+                }
+            }
+            else
+            {
+                bond = cfg.DuplicateBond[(int)tier];
+                pals.Bond[line] += bond;
+            }
+
+            if (sparkle && !pals.Sparkle[line])
+            {
+                pals.Sparkle[line] = true;
+                pals.SparkleOn[line] = true;
+            }
+
+            return new CallResult(line, tier, sparkle, isNew, bond, guaranteed);
+        }
+
+        /// <summary>Sum of the rates from <paramref name="minimum"/> up (the draw's range).</summary>
+        private static int RateFrom(int[] rates, PalRarity minimum)
+        {
+            int total = 0;
+            for (int t = (int)minimum; t < rates.Length; t++)
+            {
+                total += rates[t];
+            }
+
+            return Math.Max(1, total);
+        }
+
+        /// <summary>The tier a roll in [0, sum of rates ≥ minimum) lands in, counting only tiers ≥ minimum.</summary>
+        public static PalRarity TierFor(int roll, int[] rates, PalRarity minimum)
+        {
+            for (int t = (int)minimum; t < rates.Length; t++)
+            {
+                if (roll < rates[t])
+                {
+                    return (PalRarity)t;
+                }
+
+                roll -= rates[t];
+            }
+
+            return (PalRarity)(rates.Length - 1);
+        }
+
+        /// <summary>The Call's disclosure: each Tideling's percent (its tier's rate split evenly within the tier).</summary>
+        public static IReadOnlyList<(int line, float percent)> Odds(PalsConfig cfg)
+        {
+            var odds = new List<(int, float)>();
+            foreach (PalLine line in cfg.Lines)
+            {
+                int inTier = cfg.LinesOfTier(line.Rarity).Count;
+                odds.Add((line.Id, cfg.Call.TierRatesPermille[(int)line.Rarity] / 10f / inTier));
+            }
+
+            return odds;
+        }
+
+        // --------------------------------------------------------- Second Wind
+
+        /// <summary>A free continue is left today.</summary>
         public static bool FreeContinueLeft(PalSave pals, long today, PalPerks perks) =>
             perks.FreeContinuesPerDay > 0 && (pals.ContinueDay != today || pals.ContinuesUsed < perks.FreeContinuesPerDay);
 
@@ -427,22 +502,6 @@ namespace Riptide.Core
             }
 
             pals.ContinuesUsed++;
-        }
-
-        /// <summary>Hatch odds as percents per line (the egg card's disclosure, §16.3).</summary>
-        public static IReadOnlyList<(int line, float percent)> Odds(PalsConfig cfg, int egg)
-        {
-            EggType type = cfg.Eggs[egg];
-            var odds = new List<(int, float)>();
-            for (int i = 0; i < type.Weights.Count; i++)
-            {
-                if (type.Weights[i] > 0)
-                {
-                    odds.Add((i, 100f * type.Weights[i] / type.TotalWeight));
-                }
-            }
-
-            return odds;
         }
     }
 }

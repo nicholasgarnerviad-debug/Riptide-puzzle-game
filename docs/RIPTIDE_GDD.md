@@ -333,65 +333,65 @@ Deterministic: no RNG draws, so the deal stream is untouched. The sim emits `Pow
 
 Supersedes §15.2 (pet levels and the flat buddy coin bonus). The board's 8 rescue species (§2.5) and their in-run powers (§15.1) are unchanged — Tidelings are a **meta layer**: the sim never sees a growth stage, and the Daily never sees a perk. All numbers are data in `Assets/Resources/Content/pals.json` (code says "pal" internally; players only ever see **Tidelings**).
 
-### 16.1 The Tidelings — 12 lines × 3 stages
-Every creature is a **line** of three named, visually distinct stages: **Baby → Grown → Grand**. The first eight are the board species (met by rescuing *or* hatching); four **Deep Tidelings** never appear on the board and come only from eggs.
+### 16.1 The Tidelings — 16 lines × 3 stages, in four tiers
+Every creature is a **line** of three named, visually distinct stages: **Baby → Grown → Grand**. Tidelings come in four **tiers**, and the tier decides both how often one arrives and how strong its ability is (Nick, 2026-10-18: rare ones come from eggs, not the board, with abilities split by tier):
 
-| # | Line | Rarity | Where | Baby | Grown | Grand | Pod perk (Baby / Grown / Grand) |
-|---|---|---|---|---|---|---|---|
-| 0 | Crab | Common | board + eggs | Pinchy | Clawdette | Lord Pincerton | **Treasure Pincers** — +5 / 10 / 15 % run coins |
-| 1 | Starfish | Common | board + eggs | Twinkle | Stellina | Supernova | **Lucky Star** — +5 / 10 / 15 coins per Voyage star earned |
-| 2 | Seahorse | Common | board + eggs | Ripple | Galloper | Tidecharger | **Steady Current** — the tide's starting interval +1 / +1 / +2 moves |
-| 3 | Octopus | Uncommon | board + eggs | Inky | Octavia | Krakenling | **Ink Discount** — boosters cost −10 / 20 / 30 % |
-| 4 | Turtle | Uncommon | board + eggs | Peanut | Mossback | Elder Atoll | **Safe Harbor** — start water −1 / −1 / −2 (floored) |
-| 5 | Pufferfish | Uncommon | board + eggs | Puff | Spikeball | Blowfin Boss | **Puff Shield** — 1 / 1 / 2 free Bubble Pops per run |
-| 6 | Jellyfish | Rare | board + eggs | Glim | Glowbell | Aurora Bell | **Warm Glow** — eggs warm +25 / 50 / 75 % faster |
-| 7 | Axolotl | Epic | board (rare) + eggs | Lotl | Gillian | Axolord | **Second Wind** — 1 / 1 / 2 free continues per day |
-| 8 | Narwhal | Rare | eggs only | Tusky | Unicorna | Polaris | **Gift Wrap** — daily pet gift +25 / 50 / 100 % |
-| 9 | Manta Ray | Rare | eggs only | Flapjack | Wavecloak | Grand Mantle | **Quest Glider** — quest & badge coins +15 / 30 / 50 % |
-| 10 | Anglerfish | Epic | eggs only | Flicker | Lurelight | Abyss Beacon | **Deep Luck** — Sparkle odds ×2 / 3 / 4 · 5 / 10 / 15 % egg tier-up |
-| 11 | Sea Dragon | Legendary | eggs only | Leafy | Ribbontail | Tidewyrm | **Old Tides** — the Pod earns bond ×1.5 / 2 / 3 |
+- **Common** — the six everyday board creatures. Befriended by rescuing them on the board (or by Call). Abilities: small coin perks.
+- **Rare** — run helpers. **Epic** — strong run perks. **Legendary** — signature, run-shaping abilities. Rare, Epic and Legendary Tidelings arrive **only by Call** (§16.3). The Jellyfish and Axolotl still appear on the board as rescue targets (the sim is unchanged), but rescuing one leaves **eggs**, not the Tideling.
+
+| # | Line | Tier | Baby | Grown | Grand | Ability (Baby / Grown / Grand) |
+|---|---|---|---|---|---|---|
+| 0 | Crab | Common | Pinchy | Clawdette | Lord Pincerton | **Treasure Pincers** — +5 / 8 / 12 % run coins |
+| 1 | Starfish | Common | Twinkle | Stellina | Supernova | **Lucky Star** — +3 / 5 / 8 coins per Voyage star |
+| 2 | Seahorse | Common | Ripple | Galloper | Tidecharger | **Quest Gallop** — quest coins +10 / 15 / 25 % |
+| 3 | Octopus | Common | Inky | Octavia | Krakenling | **Ink Discount** — boosters −5 / 10 / 15 % |
+| 4 | Turtle | Common | Peanut | Mossback | Elder Atoll | **Gift Wrap** — daily pet gift +20 / 35 / 50 % |
+| 5 | Pufferfish | Common | Puff | Spikeball | Blowfin Boss | **Rescue Reward** — +2 / 3 / 5 coins per creature rescued |
+| 6 | Jellyfish | Rare | Glim | Glowbell | Aurora Bell | **Warm Glow** — rows lay eggs +25 / 50 / 75 % faster |
+| 7 | Narwhal | Rare | Tusky | Unicorna | Polaris | **Steady Current** — the tide's starting interval +1 / +1 / +2 |
+| 8 | Manta Ray | Rare | Flapjack | Wavecloak | Grand Mantle | **Puff Shield** — 1 / 1 / 2 free Bubble Pops per run |
+| 9 | Sea Otter | Rare | Pebbles | Driftwood | Kelp Captain | **Fresh Catch** — 1 / 1 / 2 free Rerolls per run |
+| 10 | Axolotl | Epic | Lotl | Gillian | Axolord | **Second Wind** — 1 / 1 / 2 free continues per day |
+| 11 | Anglerfish | Epic | Flicker | Lurelight | Abyss Beacon | **Deep Luck** — Sparkle odds ×2 / 3 / 4 · Legendary pity −5 / 10 / 15 calls |
+| 12 | Nautilus | Epic | Swirl | Spiralla | Chamber Lord | **Safe Harbor** — start water −1 / −1 / −2 (floored) |
+| 13 | Sea Dragon | Legendary | Leafy | Ribbontail | Tidewyrm | **Old Tides** — the Pod earns bond ×1.5 / 2 / 3 |
+| 14 | Giant Squid | Legendary | Inklet | Longarm | The Colossus | **Ink Storm** — 1 / 2 / 3 free Drain Pumps per run |
+| 15 | Great Whale | Legendary | Splash | Songkeeper | Leviathan | **Whale Song** — tide +1 / 2 / 2 *and* start water −1 / −1 / −2 |
 
 ### 16.2 Owning, bond and growing up
-- A Tideling is **owned** from its first rescue (board species) or first hatch. Owned Tidelings start as Babies.
-- **Bond** grows per Tideling: +1 per board rescue of its species (every mode, the Daily included — bond is collection, not competition); +1 per finished run for each Pod member (+2 for the leader); a **duplicate hatch** adds bond by rarity (Common 3 · Uncommon 4 · Rare 6 · Epic 8 · Legendary 10). Old Tides multiplies run and rescue bond (not duplicates).
-- **Growing up** is the player's moment: when bond reaches the next threshold a *Grow up!* button lights up; tapping plays the celebration and the Tideling becomes its next stage. Thresholds (bond to reach Grown / Grand) by rarity: Common 15 / 50 · Uncommon 12 / 40 · Rare 10 / 30 · Epic 8 / 24 · Legendary 6 / 18 — rarer Tidelings meet you less often, so they need less.
-- **Sparkle Tidelings:** each hatch has a 1-in-64 chance (Deep Luck raises it) to be a Sparkle — an alternate palette with a glint. Owning a Sparkle is per line and purely cosmetic (toggle on the Tideling card).
+- A Common is **owned** from its first rescue (or its first Call); everything rarer is owned from its first Call. Owned Tidelings start as Babies.
+- **Bond** grows per Tideling: +1 per board rescue of its species (every mode, the Daily included — bond is collection, not competition); +1 per finished run for each Pod member (+2 for the leader); a **duplicate Call** adds bond by tier (Common 3 · Rare 6 · Epic 10 · Legendary 15). Old Tides multiplies run and rescue bond (not duplicates).
+- **Growing up** is the player's moment: when bond reaches the next threshold a *Grow up!* button lights up; tapping plays the celebration and the Tideling becomes its next stage. Thresholds (bond to reach Grown / Grand) by tier: Common 15 / 50 · Rare 10 / 30 · Epic 8 / 24 · Legendary 6 / 18 — rarer Tidelings arrive less often, so they need less.
+- **Sparkle Tidelings:** each Call has a 1-in-64 chance (Deep Luck raises it) to arrive as a Sparkle — an alternate palette with a glint. Per line, purely cosmetic (toggle on the Tideling card).
 
-### 16.3 Eggs
-Four egg types; **odds are always shown on the egg's card** and eggs are **earned only — never sold for coins or real money** (no loot boxes).
+### 16.3 Eggs and the Call
+**Eggs are a currency you collect, and spending them is how Tidelings arrive.** Eggs are **earned only — never sold for coins or real money** — so a Call is never a paid random draw (no loot boxes); the odds are always shown on the Call screen.
 
-| Egg | Rows to hatch | Drop table (weights, total 100) |
-|---|---|---|
-| Tide | 15 | Crab 25 · Starfish 25 · Seahorse 25 · Octopus 8 · Turtle 8 · Puffer 8 · Jelly 1 |
-| Coral | 30 | Crab 8 · Starfish 8 · Seahorse 8 · Octopus 22 · Turtle 22 · Puffer 22 · Jelly 6 · Narwhal 2 · Manta 2 |
-| Pearl | 50 | Octopus 10 · Turtle 10 · Puffer 10 · Jelly 25 · Narwhal 18 · Manta 18 · Axolotl 5 · Angler 4 |
-| Abyss | 80 | Jelly 15 · Narwhal 20 · Manta 20 · Axolotl 20 · Angler 17 · Sea Dragon 8 |
+- **The Call** (the Conch): **5 eggs** for one Tideling, or **45 eggs for ten** (one free). Tier odds: **Common 70 % · Rare 22 % · Epic 6.5 % · Legendary 1.5 %**, split evenly among the Tidelings of a tier (each odds line is on screen).
+- **Guarantees (pity):** an Epic-or-better arrives by the **20th** Call since the last one; a Legendary by the **60th** since the last (Deep Luck shortens it). A ten-Call always holds at least one Rare-or-better. The screen shows "Legendary guaranteed in N calls".
+- **Collecting eggs:** every **25 rows** you clear in any mode lays an egg (Warm Glow speeds it) · a **Welcome gift of 10 eggs** · Voyage first clears of each zone's level 5 (2), 10 (3), 15 (2), 20 (5; 8 in zones 6–10) · a Daily **win** (2) · claiming all of the day's quests (3) · the week's first **Event Tide** win (10) · every 20 tides in one Endless run (1, max 3 per run) · rescuing a Jellyfish or Axolotl on the board (1).
+- Calls are deterministic from the save's call counter and a per-save seed (Core purity: no `System.Random`), so every Call can be replayed and tested.
 
-- **The warm spot:** one egg sits in the nest's warm spot at a time; every row you clear in any mode warms it (Warm Glow speeds it). When it's warm enough it hatches on your next visit to the Nest (the reveal is a moment, never automatic mid-run).
-- **Nest:** up to 6 waiting eggs; an egg earned into a full nest pays coins instead (Tide 30 · Coral 60 · Pearl 120 · Abyss 240).
-- **Where eggs come from** (each once, by key): a **Welcome egg** (Tide) the first time Tidelings open · Voyage first clears of each zone's level 5 and 15 (Tide), 10 (Coral), 20 (Pearl; Abyss in zones 6–10) · a Daily **win** (Tide) · claiming all of the day's quests (Coral) · the week's first **Event Tide** win (Pearl) · every 20 tides in one Endless run (Tide, max 2 per run). Deep Luck can upgrade any earned egg by one tier.
-- Hatching is deterministic from the save's hatch counter and a per-save seed (Core purity: no `System.Random`), so a hatch can be replayed and tested.
-
-### 16.4 The Pod and perks
+### 16.4 The Pod and abilities
 - The **Pod** is up to three Tidelings you bring along: slot 1 is always open (the **leader** — on Home and perched on the tray), slot 2 opens at 4 Tidelings owned, slot 3 at 8.
-- Every Pod member's perk applies at its current stage. **Perks never apply in the Daily** (comparison purity, like powers). Perks that touch the board (Steady Current, Safe Harbor) apply through the run config; the rest are meta (coins, boosters, continues, eggs, gifts, bond).
+- Every Pod member's ability applies at its current stage; the tier sets the ability's weight class (Common coin perks → Legendary run-shapers). **Abilities never apply in the Daily** (comparison purity, like powers). Abilities that touch the board (Steady Current, Safe Harbor, Whale Song) apply through the run config; the rest are meta (coins, boosters, continues, eggs, gifts, bond).
 - The **daily pet gift** (§15.2) becomes: Σ stages of all owned Tidelings × 3 coins, capped at 120, × Gift Wrap.
 
 ### 16.5 The Tide Journal
-A collection book of all 36 forms (12 lines × 3 stages) plus each line's Sparkle. Unseen forms are silhouettes with "???". Completing a line (all three stages) pays 100 coins once. New badges: *Hatchling* (hatch 1 egg) · *Egg Collector* (hatch 25) · *Full Pod* (own 8 Tidelings) · *Tide Journal* (own all 12) · *Sparkle!* (own a Sparkle); *All Grown Up* (was "Best Friends") means a Grand-stage Tideling.
+A collection book of all 48 forms (16 lines × 3 stages) plus each line's Sparkle, sorted by tier. Unseen forms are silhouettes with "???". Completing a line (all three stages) pays 100 coins once. New badges: *First Call* (1 Call) · *Conch Keeper* (100 Calls) · *Full Pod* (own 8 Tidelings) · *Tide Journal* (own all 16) · *Legend* (own a Legendary) · *Sparkle!* (own a Sparkle); *All Grown Up* means a Grand-stage Tideling.
 
 ### 16.6 Screens (UI direction mocked for sign-off before it is built)
-- The Tidepool tab becomes **Tidelings**: the Pod (leader + two slots with perks), the collection/Journal grid, the **Nest** (warm spot, waiting eggs, odds), and the existing Tidepool diorama.
-- **Hatch** and **Grow up** are full-screen celebrations in Riptide's own sea language (see §16.8): a wave washes over the egg and it pops out of a bubble burst; a growing Tideling is spun up in a whirlpool of bubbles and lands as its new form with confetti — never a white-silhouette flash-morph.
-- Home's stage shows the warming egg; Results show rows added to the egg and any egg earned.
+- The Tidepool tab becomes **Tidelings**: the Pod (leader + two slots with abilities), the collection/Journal grid by tier, the **Conch** (egg count, row progress to the next egg, Call ×1 / ×10, odds, pity counter), and the existing Tidepool diorama.
+- **Call** and **Grow up** are full-screen celebrations in Riptide's own sea language (see §16.8): the conch sounds, a wave rolls in and the Tideling pops out of a bubble burst in its tier's color (a Legendary gets a whirlpool and a rainbow wake); a growing Tideling spins up in a whirlpool of bubbles and lands as its new form with confetti — never a white-silhouette flash-morph.
+- Home's stage shows your egg count; Results show rows toward the next egg and any eggs earned.
 
 ### 16.7 Migration (save v5)
-Bond starts at each species' lifetime rescues; every met species is owned as a Baby (and can grow up on first look if its bond already qualifies — a welcome-back moment); the v4 buddy becomes the Pod leader; one Welcome egg is granted.
+Bond starts at each species' lifetime rescues; every species met under the old rules is owned as a Baby — including a Jellyfish or Axolotl (grandfathered) — and can grow up on first look if its bond already qualifies; the v4 buddy becomes the Pod leader; the Welcome gift grants 10 eggs.
 
 ### 16.8 Originality guardrails (creature-collection genre)
 Genre mechanics — collecting, eggs, growth stages, rarity, alternate colors, a collection book — are common to many games and not ownable; **names, characters, catchphrases, specific presentations and patented mechanics are**. Rules for this game, enforced where a machine can:
 - **Names:** every Tideling name is original and is checked by ContentCheck against a denylist of existing sea-creature character names from well-known creature-collection franchises (edit distance ≤ 2 fails the build). No compound names built the way those franchises build theirs for the same animal.
 - **Words never used in player-facing text** (ContentCheck scans strings.json): another franchise's name, its book ("…dex"), "shiny", "evolve/evolution", "trainer", "gotta catch". We say Tidelings, Tide Journal, Sparkle, grow up, leader.
 - **Mechanics we do not build:** throwing or aiming an item to capture creatures, capture-rate rolls, summoning creatures from a thrown item, riding creatures, creature battles, elemental type charts, creatures stored in ball-like items. (Several of these are the subject of active patent litigation in the genre.) Tidelings are befriended by rescue or hatched — that's all.
-- **Presentation:** chibi real-world sea animals in Riptide's sticker style; eggs are sea objects (wave-banded, coral-spotted, pearl-sheened, abyss-glowing), not white eggs with colored spots; celebrations use waves, bubbles and confetti, never the white-silhouette morph.
+- **Presentation:** chibi real-world sea animals in Riptide's sticker style; eggs are sea objects (wave-banded, pearl-sheened), not white eggs with colored spots; the Call is a conch, never a ball or capsule; celebrations use waves, bubbles and confetti, never the white-silhouette morph.
 - Before store launch, the Tidelings name and the 36 form names get a formal trademark search (the in-repo checks are a guardrail, not legal clearance).

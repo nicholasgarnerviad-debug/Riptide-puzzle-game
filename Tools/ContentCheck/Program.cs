@@ -81,36 +81,24 @@ namespace Riptide.Tools.ContentCheck
                 Console.WriteLine($"OK expansion.json ({expansion.QuestPool.Count} quests, {expansion.Badges.Count} badges, " +
                     $"{expansion.Events.Count} events)");
 
-                // GDD §16 Sea Pals: every board species has a line, every egg's odds are
-                // disclosed as whole-percent-summing tables, every line can hatch somewhere.
+                // GDD §16 Tidelings: every board species has a line (the loader), tier odds sum to
+                // 1000‰ (the loader) and every Tideling is obtainable — a Common by rescue, the
+                // rest by Call, which needs its tier's odds above zero.
                 PalsConfig pals = PalsLoader.Load(File.ReadAllText(Path.Combine(root, "pals.json")), "pals.json",
                     roster.Count);
-                var hatchable = new bool[pals.Lines.Count];
-                foreach (EggType egg in pals.Eggs)
+                foreach (PalLine line in pals.Lines)
                 {
-                    if (egg.TotalWeight != 100)
+                    bool byRescue = line.Rarity == PalRarity.Common && line.BoardSpecies >= 0;
+                    if (!byRescue && pals.Call.TierRatesPermille[(int)line.Rarity] == 0)
                     {
-                        Console.Error.WriteLine($"pals.json: egg '{egg.Id}' weights sum to {egg.TotalWeight}, not 100 " +
-                            "(odds are shown to players as percents).");
-                        return 1;
-                    }
-
-                    for (int i = 0; i < egg.Weights.Count; i++)
-                    {
-                        hatchable[i] |= egg.Weights[i] > 0;
-                    }
-                }
-
-                for (int i = 0; i < pals.Lines.Count; i++)
-                {
-                    if (!hatchable[i])
-                    {
-                        Console.Error.WriteLine($"pals.json: line '{pals.Lines[i].Key}' is in no egg — Deep Pals would be unobtainable.");
+                        Console.Error.WriteLine($"pals.json: '{line.Key}' is unobtainable (its tier has 0 Call odds).");
                         return 1;
                     }
                 }
 
-                Console.WriteLine($"OK pals.json ({pals.Lines.Count} lines, {pals.Eggs.Count} eggs)");
+                Console.WriteLine($"OK pals.json ({pals.Lines.Count} Tidelings: " +
+                    $"{pals.LinesOfTier(PalRarity.Common).Count} common, {pals.LinesOfTier(PalRarity.Rare).Count} rare, " +
+                    $"{pals.LinesOfTier(PalRarity.Epic).Count} epic, {pals.LinesOfTier(PalRarity.Legendary).Count} legendary)");
 
                 // GDD §16.8: originality guardrail over form names and player-facing copy.
                 JsonObject stringsJson = JsonParser.Parse(File.ReadAllText(Path.Combine(root, "strings.json"))).AsObject();

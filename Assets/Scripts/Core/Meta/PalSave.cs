@@ -8,14 +8,14 @@ namespace Riptide.Core
     /// <summary>
     /// GDD §16 Tidelings save state (save v5), its own JSON object inside the save so
     /// SaveData stays readable. Per line: bond, stage (0 = not owned), Sparkle owned /
-    /// shown, Dex line reward paid. Eggs: the nest queue, the incubating egg and its
-    /// warmth (hundredths of a row). The Pod, egg-source keys, once-a-day guards, the
-    /// per-save hatch seed and counters.
+    /// shown, Journal line reward paid. The egg wallet and the row progress toward the
+    /// next egg; the Call counter (the RNG index) and both pity counters; the Pod,
+    /// egg-source keys, once-a-day guards and the per-save seed. Newer fields parse as
+    /// optional so an older v5 file still loads.
     /// </summary>
     public sealed class PalSave
     {
         public const int MaxLines = 32;
-        public const int MaxNest = 16;
         public const int MaxPod = 3;
         public const int MaxEggKeys = 256;
 
@@ -24,9 +24,14 @@ namespace Riptide.Core
         public bool[] Sparkle = new bool[0];
         public bool[] SparkleOn = new bool[0];
         public bool[] LineRewarded = new bool[0];
-        public List<int> Nest = new List<int>();
-        public int Incubating = -1;
-        public int Warmth;
+        public int Eggs;
+
+        /// <summary>Rows cleared toward the next egg, in hundredths (Jellyfish speeds it).</summary>
+        public int EggRowProgress;
+
+        public int Calls;
+        public int SinceEpic;
+        public int SinceLegendary;
         public int[] Pod = { -1, -1, -1 };
         public List<string> EggKeys = new List<string>();
         public long DailyEggDay = -1;
@@ -34,8 +39,6 @@ namespace Riptide.Core
         public int EventEggWeek = -1;
         public long ContinueDay = -1;
         public int ContinuesUsed;
-        public int EggsHatched;
-        public int EggsGranted;
         public ulong Seed;
         public bool WelcomeGiven;
 
@@ -82,7 +85,6 @@ namespace Riptide.Core
             WriteBools(sb, "sparkle", Sparkle);
             WriteBools(sb, "sparkleOn", SparkleOn);
             WriteBools(sb, "lineRewarded", LineRewarded);
-            WriteInts(sb, "nest", Nest.ToArray());
             WriteInts(sb, "pod", Pod);
             sb.Append("\"eggKeys\": [");
             for (int i = 0; i < EggKeys.Count; i++)
@@ -91,9 +93,9 @@ namespace Riptide.Core
             }
 
             sb.Append("], ");
-            sb.Append($"\"incubating\": {Incubating}, \"warmth\": {Warmth}, ");
+            sb.Append($"\"eggs\": {Eggs}, \"eggRows\": {EggRowProgress}, ");
+            sb.Append($"\"calls\": [{Calls}, {SinceEpic}, {SinceLegendary}], ");
             sb.Append($"\"days\": [{DailyEggDay}, {QuestEggDay}, {EventEggWeek}, {ContinueDay}, {ContinuesUsed}], ");
-            sb.Append($"\"counts\": [{EggsHatched}, {EggsGranted}], ");
             sb.Append($"\"seed\": \"{Seed.ToString(CultureInfo.InvariantCulture)}\", ");
             sb.Append($"\"welcome\": {(WelcomeGiven ? "true" : "false")}");
             sb.Append('}');
@@ -110,14 +112,14 @@ namespace Riptide.Core
                 Sparkle = BoolArray(o, "sparkle"),
                 SparkleOn = BoolArray(o, "sparkleOn"),
                 LineRewarded = BoolArray(o, "lineRewarded"),
-                Incubating = o.Require("incubating").AsInt(),
-                Warmth = Math.Max(0, o.Require("warmth").AsInt()),
                 WelcomeGiven = o.Require("welcome").AsBool(),
+                Eggs = o.Optional("eggs") is JsonValue eggs ? Math.Max(0, eggs.AsInt()) : 0,
+                EggRowProgress = o.Optional("eggRows") is JsonValue rows ? Math.Max(0, rows.AsInt()) : 0,
             };
 
             int lines = pals.Stage.Length;
             if (pals.Bond.Length != lines || pals.Sparkle.Length != lines || pals.SparkleOn.Length != lines
-                || pals.LineRewarded.Length != lines || pals.Incubating < -1)
+                || pals.LineRewarded.Length != lines)
             {
                 throw new ArgumentException("pal arrays disagree");
             }
@@ -130,7 +132,6 @@ namespace Riptide.Core
                 }
             }
 
-            pals.Nest.AddRange(IntArray(o, "nest", MaxNest));
             int[] pod = IntArray(o, "pod", MaxPod, allowNegativeOne: true);
             if (pod.Length != MaxPod)
             {
@@ -149,11 +150,23 @@ namespace Riptide.Core
                 pals.EggKeys.Add(key.AsString());
             }
 
-            JsonArray days = o.Require("days").AsArray();
-            JsonArray counts = o.Require("counts").AsArray();
-            if (days.Count != 5 || counts.Count != 2)
+            if (o.Optional("calls") is JsonValue callsNode)
             {
-                throw new ArgumentException("pal day/count arrays malformed");
+                JsonArray calls = callsNode.AsArray();
+                if (calls.Count != 3)
+                {
+                    throw new ArgumentException("pal call counters malformed");
+                }
+
+                pals.Calls = Math.Max(0, calls.Items[0].AsInt());
+                pals.SinceEpic = Math.Max(0, calls.Items[1].AsInt());
+                pals.SinceLegendary = Math.Max(0, calls.Items[2].AsInt());
+            }
+
+            JsonArray days = o.Require("days").AsArray();
+            if (days.Count != 5)
+            {
+                throw new ArgumentException("pal day array malformed");
             }
 
             pals.DailyEggDay = days.Items[0].AsLong();
@@ -161,8 +174,6 @@ namespace Riptide.Core
             pals.EventEggWeek = days.Items[2].AsInt();
             pals.ContinueDay = days.Items[3].AsLong();
             pals.ContinuesUsed = Math.Max(0, days.Items[4].AsInt());
-            pals.EggsHatched = Math.Max(0, counts.Items[0].AsInt());
-            pals.EggsGranted = Math.Max(0, counts.Items[1].AsInt());
             if (!ulong.TryParse(o.Require("seed").AsString(), NumberStyles.None, CultureInfo.InvariantCulture,
                     out pals.Seed))
             {
@@ -235,7 +246,7 @@ namespace Riptide.Core
         private static T[] Grow<T>(T[] source, int count)
         {
             var grown = new T[count];
-            System.Array.Copy(source, grown, source.Length);
+            Array.Copy(source, grown, source.Length);
             return grown;
         }
     }

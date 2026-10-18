@@ -88,7 +88,7 @@ Non-negotiables the codebase is built around:
 ## Testing
 
 ```bash
-./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (263) → content validation
+./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (267) → content validation
 ```
 
 The content gate also runs the accessibility audits: WCAG text contrast, block-palette
@@ -99,7 +99,7 @@ every booster, drown-continues — and replays each twice with per-move state-ha
 (0 divergences); 32 are pinned to `CrossPipelineFuzzPins.cs` and replayed under both the
 dotnet shim and Unity's Mono, which must agree hash-for-hash.
 
-Unity-side suites (EditMode mirrors the 263; PlayMode adds 66 integration tests: board
+Unity-side suites (EditMode mirrors the 267; PlayMode adds 66 integration tests: board
 acceptance, flow smoke, monetization threading, monkey runs, event-queue ordering,
 navigation matrix, strings coverage, real-click regression, perf budgets, kill-and-resume
 round trips, safe-area math, clock-rollback, creature-sprite distinctness, Pets & Tides
