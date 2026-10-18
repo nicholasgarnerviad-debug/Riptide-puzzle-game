@@ -92,6 +92,10 @@ namespace Riptide.UI
             "event.octopus_ink.desc", "event.turtle_trek.desc", "event.jelly_glow.desc",
             "results.eventWin", "results.eventReward", "results.buddyBonus", "results.powers",
             "tidepool.eventReward",
+
+            // Home "Buddy Stage" (2026-10-18).
+            "home.petGift", "buddy.next", "buddy.gift", "buddy.daily", "buddy.cheer1", "buddy.cheer2",
+            "buddy.cheer3", "buddy.power", "buddy.pick",
         };
     }
 }

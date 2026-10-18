@@ -174,6 +174,39 @@ namespace Riptide.PlayMode.Tests
         }
 
         [UnityTest]
+        public IEnumerator Home_BuddyStage_ShowsYourBuddy_TalksOnTap_AndPaysTheGift()
+        {
+            GameFlow flow = null!;
+            ScreenManager screens = null!;
+            yield return Boot((f, s) => { flow = f; screens = s; });
+
+            var home = Object.FindFirstObjectByType<HomeScreen>();
+            Assert.That(home, Is.Not.Null, "home built at boot");
+            Assert.That(home!.Stage.Species, Is.EqualTo(0), "the crab stands in until a buddy is picked");
+
+            flow.Meta.Save.RecordRescue(4, flow.Roster.Count);
+            Assert.That(flow.SetBuddy(4), Is.True);
+            flow.GoTo(FlowScreen.Tidepool);
+            yield return null;
+            flow.GoTo(FlowScreen.Home);
+            yield return null;
+            Assert.That(home.Stage.Species, Is.EqualTo(4), "the stage shows your buddy");
+            Assert.That(home.Stage.Line, Is.EqualTo(flow.Strings.Get("buddy.gift")), "a ready gift is the headline");
+
+            string before = home.Stage.Line;
+            home.Stage.transform.Find("buddy").GetComponent<Button>().onClick.Invoke();
+            Assert.That(home.Stage.Line, Is.Not.EqualTo(before), "tapping the buddy makes it talk");
+
+            long coins = flow.Meta.Coins;
+            int gift = flow.PetGiftCoins;
+            home.Stage.transform.Find("petGift").GetComponent<Button>().onClick.Invoke();
+            Assert.That(flow.Meta.Coins, Is.EqualTo(coins + gift), "the stage's gift box pays the pet gift");
+            Assert.That(flow.PetGiftAvailable, Is.False);
+
+            Teardown(screens);
+        }
+
+        [UnityTest]
         public IEnumerator Buddy_RidesAlongInRuns()
         {
             GameFlow flow = null!;

@@ -284,5 +284,15 @@
   "results.eventReward": "Unlocked: {0}!",
   "results.buddyBonus": "{0} buddy bonus +{1}",
   "results.powers": "{0} powers fired",
-  "tidepool.eventReward": "Event prize"
+  "tidepool.eventReward": "Event prize",
+
+  "home.petGift": "Pet gift",
+  "buddy.next": "Level {0} next! Let's rescue some friends!",
+  "buddy.gift": "Psst… I found you a gift! Tap the box!",
+  "buddy.daily": "Today's Daily is ready. Want to try it?",
+  "buddy.cheer1": "You're doing great!",
+  "buddy.cheer2": "Clear rows to drain the tide!",
+  "buddy.cheer3": "Rescue friends to grow our tidepool!",
+  "buddy.power": "My power: {0}!",
+  "buddy.pick": "Pick a buddy ›"
 }
