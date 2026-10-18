@@ -341,7 +341,7 @@ namespace Riptide.UI
         private void RefreshBuddy()
         {
             stage.Refresh();
-            int buddy = flow.Meta.Save.BuddySpecies;
+            int buddy = flow.LeaderSpecies;
             bool chosen = buddy >= 0 && buddy < flow.Roster.Count;
             petBar.gameObject.SetActive(chosen);
             if (!chosen)
@@ -350,11 +350,9 @@ namespace Riptide.UI
                 return;
             }
 
-            int level = flow.PetLevel(buddy);
-            petName.text = $"{flow.Roster.Species[buddy].Name} · {string.Format(flow.Strings.Get("pet.level"), level)}";
-            int rescues = flow.Meta.Save.RescuesFor(buddy);
-            int? next = flow.PetNextThreshold(buddy);
-            petBar.Set(next.HasValue ? rescues : 1, next ?? 1, "");
+            TidelingView leader = flow.Tideling(flow.Pals.LineForSpecies(buddy));
+            petName.text = $"{leader.FormName} · {string.Format(flow.Strings.Get("pet.level"), leader.Stage)}";
+            petBar.Set(leader.NextBond.HasValue ? leader.Bond : 1, leader.NextBond ?? 1, "");
         }
 
         private void Update()

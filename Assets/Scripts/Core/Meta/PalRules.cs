@@ -12,7 +12,7 @@ namespace Riptide.Core
         public int BoosterDiscountPercent { get; set; }
         public int GiftPercent { get; set; }
         public int RescueCoins { get; set; }
-        public int EggRowPercent { get; set; }
+        public int EggPacePercent { get; set; }
         public int TideIntervalBonus { get; set; }
         public int FreePops { get; set; }
         public int FreeRerolls { get; set; }
@@ -259,7 +259,7 @@ namespace Riptide.Core
                     case PalPerk.BoosterDiscount: p.BoosterDiscountPercent = Math.Min(90, p.BoosterDiscountPercent + v); break;
                     case PalPerk.GiftBoost: p.GiftPercent += v; break;
                     case PalPerk.RescueCoins: p.RescueCoins += v; break;
-                    case PalPerk.EggRows: p.EggRowPercent += v; break;
+                    case PalPerk.EggPace: p.EggPacePercent += v; break;
                     case PalPerk.TideInterval: p.TideIntervalBonus += v; break;
                     case PalPerk.FreePops: p.FreePops += v; break;
                     case PalPerk.FreeRerolls: p.FreeRerolls += v; break;
@@ -296,25 +296,26 @@ namespace Riptide.Core
 
         // ------------------------------------------------------------------ eggs
 
-        /// <summary>Cleared rows fill the nest; every rowsPerEgg rows (faster with Jellyfish) lays an egg. Returns eggs laid.</summary>
-        public static int AddRows(PalSave pals, PalsConfig cfg, int rows, PalPerks perks)
+        /// <summary>
+        /// A finished board (any mode, won or lost — never a quit): every boardsPerEgg boards
+        /// lays an egg, sooner with the Jellyfish. Returns eggs laid (0 or more).
+        /// </summary>
+        public static int AddBoard(PalSave pals, PalsConfig cfg, PalPerks perks)
         {
-            if (rows <= 0)
-            {
-                return 0;
-            }
-
-            pals.EggRowProgress += rows * (100 + perks.EggRowPercent);
-            int per = cfg.Eggs.RowsPerEgg * 100;
-            int laid = pals.EggRowProgress / per;
-            pals.EggRowProgress -= laid * per;
+            pals.EggProgress += 100 + perks.EggPacePercent;
+            int per = cfg.Eggs.BoardsPerEgg * 100;
+            int laid = pals.EggProgress / per;
+            pals.EggProgress -= laid * per;
             pals.Eggs += laid;
             return laid;
         }
 
-        /// <summary>Progress toward the next row-laid egg, 0..1.</summary>
-        public static float EggRowFraction(PalSave pals, PalsConfig cfg) =>
-            Math.Min(1f, pals.EggRowProgress / (cfg.Eggs.RowsPerEgg * 100f));
+        /// <summary>Progress toward the next board-laid egg, 0..1.</summary>
+        public static float EggFraction(PalSave pals, PalsConfig cfg) =>
+            Math.Min(1f, pals.EggProgress / (cfg.Eggs.BoardsPerEgg * 100f));
+
+        /// <summary>Whole boards played toward the next egg ("3 / 5").</summary>
+        public static int BoardsTowardEgg(PalSave pals) => pals.EggProgress / 100;
 
         public static void GrantEggs(PalSave pals, int count)
         {

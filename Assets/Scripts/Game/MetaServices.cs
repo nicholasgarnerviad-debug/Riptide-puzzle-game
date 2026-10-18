@@ -53,11 +53,21 @@ namespace Riptide.Game
         private void PreparePals()
         {
             SaveData d = store.Data;
-            if (d.PalsNeedMigration)
+            if (d.PalsNeedMigration || !d.Pals.WelcomeGiven)
             {
-                CreatureRoster roster = RuntimeContent.LoadCreatures();
-                PalRules.MigrateLegacy(d.Pals, RuntimeContent.LoadPals(roster.Count), d.SpeciesRescues, d.BuddySpecies);
-                d.PalsNeedMigration = false;
+                PalsConfig pals = RuntimeContent.LoadPals(RuntimeContent.LoadCreatures().Count);
+                if (d.PalsNeedMigration)
+                {
+                    PalRules.MigrateLegacy(d.Pals, pals, d.SpeciesRescues, d.BuddySpecies);
+                    d.PalsNeedMigration = false;
+                }
+
+                if (!d.Pals.WelcomeGiven)
+                {
+                    // §16.3: the Welcome gift — enough eggs for the first Calls.
+                    PalRules.GrantEggs(d.Pals, pals.Eggs.Welcome);
+                    d.Pals.WelcomeGiven = true;
+                }
             }
 
             if (d.Pals.Seed == 0)

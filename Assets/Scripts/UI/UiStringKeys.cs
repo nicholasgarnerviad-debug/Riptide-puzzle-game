@@ -77,8 +77,8 @@ namespace Riptide.UI
             "badge.decor_5", "badge.powers_25", "badge.quests_10", "badge.events_1", "badge.pet_max",
             "badgeStat.rescues", "badgeStat.species", "badgeStat.rows", "badgeStat.bestClear", "badgeStat.tides",
             "badgeStat.stars", "badgeStat.levels", "badgeStat.endlessBest", "badgeStat.streakBest",
-            "badgeStat.decor", "badgeStat.powers", "badgeStat.quests", "badgeStat.events", "badgeStat.petLevel",
-            "pet.level", "pet.next", "pet.maxed", "pet.makeBuddy", "pet.isBuddy", "pet.buddyBonus",
+            "badgeStat.decor", "badgeStat.powers", "badgeStat.quests", "badgeStat.events", "badgeStat.bestStage",
+            "pet.level", "pet.next", "pet.maxed", "pet.makeBuddy", "pet.isBuddy",
             "pet.gift", "pet.giftClaimed", "pet.giftTomorrow",
             "power.Pinch", "power.Wish", "power.Steady", "power.Ink", "power.Calm", "power.Puff", "power.Glow",
             "power.Regrow", "power.Pinch.desc", "power.Wish.desc", "power.Steady.desc", "power.Ink.desc",
@@ -90,8 +90,10 @@ namespace Riptide.UI
             "event.turtle_trek", "event.jelly_glow",
             "event.crab_carnival.desc", "event.starfish_shower.desc", "event.seahorse_stampede.desc",
             "event.octopus_ink.desc", "event.turtle_trek.desc", "event.jelly_glow.desc",
-            "results.eventWin", "results.eventReward", "results.buddyBonus", "results.powers",
+            "results.eventWin", "results.eventReward", "results.podBonus", "results.egg", "results.eggs", "results.powers",
             "tidepool.eventReward",
+            "continue.secondWind", "pet.ready", "pet.growUp", "pet.tierLine", "pet.callOnly",
+            "tier.common", "tier.rare", "tier.epic", "tier.legendary",
 
             // Home "Buddy Stage" (2026-10-18).
             "home.petGift", "buddy.next", "buddy.gift", "buddy.daily", "buddy.cheer1", "buddy.cheer2",

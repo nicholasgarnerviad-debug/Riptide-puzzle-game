@@ -61,8 +61,15 @@ namespace Riptide.Game
         /// <summary>The double-coins rewarded payout fired for this outcome (once only).</summary>
         public bool DoubledClaimed;
 
-        // GDD §15 Pets & Tides.
-        public int BuddyBonus;
+        // GDD §15 Pets & Tides / §16 Tidelings.
+        /// <summary>Coins the Pod's abilities added (Crab %, Starfish per star, Pufferfish per rescue).</summary>
+        public int PodBonus;
+
+        /// <summary>Eggs this run laid or earned (boards, milestones, wins, tides, rare rescues).</summary>
+        public int EggsEarned;
+
+        /// <summary>Whole boards toward the next board-laid egg after this run ("3 / 5").</summary>
+        public int BoardsTowardEgg;
         public int PowersFired;
         public string EventId = "";
         public bool EventFirstWin;
@@ -145,19 +152,20 @@ namespace Riptide.Game
         public IReadOnlyList<Decoration> Decorations =>
             decorations ??= RuntimeContent.LoadDecorations();
 
-        public int BoosterCost(BoosterKind kind) => kind switch
+        /// <summary>The coin price, after the Octopus's Ink Discount (§16.4).</summary>
+        public int BoosterCost(BoosterKind kind) => PodDiscounted(kind switch
         {
             BoosterKind.DrainPump => Economy.Boosters.DrainPump,
             BoosterKind.BubblePop => Economy.Boosters.BubblePop,
             BoosterKind.PieceSwap => Economy.Boosters.PieceSwap,
             _ => Economy.Boosters.NewTide,
-        };
+        });
 
         public bool CanUseBooster(BoosterKind kind) =>
             Store != null
             && !Store.State.Status.IsTerminal()
             && Store.State.Config.BoostersAllowed
-            && Meta.CanAfford(BoosterCost(kind));
+            && (PodFreeBoostersLeft(kind) > 0 || Meta.CanAfford(BoosterCost(kind)));
 
         /// <summary>GDD 9 L4: one free Drain Pump, granted by the tutorial, no ad, no coins.</summary>
         public bool TutorialDrainPumpPending { get; private set; }
@@ -212,6 +220,12 @@ namespace Riptide.Game
             {
                 TutorialDrainPumpPending = false;
                 Analytics.LogBoosterUsed(kind.ToString(), "tutorial");
+                return true;
+            }
+
+            if (UsePodFreeBooster(kind))
+            {
+                Analytics.LogBoosterUsed(kind.ToString(), "tideling");
                 return true;
             }
 
@@ -445,7 +459,7 @@ namespace Riptide.Game
                 return false;
             }
 
-            LevelConfig config;
+            System.Func<bool, bool, LevelConfig> build;
             LevelDef? level = null;
             GameMode mode;
             switch (record.Mode)
@@ -457,12 +471,13 @@ namespace Riptide.Game
                         return false;
                     }
 
-                    level = ZoneLevels(record.Zone)[record.Level - 1];
-                    config = VoyageConfig(level);
+                    LevelDef def = ZoneLevels(record.Zone)[record.Level - 1];
+                    level = def;
+                    build = (powers, pod) => VoyageConfig(def, powers, pod);
                     mode = GameMode.Voyage;
                     break;
                 case "Endless":
-                    config = EndlessRunConfig();
+                    build = (powers, pod) => EndlessRunConfig(powers, pod);
                     mode = GameMode.Endless;
                     break;
                 case "Event":
@@ -472,12 +487,13 @@ namespace Riptide.Game
                         return false;
                     }
 
-                    CurrentEvent = EventSchedule.ForWeek((int)record.EpochDay, Expansion.Events);
-                    config = EventRunConfig(CurrentEvent);
+                    EventDef tide = EventSchedule.ForWeek((int)record.EpochDay, Expansion.Events);
+                    CurrentEvent = tide;
+                    build = (powers, pod) => EventRunConfig(tide, powers, pod);
                     mode = GameMode.Event;
                     break;
                 case "Daily":
-                    config = ModeFactory.Daily(Economy, Roster.Count);
+                    build = (powers, pod) => ModeFactory.Daily(Economy, Roster.Count);
                     mode = GameMode.Daily;
                     break;
                 default:
@@ -485,17 +501,24 @@ namespace Riptide.Game
                     return false;
             }
 
+            // Upgrade paths (GDD §15 / §16): a run recorded before creature powers, or
+            // before the Pod's board abilities (or with a different Pod), was played
+            // without them — the hash proves which, and it resumes exactly as played.
+            LevelConfig config = build(true, true);
             RunReplayResult replay = RunReplay.Rebuild(config, record);
-            if (replay.Status != RunReplayStatus.Ok && config.Powers != null)
+            foreach ((bool powers, bool pod) in new[] { (true, false), (false, false) })
             {
-                // GDD §15 upgrade path: a run recorded before creature powers was
-                // played powers-off — the hash proves it, and it resumes as played.
-                LevelConfig legacy = config.WithCreaturePowers(null);
-                RunReplayResult legacyReplay = RunReplay.Rebuild(legacy, record);
-                if (legacyReplay.Status == RunReplayStatus.Ok)
+                if (replay.Status == RunReplayStatus.Ok)
                 {
-                    config = legacy;
-                    replay = legacyReplay;
+                    break;
+                }
+
+                LevelConfig candidate = build(powers, pod);
+                RunReplayResult attempt = RunReplay.Rebuild(candidate, record);
+                if (attempt.Status == RunReplayStatus.Ok)
+                {
+                    config = candidate;
+                    replay = attempt;
                 }
             }
 
@@ -533,6 +556,7 @@ namespace Riptide.Game
             runRescues = replay.Rescues;
             runTides = replay.State!.Goals.TidesSurvived;
             runPowers = 0;
+            ResetTidelingRun();
             freeDrainUsedThisRun = false;
             freeNewTideUsedThisRun = false;
             ContinueOfferPending = false;
@@ -580,6 +604,7 @@ namespace Riptide.Game
             runRescues = 0;
             runTides = 0;
             runPowers = 0;
+            ResetTidelingRun();
             freeDrainUsedThisRun = false;
             freeNewTideUsedThisRun = false;
             ContinueOfferPending = false;
@@ -606,6 +631,7 @@ namespace Riptide.Game
             if (result.Events.RescuedCreatures.Count > 0)
             {
                 Meta.RecordRescues(result.Events.RescuedCreatures, Roster.Count);
+                RecordTidelingRescues(result.Events.RescuedCreatures);
                 runRescues += result.Events.RescuedCreatures.Count;
             }
 
@@ -655,7 +681,7 @@ namespace Riptide.Game
             && !final.ContinueUsed
             && Mode != GameMode.Daily
             && final.Config.BoostersAllowed
-            && (ContinueAdAvailable || Meta.CanAfford(Economy.Coins.ContinueCost));
+            && (ContinueAdAvailable || Meta.CanAfford(Economy.Coins.ContinueCost) || SecondWindAvailable);
 
         public bool ContinueAdAvailable => Ads != null && Ads.RewardedAvailable;
 
@@ -671,6 +697,14 @@ namespace Riptide.Game
 
         public bool TryContinueWithCoins()
         {
+            // §16.4 Second Wind: the Axolotl pays the coin continue for you, a few times a day.
+            if (ContinueOfferPending && SecondWindAvailable)
+            {
+                UseSecondWind();
+                DispatchContinue("tideling");
+                return true;
+            }
+
             if (!ContinueOfferPending || !Meta.TrySpendCoins(Economy.Coins.ContinueCost))
             {
                 return false;

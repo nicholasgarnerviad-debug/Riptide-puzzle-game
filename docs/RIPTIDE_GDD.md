@@ -347,7 +347,7 @@ Every creature is a **line** of three named, visually distinct stages: **Baby �
 | 3 | Octopus | Common | Inky | Octavia | Krakenling | **Ink Discount** — boosters −5 / 10 / 15 % |
 | 4 | Turtle | Common | Peanut | Mossback | Elder Atoll | **Gift Wrap** — daily pet gift +20 / 35 / 50 % |
 | 5 | Pufferfish | Common | Puff | Spikeball | Blowfin Boss | **Rescue Reward** — +2 / 3 / 5 coins per creature rescued |
-| 6 | Jellyfish | Rare | Glim | Glowbell | Aurora Bell | **Warm Glow** — rows lay eggs +25 / 50 / 75 % faster |
+| 6 | Jellyfish | Rare | Glim | Glowbell | Aurora Bell | **Warm Glow** — eggs come +25 / 50 / 75 % sooner |
 | 7 | Narwhal | Rare | Tusky | Unicorna | Polaris | **Steady Current** — the tide's starting interval +1 / +1 / +2 |
 | 8 | Manta Ray | Rare | Flapjack | Wavecloak | Grand Mantle | **Puff Shield** — 1 / 1 / 2 free Bubble Pops per run |
 | 9 | Sea Otter | Rare | Pebbles | Driftwood | Kelp Captain | **Fresh Catch** — 1 / 1 / 2 free Rerolls per run |
@@ -369,8 +369,9 @@ Every creature is a **line** of three named, visually distinct stages: **Baby �
 
 - **The Call** (the Conch): **5 eggs** for one Tideling, or **45 eggs for ten** (one free). Tier odds: **Common 70 % · Rare 22 % · Epic 6.5 % · Legendary 1.5 %**, split evenly among the Tidelings of a tier (each odds line is on screen).
 - **Guarantees (pity):** an Epic-or-better arrives by the **20th** Call since the last one; a Legendary by the **60th** since the last (Deep Luck shortens it). A ten-Call always holds at least one Rare-or-better. The screen shows "Legendary guaranteed in N calls".
-- **Collecting eggs:** every **25 rows** you clear in any mode lays an egg (Warm Glow speeds it) · a **Welcome gift of 10 eggs** · Voyage first clears of each zone's level 5 (2), 10 (3), 15 (2), 20 (5; 8 in zones 6–10) · a Daily **win** (2) · claiming all of the day's quests (3) · the week's first **Event Tide** win (10) · every 20 tides in one Endless run (1, max 3 per run) · rescuing a Jellyfish or Axolotl on the board (1).
+- **Collecting eggs:** **one egg every 5 boards** you finish — any mode, win or lose, never a quit (Warm Glow speeds it; Nick: steady, not annoying) · a **Welcome gift of 10 eggs** · Voyage first clears of each zone's level 5 (2), 10 (3), 15 (2), 20 (5; 8 in zones 6–10) · a Daily **win** (2) · claiming all of the day's quests (3) · the week's first **Event Tide** win (10) · every 20 tides in one Endless run (1, max 3 per run) · rescuing a Jellyfish or Axolotl on the board (1).
 - Calls are deterministic from the save's call counter and a per-save seed (Core purity: no `System.Random`), so every Call can be replayed and tested.
+- **The roster will grow.** Adding a Tideling is data: a `pals.json` entry (tier, three stage names through the originality gate, an ability) plus its art model; tier odds re-split automatically, and pity, the Journal and the Pod need no change.
 
 ### 16.4 The Pod and abilities
 - The **Pod** is up to three Tidelings you bring along: slot 1 is always open (the **leader** — on Home and perched on the tray), slot 2 opens at 4 Tidelings owned, slot 3 at 8.
@@ -383,7 +384,7 @@ A collection book of all 48 forms (16 lines × 3 stages) plus each line's Sparkl
 ### 16.6 Screens (UI direction mocked for sign-off before it is built)
 - The Tidepool tab becomes **Tidelings**: the Pod (leader + two slots with abilities), the collection/Journal grid by tier, the **Conch** (egg count, row progress to the next egg, Call ×1 / ×10, odds, pity counter), and the existing Tidepool diorama.
 - **Call** and **Grow up** are full-screen celebrations in Riptide's own sea language (see §16.8): the conch sounds, a wave rolls in and the Tideling pops out of a bubble burst in its tier's color (a Legendary gets a whirlpool and a rainbow wake); a growing Tideling spins up in a whirlpool of bubbles and lands as its new form with confetti — never a white-silhouette flash-morph.
-- Home's stage shows your egg count; Results show rows toward the next egg and any eggs earned.
+- Home's stage shows your egg count; Results show a quiet "3 / 5 boards to your next egg" pip row and any eggs earned. Egg news is never a popup that interrupts play (Nick: "we don't wanna be annoying").
 
 ### 16.7 Migration (save v5)
 Bond starts at each species' lifetime rescues; every species met under the old rules is owned as a Baby — including a Jellyfish or Axolotl (grandfathered) — and can grow up on first look if its bond already qualifies; the v4 buddy becomes the Pod leader; the Welcome gift grants 10 eggs.

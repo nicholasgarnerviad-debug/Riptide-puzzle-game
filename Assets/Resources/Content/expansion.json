@@ -8,12 +8,6 @@
     "turtleDrain": 1,
     "axolotlDrain": 2
   },
-  "pets": {
-    "levelThresholds": [1, 5, 15, 35, 75],
-    "giftCoinsPerLevel": 4,
-    "giftCap": 120,
-    "buddyBonusPercentPerLevel": 2
-  },
   "quests": {
     "perDay": 3,
     "pool": [
@@ -58,7 +52,7 @@
     { "id": "powers_25", "stat": "powers", "target": 25, "reward": 120, "icon": "drop" },
     { "id": "quests_10", "stat": "quests", "target": 10, "reward": 120, "icon": "check" },
     { "id": "events_1", "stat": "events", "target": 1, "reward": 100, "icon": "calendar" },
-    { "id": "pet_max", "stat": "petLevel", "target": 5, "reward": 250, "icon": "trophy" }
+    { "id": "pet_max", "stat": "bestStage", "target": 3, "reward": 250, "icon": "trophy" }
   ],
   "events": [
     { "id": "crab_carnival", "featuredSpecies": 0, "startWaterLevel": 1, "startTideInterval": 6, "creatureSpawnIntervalTrays": 3, "goal": "rescue", "goalTarget": 4, "rewardCoins": 150, "rewardDecoration": "golden_crab" },

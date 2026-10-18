@@ -138,7 +138,12 @@ namespace Riptide.UI
             resolved = false;
             deadline = Time.realtimeSinceStartup + CountdownSeconds;
             adButton.interactable = flow.ContinueAdAvailable;
-            coinButton.interactable = flow.Meta.CanAfford(flow.Economy.Coins.ContinueCost);
+            // §16.4 Second Wind: the Axolotl covers the coin continue — say so on the button.
+            bool free = flow.SecondWindAvailable;
+            coinButton.interactable = free || flow.Meta.CanAfford(flow.Economy.Coins.ContinueCost);
+            coinButton.GetComponentInChildren<TMPro.TextMeshProUGUI>().text = free
+                ? flow.Strings.Get("continue.secondWind")
+                : string.Format(flow.Strings.Get("continue.coins"), flow.Economy.Coins.ContinueCost);
             sheet.Show();
         }
 

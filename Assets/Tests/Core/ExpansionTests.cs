@@ -5,7 +5,7 @@ namespace Riptide.Core.Tests
 {
     /// <summary>
     /// GDD §15 Pets &amp; Tides: creature powers (each rule, off = byte-identical,
-    /// determinism), featured species, pets, quests, badges, events, the loader,
+    /// determinism), featured species, quests, badges, events, the loader,
     /// and the v4 save.
     /// </summary>
     [TestFixture]
@@ -202,31 +202,6 @@ namespace Riptide.Core.Tests
 
         // ---------------------------------------------------------------- meta
 
-        private static PetsConfig Pets() => new PetsConfig(new[] { 1, 5, 15, 35, 75 }, 4, 120, 2);
-
-        [Test]
-        public void Pets_LevelGiftAndBuddy()
-        {
-            PetsConfig pets = Pets();
-            Assert.That(PetRules.LevelFor(0, pets), Is.EqualTo(0));
-            Assert.That(PetRules.LevelFor(1, pets), Is.EqualTo(1));
-            Assert.That(PetRules.LevelFor(14, pets), Is.EqualTo(2));
-            Assert.That(PetRules.LevelFor(500, pets), Is.EqualTo(5));
-            Assert.That(PetRules.NextThreshold(14, pets), Is.EqualTo(15));
-            Assert.That(PetRules.NextThreshold(500, pets), Is.Null);
-
-            Assert.That(PetRules.GiftCoins(new[] { 1, 5, 0 }, pets), Is.EqualTo((1 + 2) * 4));
-            Assert.That(PetRules.GiftCoins(new[] { 999, 999, 999, 999, 999, 999, 999, 999 }, pets), Is.EqualTo(120),
-                "capped");
-            Assert.That(PetRules.GiftAvailable(10, 9, new[] { 1 }, pets), Is.True);
-            Assert.That(PetRules.GiftAvailable(9, 9, new[] { 1 }, pets), Is.False, "once per day");
-            Assert.That(PetRules.GiftAvailable(8, 9, new[] { 1 }, pets), Is.False, "clock rollback can't re-arm");
-            Assert.That(PetRules.GiftAvailable(10, 9, new[] { 0 }, pets), Is.False, "no pets, no gift");
-
-            Assert.That(PetRules.BuddyBonus(100, 3, pets), Is.EqualTo(6));
-            Assert.That(PetRules.BuddyBonus(100, 0, pets), Is.EqualTo(0));
-        }
-
         [Test]
         public void QuestBoard_IsDeterministic_Distinct_AndVariesByDay()
         {
@@ -310,7 +285,6 @@ namespace Riptide.Core.Tests
         private const string ExpansionJson = @"{
   ""creaturePowers"": { ""modes"": { ""voyage"": true, ""endless"": true, ""event"": true },
     ""crabCoral"": 1, ""starfishScore"": 200, ""seahorseTideRelief"": 2, ""octopusCoral"": 3, ""turtleDrain"": 1, ""axolotlDrain"": 2 },
-  ""pets"": { ""levelThresholds"": [1, 5, 15, 35, 75], ""giftCoinsPerLevel"": 4, ""giftCap"": 120, ""buddyBonusPercentPerLevel"": 2 },
   ""quests"": { ""perDay"": 2, ""pool"": [
     { ""id"": ""rescue_3"", ""kind"": ""rescue"", ""target"": 3, ""reward"": 40 },
     { ""id"": ""crab_1"", ""kind"": ""rescueSpecies"", ""species"": 0, ""target"": 1, ""reward"": 40 } ] },
@@ -325,7 +299,6 @@ namespace Riptide.Core.Tests
             ExpansionConfig cfg = ExpansionLoader.Load(ExpansionJson, "fixture", 8);
             Assert.That(cfg.Powers.StarfishScore, Is.EqualTo(200));
             Assert.That(cfg.PowerModes.Event, Is.True);
-            Assert.That(cfg.Pets.MaxLevel, Is.EqualTo(5));
             Assert.That(cfg.QuestPool[1].Kind, Is.EqualTo(QuestKind.RescueSpecies));
             Assert.That(cfg.Badges[0].Stat, Is.EqualTo(BadgeStat.BestClear));
             Assert.That(cfg.Events[0].GoalKind, Is.EqualTo(EventGoalKind.Rescue));

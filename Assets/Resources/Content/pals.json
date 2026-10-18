@@ -21,7 +21,7 @@
 
     { "id": 6, "key": "jelly", "name": "Jellyfish", "rarity": "rare", "boardSpecies": 6,
       "stages": ["Glim", "Glowbell", "Aurora Bell"],
-      "perk": "eggRows", "perkValues": [25, 50, 75] },
+      "perk": "eggPace", "perkValues": [25, 50, 75] },
     { "id": 7, "key": "narwhal", "name": "Narwhal", "rarity": "rare", "boardSpecies": -1,
       "stages": ["Tusky", "Unicorna", "Polaris"],
       "perk": "tideInterval", "perkValues": [1, 1, 2] },
@@ -79,7 +79,7 @@
   },
 
   "eggs": {
-    "rowsPerEgg": 25,
+    "boardsPerEgg": 5,
     "welcome": 10,
     "voyageMilestones": { "5": 2, "10": 3, "15": 2, "20": 5 },
     "deepZoneFrom": 6,

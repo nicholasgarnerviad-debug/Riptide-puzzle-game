@@ -5,8 +5,8 @@ namespace Riptide.Game
 {
     /// <summary>
     /// GDD §15 Pets &amp; Tides persistence (save v4): quest days and progress,
-    /// the daily pet gift, the buddy, lifetime badge counters, and the weekly
-    /// event reward. Day guards are strictly-greater (audit B5).
+    /// lifetime badge counters, and the weekly event reward. Day guards are
+    /// strictly-greater (audit B5). Tidelings (§16) live in MetaServices.Tidelings.
     /// </summary>
     public sealed partial class MetaServices
     {
@@ -38,7 +38,7 @@ namespace Riptide.Game
             }
         }
 
-        public bool TryClaimQuest(QuestView quest)
+        public bool TryClaimQuest(QuestView quest, int bonusPercent = 0)
         {
             SaveData d = store.Data;
             if (!quest.Complete || d.QuestClaimed[quest.Index])
@@ -48,39 +48,7 @@ namespace Riptide.Game
 
             d.QuestClaimed[quest.Index] = true;
             d.QuestsCompleted++;
-            wallet.Earn(quest.Def.Reward);
-            SaveNow();
-            return true;
-        }
-
-        // ------------------------------------------------------------------ pets
-
-        /// <summary>Claims today's pet gift; returns the coins paid (0 when unavailable).</summary>
-        public int TryClaimPetGift(PetsConfig pets)
-        {
-            SaveData d = store.Data;
-            long today = TodayEpochDay();
-            if (!PetRules.GiftAvailable(today, d.PetGiftDay, d.SpeciesRescues, pets))
-            {
-                return 0;
-            }
-
-            int coins = PetRules.GiftCoins(d.SpeciesRescues, pets);
-            d.PetGiftDay = today;
-            wallet.Earn(coins);
-            SaveNow();
-            return coins;
-        }
-
-        /// <summary>Equips a met species as the buddy (−1 unequips).</summary>
-        public bool SetBuddy(int species)
-        {
-            if (species >= 0 && store.Data.RescuesFor(species) <= 0)
-            {
-                return false;
-            }
-
-            store.Data.BuddySpecies = species;
+            wallet.Earn(quest.Def.Reward * (100 + bonusPercent) / 100);
             SaveNow();
             return true;
         }
@@ -96,26 +64,24 @@ namespace Riptide.Game
             d.PowersTriggered += powers;
         }
 
-        public PlayerStats BuildStats(PetsConfig pets, int speciesCount)
+        public PlayerStats BuildStats(int speciesCount, int bestStage)
         {
             SaveData d = store.Data;
             long rescues = 0;
             int met = 0;
-            int bestPet = 0;
             for (int i = 0; i < speciesCount; i++)
             {
                 int count = d.RescuesFor(i);
                 rescues += count;
                 met += count > 0 ? 1 : 0;
-                bestPet = Math.Max(bestPet, PetRules.LevelFor(count, pets));
             }
 
             return new PlayerStats(rescues, met, d.TotalRowsCleared, d.BestClearAtOnce, d.TotalTides,
                 Voyage.TotalStars, Voyage.CompletedCount, d.EndlessBest, d.Streak.Best, d.DecorationsOwned.Count,
-                d.PowersTriggered, d.QuestsCompleted, d.EventsCompleted, bestPet);
+                d.PowersTriggered, d.QuestsCompleted, d.EventsCompleted, bestStage);
         }
 
-        public bool TryClaimBadge(BadgeDef badge, PlayerStats stats)
+        public bool TryClaimBadge(BadgeDef badge, PlayerStats stats, int bonusPercent = 0)
         {
             SaveData d = store.Data;
             if (!BadgeRules.Earned(badge, stats) || d.BadgesClaimed.Contains(badge.Id))
@@ -124,7 +90,7 @@ namespace Riptide.Game
             }
 
             d.BadgesClaimed.Add(badge.Id);
-            wallet.Earn(badge.Reward);
+            wallet.Earn(badge.Reward * (100 + bonusPercent) / 100);
             SaveNow();
             return true;
         }

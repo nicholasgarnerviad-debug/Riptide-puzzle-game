@@ -23,8 +23,9 @@ namespace Riptide.Game
 
     /// <summary>
     /// GDD §15 Pets &amp; Tides flow: per-mode power configs, the weekly Event
-    /// Tide mode, quest/badge counters fed from moves and run ends, the buddy's
-    /// coin bonus, and the pet/quest/badge/event API the screens call.
+    /// Tide mode, quest/badge counters fed from moves and run ends, and the
+    /// quest/badge/event API the screens call. (§15.2 pets became Tidelings —
+    /// GameFlow.Tidelings.cs.)
     /// </summary>
     public sealed partial class GameFlow
     {
@@ -39,18 +40,22 @@ namespace Riptide.Game
 
         // ------------------------------------------------------------ configs
 
-        /// <summary>GDD §15.1: powers per mode — never the Daily (ModeFactory.Daily is used as-is).</summary>
-        public LevelConfig VoyageConfig(LevelDef def) =>
-            def.ToLevelConfig(Economy, Roster.Count)
-                .WithCreaturePowers(Expansion.PowerModes.Voyage ? Expansion.Powers : null);
+        /// <summary>
+        /// GDD §15.1 powers and §16.4 board-touching Pod abilities, per mode — never the
+        /// Daily (ModeFactory.Daily is used as-is). The flags exist for resume's upgrade
+        /// paths (a run recorded without powers or without the Pod replays without them).
+        /// </summary>
+        public LevelConfig VoyageConfig(LevelDef def, bool powers = true, bool pod = true) =>
+            WithPod(def.ToLevelConfig(Economy, Roster.Count)
+                .WithCreaturePowers(powers && Expansion.PowerModes.Voyage ? Expansion.Powers : null), pod);
 
-        public LevelConfig EndlessRunConfig() =>
-            ModeFactory.Endless(Economy, Roster.Count)
-                .WithCreaturePowers(Expansion.PowerModes.Endless ? Expansion.Powers : null);
+        public LevelConfig EndlessRunConfig(bool powers = true, bool pod = true) =>
+            WithPod(ModeFactory.Endless(Economy, Roster.Count)
+                .WithCreaturePowers(powers && Expansion.PowerModes.Endless ? Expansion.Powers : null), pod);
 
-        public LevelConfig EventRunConfig(EventDef def) =>
-            EventSchedule.BuildConfig(def, Economy, Roster.Count,
-                Expansion.PowerModes.Event ? Expansion.Powers : null);
+        public LevelConfig EventRunConfig(EventDef def, bool powers = true, bool pod = true) =>
+            WithPod(EventSchedule.BuildConfig(def, Economy, Roster.Count,
+                powers && Expansion.PowerModes.Event ? Expansion.Powers : null), pod);
 
         // -------------------------------------------------------------- event
 
@@ -146,29 +151,10 @@ namespace Riptide.Game
                 EndlessRuns = outcome.Mode == GameMode.Endless ? 1 : 0,
             });
 
-            int buddy = Meta.Save.BuddySpecies;
-            if (buddy >= 0 && outcome.CoinsAwarded > 0)
-            {
-                outcome.BuddyBonus = PetRules.BuddyBonus(outcome.CoinsAwarded, PetLevel(buddy), Expansion.Pets);
-                outcome.CoinsAwarded += outcome.BuddyBonus;
-            }
+            FinishTidelings(outcome);
         }
 
-        // --------------------------------------------------------- pets / UI
-
-        public int PetLevel(int species) => PetRules.LevelFor(Meta.Save.RescuesFor(species), Expansion.Pets);
-
-        public int? PetNextThreshold(int species) =>
-            PetRules.NextThreshold(Meta.Save.RescuesFor(species), Expansion.Pets);
-
-        public int PetGiftCoins => PetRules.GiftCoins(Meta.Save.SpeciesRescues, Expansion.Pets);
-
-        public bool PetGiftAvailable =>
-            PetRules.GiftAvailable(Meta.TodayEpochDay(), Meta.Save.PetGiftDay, Meta.Save.SpeciesRescues, Expansion.Pets);
-
-        public int TryClaimPetGift() => Meta.TryClaimPetGift(Expansion.Pets);
-
-        public bool SetBuddy(int species) => Meta.SetBuddy(species);
+        // ------------------------------------------------------- quests / badges
 
         public IReadOnlyList<QuestView> TodaysQuests()
         {
@@ -184,17 +170,24 @@ namespace Riptide.Game
             return views;
         }
 
+        /// <summary>Claims a done quest (the Seahorse boosts its coins); all three claimed lays the day's quest eggs.</summary>
         public bool TryClaimQuest(int index)
         {
             IReadOnlyList<QuestView> quests = TodaysQuests();
-            return index >= 0 && index < quests.Count && Meta.TryClaimQuest(quests[index]);
+            if (index < 0 || index >= quests.Count || !Meta.TryClaimQuest(quests[index], PodPerks.QuestPercent))
+            {
+                return false;
+            }
+
+            GrantQuestEggsIfAllClaimed();
+            return true;
         }
 
-        public PlayerStats Stats() => Meta.BuildStats(Expansion.Pets, Roster.Count);
+        public PlayerStats Stats() => Meta.BuildStats(Roster.Count, BestStage());
 
         public bool BadgeClaimed(BadgeDef badge) => Meta.Save.BadgesClaimed.Contains(badge.Id);
 
-        public bool TryClaimBadge(BadgeDef badge) => Meta.TryClaimBadge(badge, Stats());
+        public bool TryClaimBadge(BadgeDef badge) => Meta.TryClaimBadge(badge, Stats(), PodPerks.QuestPercent);
 
         /// <summary>Claimable rewards right now — the Quests tab's count badge.</summary>
         public int ClaimableCount()

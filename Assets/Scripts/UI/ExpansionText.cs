@@ -81,15 +81,20 @@ namespace Riptide.UI
             return flow.Strings.Get("event.title");
         }
 
-        /// <summary>"Crab buddy bonus +6 · 3 powers fired" — empty when neither happened.</summary>
+        /// <summary>"Pod bonus +6 · 3 powers fired · +1 egg" — empty when none happened.</summary>
         public static string RunBonus(GameFlow flow, RunOutcome outcome)
         {
             string text = "";
-            int buddy = flow.Meta.Save.BuddySpecies;
-            if (outcome.BuddyBonus > 0 && buddy >= 0 && buddy < flow.Roster.Count)
+            if (outcome.PodBonus > 0)
             {
-                text = string.Format(flow.Strings.Get("results.buddyBonus"), flow.Roster.Species[buddy].Name,
-                    outcome.BuddyBonus);
+                text = string.Format(flow.Strings.Get("results.podBonus"), outcome.PodBonus);
+            }
+
+            if (outcome.EggsEarned > 0)
+            {
+                string eggs = string.Format(flow.Strings.Get(outcome.EggsEarned == 1 ? "results.egg" : "results.eggs"),
+                    outcome.EggsEarned);
+                text = text.Length > 0 ? $"{text}  ·  {eggs}" : eggs;
             }
 
             if (outcome.PowersFired > 0)
@@ -100,6 +105,10 @@ namespace Riptide.UI
 
             return text;
         }
+
+        /// <summary>A tier's display word (Common, Rare, Epic, Legendary).</summary>
+        public static string TierName(GameFlow flow, PalRarity tier) =>
+            flow.Strings.Get("tier." + tier.ToString().ToLowerInvariant());
 
         /// <summary>The event reward decoration's display name (falls back to its id).</summary>
         public static string DecorationName(GameFlow flow, string id)

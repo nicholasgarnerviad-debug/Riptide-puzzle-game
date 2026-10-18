@@ -141,9 +141,10 @@ namespace Riptide.UI
         {
             bool any = shownSpecies >= 0;
             bool met = any && flow.Meta.Save.RescuesFor(shownSpecies) > 0;
-            infoProgress.gameObject.SetActive(met);
+            bool owned = any && flow.PetLevel(shownSpecies) > 0;
+            infoProgress.gameObject.SetActive(owned);
             powerRow.gameObject.SetActive(met);
-            buddyButton.gameObject.SetActive(met);
+            buddyButton.gameObject.SetActive(owned);
             buddyBonus.gameObject.SetActive(met);
             if (!any)
             {
@@ -168,40 +169,63 @@ namespace Riptide.UI
                 return;
             }
 
-            int level = flow.PetLevel(shownSpecies);
-            infoCount.text = string.Format(flow.Strings.Get("tidepool.rescued"), rescues) + "  ·  "
-                + string.Format(flow.Strings.Get("pet.level"), level);
-            int? next = flow.PetNextThreshold(shownSpecies);
-            if (next.HasValue)
+            powerName.text = ExpansionText.PowerName(flow, shownSpecies);
+            powerDesc.text = ExpansionText.PowerDescription(flow, shownSpecies);
+            int line = flow.Pals.LineForSpecies(shownSpecies);
+            TidelingView tideling = flow.Tideling(line);
+            buddyBonus.text = owned
+                ? string.Format(flow.Strings.Get("pet.tierLine"), ExpansionText.TierName(flow, tideling.Line.Rarity))
+                : flow.Strings.Get("pet.callOnly");
+            infoCount.text = string.Format(flow.Strings.Get("tidepool.rescued"), rescues)
+                + (owned ? "  ·  " + string.Format(flow.Strings.Get("pet.level"), tideling.Stage) : "");
+            if (!owned)
             {
-                infoProgress.Set(rescues, next.Value,
-                    string.Format(flow.Strings.Get("pet.next"), rescues, next.Value, level + 1));
+                return;
+            }
+
+            infoName.text = $"{tideling.FormName} · {species.Name}";
+            if (tideling.NextBond.HasValue)
+            {
+                infoProgress.Set(tideling.Bond, tideling.NextBond.Value, tideling.CanGrow
+                    ? flow.Strings.Get("pet.ready")
+                    : string.Format(flow.Strings.Get("pet.next"), tideling.Bond, tideling.NextBond.Value));
             }
             else
             {
                 infoProgress.Set(1, 1, flow.Strings.Get("pet.maxed"));
             }
 
-            powerName.text = ExpansionText.PowerName(flow, shownSpecies);
-            powerDesc.text = ExpansionText.PowerDescription(flow, shownSpecies);
-
-            bool isBuddy = flow.Meta.Save.BuddySpecies == shownSpecies;
-            buddyButton.GetComponent<PopSurface>().SetTone(isBuddy ? PopTone.Yellow : PopTone.Green);
+            // One button, the most useful action: grow up when ready, else lead the Pod.
+            bool isLeader = tideling.PodSlot == 0;
+            string key = tideling.CanGrow ? "pet.growUp" : isLeader ? "pet.isBuddy" : "pet.makeBuddy";
+            PopTone tone = tideling.CanGrow ? PopTone.Coral : isLeader ? PopTone.Yellow : PopTone.Green;
+            buddyButton.GetComponent<PopSurface>().SetTone(tone);
             TextMeshProUGUI label = PopKit.FaceOf(buddyButton).Find("label").GetComponent<TextMeshProUGUI>();
-            label.text = flow.Strings.Get(isBuddy ? "pet.isBuddy" : "pet.makeBuddy");
-            UiText.Outline(label, PopKit.Edge(isBuddy ? PopTone.Yellow : PopTone.Green));
-            buddyBonus.text = string.Format(flow.Strings.Get("pet.buddyBonus"),
-                level * flow.Expansion.Pets.BuddyBonusPercentPerLevel);
+            label.text = flow.Strings.Get(key);
+            UiText.Outline(label, PopKit.Edge(tone));
         }
 
         private void MakeBuddy()
         {
-            if (shownSpecies < 0 || flow.Meta.Save.BuddySpecies == shownSpecies)
+            if (shownSpecies < 0)
             {
                 return;
             }
 
-            if (flow.SetBuddy(shownSpecies))
+            int line = flow.Pals.LineForSpecies(shownSpecies);
+            if (flow.Tideling(line).CanGrow)
+            {
+                if (flow.TryGrow(line))
+                {
+                    happyUntil[shownSpecies] = Time.time + 1.4f;
+                    UiJuice.Play("streak");
+                    Refresh();
+                }
+
+                return;
+            }
+
+            if (flow.LeaderSpecies != shownSpecies && flow.SetBuddy(shownSpecies))
             {
                 happyUntil[shownSpecies] = Time.time + 1f;
                 UiJuice.Play("star");
@@ -239,10 +263,10 @@ namespace Riptide.UI
             for (int i = 0; i < chips.Count && i < petPills.Count; i++)
             {
                 int id = chips[i].id;
-                bool met = flow.Meta.Save.RescuesFor(id) > 0;
+                bool owned = flow.PetLevel(id) > 0;
                 (GameObject pill, TextMeshProUGUI label, GameObject heart) = petPills[i];
-                pill.SetActive(met);
-                heart.SetActive(met && flow.Meta.Save.BuddySpecies == id);
+                pill.SetActive(owned);
+                heart.SetActive(owned && flow.LeaderSpecies == id);
                 label.text = string.Format(flow.Strings.Get("pet.level"), flow.PetLevel(id));
             }
 

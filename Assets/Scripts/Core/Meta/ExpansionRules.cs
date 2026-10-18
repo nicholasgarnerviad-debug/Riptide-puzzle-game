@@ -3,60 +3,6 @@ using System.Collections.Generic;
 
 namespace Riptide.Core
 {
-    /// <summary>GDD §15.2 Pet Pals math — pure; all tunables from expansion.json.</summary>
-    public static class PetRules
-    {
-        /// <summary>0 = never rescued (unmet) … MaxLevel.</summary>
-        public static int LevelFor(int rescues, PetsConfig cfg)
-        {
-            int level = 0;
-            foreach (int threshold in cfg.LevelThresholds)
-            {
-                if (rescues >= threshold)
-                {
-                    level++;
-                }
-            }
-
-            return level;
-        }
-
-        /// <summary>Rescues needed for the next level, or null at max level.</summary>
-        public static int? NextThreshold(int rescues, PetsConfig cfg)
-        {
-            foreach (int threshold in cfg.LevelThresholds)
-            {
-                if (rescues < threshold)
-                {
-                    return threshold;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>The daily pet gift: Σ levels × coins-per-level, capped.</summary>
-        public static int GiftCoins(IReadOnlyList<int> speciesRescues, PetsConfig cfg)
-        {
-            int levels = 0;
-            foreach (int rescues in speciesRescues)
-            {
-                levels += LevelFor(rescues, cfg);
-            }
-
-            return Math.Min(cfg.GiftCap, levels * cfg.GiftCoinsPerLevel);
-        }
-
-        /// <summary>Strictly-greater day guard (audit B5): clock rollback never re-arms the gift.</summary>
-        public static bool GiftAvailable(long todayEpochDay, long lastGiftDay, IReadOnlyList<int> speciesRescues,
-            PetsConfig cfg) =>
-            todayEpochDay > lastGiftDay && GiftCoins(speciesRescues, cfg) > 0;
-
-        /// <summary>Buddy bonus on a run's coin award: level × percent, floored.</summary>
-        public static int BuddyBonus(int coins, int buddyLevel, PetsConfig cfg) =>
-            coins <= 0 || buddyLevel <= 0 ? 0 : coins * buddyLevel * cfg.BuddyBonusPercentPerLevel / 100;
-    }
-
     /// <summary>GDD §15.3: the day's quests — same for everyone, from the date alone.</summary>
     public static class QuestBoard
     {
@@ -151,10 +97,11 @@ namespace Riptide.Core
         public long Powers { get; }
         public int Quests { get; }
         public int Events { get; }
-        public int PetLevel { get; }
+        /// <summary>The highest Tideling stage reached (GDD §16; 0 = none).</summary>
+        public int BestStage { get; }
 
         public PlayerStats(long rescues, int species, long rows, int bestClear, long tides, int stars, int levels,
-            long endlessBest, int streakBest, int decor, long powers, int quests, int events, int petLevel)
+            long endlessBest, int streakBest, int decor, long powers, int quests, int events, int bestStage)
         {
             Rescues = rescues;
             Species = species;
@@ -169,7 +116,7 @@ namespace Riptide.Core
             Powers = powers;
             Quests = quests;
             Events = events;
-            PetLevel = petLevel;
+            BestStage = bestStage;
         }
 
         public long Get(BadgeStat stat) => stat switch
@@ -187,7 +134,7 @@ namespace Riptide.Core
             BadgeStat.Powers => Powers,
             BadgeStat.Quests => Quests,
             BadgeStat.Events => Events,
-            BadgeStat.PetLevel => PetLevel,
+            BadgeStat.BestStage => BestStage,
             _ => 0,
         };
     }

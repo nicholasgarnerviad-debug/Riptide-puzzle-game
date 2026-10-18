@@ -124,8 +124,8 @@ namespace Riptide.UI
 
         private void RefreshBuddy()
         {
-            buddy = flow.Meta.Save.BuddySpecies;
-            bool shown = buddy >= 0 && buddy < flow.Roster.Count && flow.Meta.Save.RescuesFor(buddy) > 0;
+            buddy = flow.LeaderSpecies;
+            bool shown = buddy >= 0 && buddy < flow.Roster.Count && flow.PetLevel(buddy) > 0;
             buddyRoot.gameObject.SetActive(shown);
             if (!shown)
             {

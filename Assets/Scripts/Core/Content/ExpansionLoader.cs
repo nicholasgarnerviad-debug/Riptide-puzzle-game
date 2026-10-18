@@ -18,27 +18,6 @@ namespace Riptide.Core
         }
     }
 
-    /// <summary>GDD §15.2 Pet Pals tunables.</summary>
-    public sealed class PetsConfig
-    {
-        /// <summary>Lifetime rescues needed for levels 1..5 (ascending).</summary>
-        public IReadOnlyList<int> LevelThresholds { get; }
-        public int GiftCoinsPerLevel { get; }
-        public int GiftCap { get; }
-        public int BuddyBonusPercentPerLevel { get; }
-
-        public int MaxLevel => LevelThresholds.Count;
-
-        public PetsConfig(IReadOnlyList<int> levelThresholds, int giftCoinsPerLevel, int giftCap,
-            int buddyBonusPercentPerLevel)
-        {
-            LevelThresholds = levelThresholds;
-            GiftCoinsPerLevel = giftCoinsPerLevel;
-            GiftCap = giftCap;
-            BuddyBonusPercentPerLevel = buddyBonusPercentPerLevel;
-        }
-    }
-
     /// <summary>GDD §15.3 quest kinds — what a quest counts.</summary>
     public enum QuestKind
     {
@@ -88,7 +67,7 @@ namespace Riptide.Core
         Powers,
         Quests,
         Events,
-        PetLevel,
+        BestStage,
     }
 
     public sealed class BadgeDef
@@ -151,18 +130,16 @@ namespace Riptide.Core
     {
         public CreaturePowersConfig Powers { get; }
         public PowerModes PowerModes { get; }
-        public PetsConfig Pets { get; }
         public int QuestsPerDay { get; }
         public IReadOnlyList<QuestDef> QuestPool { get; }
         public IReadOnlyList<BadgeDef> Badges { get; }
         public IReadOnlyList<EventDef> Events { get; }
 
-        public ExpansionConfig(CreaturePowersConfig powers, PowerModes powerModes, PetsConfig pets, int questsPerDay,
+        public ExpansionConfig(CreaturePowersConfig powers, PowerModes powerModes, int questsPerDay,
             IReadOnlyList<QuestDef> questPool, IReadOnlyList<BadgeDef> badges, IReadOnlyList<EventDef> events)
         {
             Powers = powers;
             PowerModes = powerModes;
-            Pets = pets;
             QuestsPerDay = questsPerDay;
             QuestPool = questPool;
             Badges = badges;
@@ -190,30 +167,6 @@ namespace Riptide.Core
                     NonNegative(powersObj, "octopusCoral"),
                     NonNegative(powersObj, "turtleDrain"),
                     NonNegative(powersObj, "axolotlDrain"));
-
-                JsonObject petsObj = root.Require("pets").AsObject();
-                JsonArray thresholdsNode = petsObj.Require("levelThresholds").AsArray();
-                var thresholds = new List<int>(thresholdsNode.Count);
-                foreach (JsonValue item in thresholdsNode.Items)
-                {
-                    int value = item.AsInt();
-                    if (value < 1 || (thresholds.Count > 0 && value <= thresholds[thresholds.Count - 1]))
-                    {
-                        throw new JsonParseException("levelThresholds must be >= 1 and strictly ascending",
-                            item.Line, item.Column);
-                    }
-
-                    thresholds.Add(value);
-                }
-
-                if (thresholds.Count < 1)
-                {
-                    throw new JsonParseException("levelThresholds needs at least one level", thresholdsNode.Line,
-                        thresholdsNode.Column);
-                }
-
-                var pets = new PetsConfig(thresholds, NonNegative(petsObj, "giftCoinsPerLevel"),
-                    NonNegative(petsObj, "giftCap"), NonNegative(petsObj, "buddyBonusPercentPerLevel"));
 
                 JsonObject questsObj = root.Require("quests").AsObject();
                 int perDay = Positive(questsObj, "perDay");
@@ -279,7 +232,7 @@ namespace Riptide.Core
                     throw new JsonParseException("events rotation is empty", root.Line, root.Column);
                 }
 
-                return new ExpansionConfig(powers, powerModes, pets, perDay, pool, badges, events);
+                return new ExpansionConfig(powers, powerModes, perDay, pool, badges, events);
             }
             catch (JsonParseException ex)
             {

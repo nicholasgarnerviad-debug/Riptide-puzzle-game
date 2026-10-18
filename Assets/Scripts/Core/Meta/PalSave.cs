@@ -8,7 +8,7 @@ namespace Riptide.Core
     /// <summary>
     /// GDD §16 Tidelings save state (save v5), its own JSON object inside the save so
     /// SaveData stays readable. Per line: bond, stage (0 = not owned), Sparkle owned /
-    /// shown, Journal line reward paid. The egg wallet and the row progress toward the
+    /// shown, Journal line reward paid. The egg wallet and the board progress toward the
     /// next egg; the Call counter (the RNG index) and both pity counters; the Pod,
     /// egg-source keys, once-a-day guards and the per-save seed. Newer fields parse as
     /// optional so an older v5 file still loads.
@@ -26,8 +26,8 @@ namespace Riptide.Core
         public bool[] LineRewarded = new bool[0];
         public int Eggs;
 
-        /// <summary>Rows cleared toward the next egg, in hundredths (Jellyfish speeds it).</summary>
-        public int EggRowProgress;
+        /// <summary>Finished boards toward the next egg, in hundredths (Jellyfish speeds it).</summary>
+        public int EggProgress;
 
         public int Calls;
         public int SinceEpic;
@@ -93,7 +93,7 @@ namespace Riptide.Core
             }
 
             sb.Append("], ");
-            sb.Append($"\"eggs\": {Eggs}, \"eggRows\": {EggRowProgress}, ");
+            sb.Append($"\"eggs\": {Eggs}, \"eggProgress\": {EggProgress}, ");
             sb.Append($"\"calls\": [{Calls}, {SinceEpic}, {SinceLegendary}], ");
             sb.Append($"\"days\": [{DailyEggDay}, {QuestEggDay}, {EventEggWeek}, {ContinueDay}, {ContinuesUsed}], ");
             sb.Append($"\"seed\": \"{Seed.ToString(CultureInfo.InvariantCulture)}\", ");
@@ -114,7 +114,7 @@ namespace Riptide.Core
                 LineRewarded = BoolArray(o, "lineRewarded"),
                 WelcomeGiven = o.Require("welcome").AsBool(),
                 Eggs = o.Optional("eggs") is JsonValue eggs ? Math.Max(0, eggs.AsInt()) : 0,
-                EggRowProgress = o.Optional("eggRows") is JsonValue rows ? Math.Max(0, rows.AsInt()) : 0,
+                EggProgress = o.Optional("eggProgress") is JsonValue progress ? Math.Max(0, progress.AsInt()) : 0,
             };
 
             int lines = pals.Stage.Length;

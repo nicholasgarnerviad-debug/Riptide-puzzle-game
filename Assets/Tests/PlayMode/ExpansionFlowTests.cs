@@ -151,17 +151,19 @@ namespace Riptide.PlayMode.Tests
             for (int i = 0; i < 5; i++)
             {
                 flow.Meta.Save.RecordRescue(0, flow.Roster.Count);
+                PalRules.RecordRescue(flow.Meta.Save.Pals, flow.Pals, 0, PalPerks.None);
             }
 
-            Assert.That(flow.PetLevel(0), Is.EqualTo(2), "thresholds [1,5,…]: five rescues is Lv 2");
+            Assert.That(flow.PetLevel(0), Is.EqualTo(1), "a rescued Common is befriended as a Baby");
+            Assert.That(flow.PetBond(0), Is.EqualTo(5), "every rescue adds bond");
             flow.GoTo(FlowScreen.Tidepool);
             yield return null;
 
             GameObject.Find("CreatureChip0")!.GetComponent<Button>().onClick.Invoke();
             yield return null;
             ButtonAt("infoCard", "makeBuddy").onClick.Invoke();
-            Assert.That(flow.Meta.Save.BuddySpecies, Is.EqualTo(0), "Make Buddy equips the shown pet");
-            Assert.That(flow.SetBuddy(3), Is.False, "an unmet species can't be a buddy");
+            Assert.That(flow.LeaderSpecies, Is.EqualTo(0), "the shown Tideling leads the Pod");
+            Assert.That(flow.SetBuddy(3), Is.False, "a Tideling you don't have can't lead");
 
             long before = flow.Meta.Coins;
             int gift = flow.PetGiftCoins;
@@ -185,6 +187,7 @@ namespace Riptide.PlayMode.Tests
             Assert.That(home!.Stage.Species, Is.EqualTo(0), "the crab stands in until a buddy is picked");
 
             flow.Meta.Save.RecordRescue(4, flow.Roster.Count);
+            PalRules.RecordRescue(flow.Meta.Save.Pals, flow.Pals, 4, PalPerks.None);
             Assert.That(flow.SetBuddy(4), Is.True);
             flow.GoTo(FlowScreen.Tidepool);
             yield return null;
@@ -214,6 +217,7 @@ namespace Riptide.PlayMode.Tests
             yield return Boot((f, s) => { flow = f; screens = s; });
 
             flow.Meta.Save.RecordRescue(4, flow.Roster.Count);
+            PalRules.RecordRescue(flow.Meta.Save.Pals, flow.Pals, 4, PalPerks.None);
             Assert.That(flow.SetBuddy(4), Is.True);
             flow.StartEndless();
             yield return null;

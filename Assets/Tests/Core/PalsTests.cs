@@ -20,7 +20,7 @@ namespace Riptide.Core.Tests
     { ""id"": 3, ""key"": ""octo"", ""name"": ""Octo"", ""rarity"": ""common"", ""boardSpecies"": 3, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""boosterDiscount"", ""perkValues"": [5, 10, 15] },
     { ""id"": 4, ""key"": ""turtle"", ""name"": ""Turtle"", ""rarity"": ""common"", ""boardSpecies"": 4, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""giftBoost"", ""perkValues"": [20, 35, 50] },
     { ""id"": 5, ""key"": ""puff"", ""name"": ""Puff"", ""rarity"": ""common"", ""boardSpecies"": 5, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""rescueCoins"", ""perkValues"": [2, 3, 5] },
-    { ""id"": 6, ""key"": ""jelly"", ""name"": ""Jelly"", ""rarity"": ""rare"", ""boardSpecies"": 6, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""eggRows"", ""perkValues"": [25, 50, 75] },
+    { ""id"": 6, ""key"": ""jelly"", ""name"": ""Jelly"", ""rarity"": ""rare"", ""boardSpecies"": 6, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""eggPace"", ""perkValues"": [25, 50, 75] },
     { ""id"": 7, ""key"": ""otter"", ""name"": ""Otter"", ""rarity"": ""rare"", ""boardSpecies"": -1, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""freeRerolls"", ""perkValues"": [1, 1, 2] },
     { ""id"": 8, ""key"": ""axo"", ""name"": ""Axo"", ""rarity"": ""epic"", ""boardSpecies"": 7, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""freeContinues"", ""perkValues"": [1, 1, 2] },
     { ""id"": 9, ""key"": ""angler"", ""name"": ""Angler"", ""rarity"": ""epic"", ""boardSpecies"": -1, ""stages"": [""A"", ""B"", ""C""], ""perk"": ""deepLuck"", ""perkValues"": [2, 3, 4], ""perkValues2"": [5, 10, 20] },
@@ -33,7 +33,7 @@ namespace Riptide.Core.Tests
   ""podUnlocks"": [0, 4, 8], ""giftCoinsPerStage"": 3, ""giftCap"": 120, ""lineCompleteCoins"": 100,
   ""call"": { ""cost"": 5, ""tenCost"": 45, ""tierRatesPermille"": { ""common"": 700, ""rare"": 220, ""epic"": 65, ""legendary"": 15 },
     ""epicPity"": 10, ""legendaryPity"": 30, ""tenCallGuaranteesRare"": true },
-  ""eggs"": { ""rowsPerEgg"": 25, ""welcome"": 10, ""voyageMilestones"": { ""5"": 2, ""20"": 5 }, ""deepZoneFrom"": 6,
+  ""eggs"": { ""boardsPerEgg"": 5, ""welcome"": 10, ""voyageMilestones"": { ""5"": 2, ""20"": 5 }, ""deepZoneFrom"": 6,
     ""deepZoneLevel20"": 8, ""dailyWin"": 2, ""questsAllClaimed"": 3, ""eventWin"": 10, ""endlessEveryTides"": 20,
     ""endlessEggs"": 1, ""endlessMaxPerRun"": 3, ""rareRescue"": 1 }
 }";
@@ -218,15 +218,29 @@ namespace Riptide.Core.Tests
         // ------------------------------------------------------------------ eggs
 
         [Test]
-        public void Rows_LayEggs_FasterWithTheJellyfish()
+        public void Boards_LayAnEggEveryFive_SoonerWithTheJellyfish()
         {
             PalsConfig cfg = Cfg();
             var pals = new PalSave();
-            Assert.That(PalRules.AddRows(pals, cfg, 30, PalPerks.None), Is.EqualTo(1));
-            Assert.That(PalRules.EggRowFraction(pals, cfg), Is.EqualTo(0.2f).Within(0.001f));
-            Assert.That(PalRules.AddRows(pals, cfg, 14, new PalPerks { EggRowPercent = 50 }), Is.EqualTo(1),
-                "5 + 14 × 1.5 = 26 rows");
-            Assert.That(pals.Eggs, Is.EqualTo(2));
+            for (int board = 1; board <= 4; board++)
+            {
+                Assert.That(PalRules.AddBoard(pals, cfg, PalPerks.None), Is.Zero);
+            }
+
+            Assert.That(PalRules.BoardsTowardEgg(pals), Is.EqualTo(4));
+            Assert.That(PalRules.EggFraction(pals, cfg), Is.EqualTo(0.8f).Within(0.001f));
+            Assert.That(PalRules.AddBoard(pals, cfg, PalPerks.None), Is.EqualTo(1), "the fifth board lays it");
+            Assert.That(PalRules.BoardsTowardEgg(pals), Is.Zero);
+
+            var glow = new PalPerks { EggPacePercent = 75 };
+            int boards = 0;
+            while (pals.Eggs < 2)
+            {
+                PalRules.AddBoard(pals, cfg, glow);
+                boards++;
+            }
+
+            Assert.That(boards, Is.EqualTo(3), "1.75 boards per board → an egg on the third");
         }
 
         // -------------------------------------------------------------- the Call
@@ -400,7 +414,7 @@ namespace Riptide.Core.Tests
             save.Pals.Bond[1] = 33;
             save.Pals.Sparkle[1] = true;
             save.Pals.Eggs = 17;
-            save.Pals.EggRowProgress = 1250;
+            save.Pals.EggProgress = 250;
             save.Pals.Calls = 40;
             save.Pals.SinceEpic = 3;
             save.Pals.SinceLegendary = 22;
@@ -426,7 +440,7 @@ namespace Riptide.Core.Tests
             Assert.That(SaveData.TryParse(v4)!.PalsNeedMigration, Is.True);
 
             // The first v5 layout (nest / incubator) predates the Call: it still loads.
-            string early = v5.Replace("\"eggs\": 0, \"eggRows\": 0, \"calls\": [0, 0, 0], ",
+            string early = v5.Replace("\"eggs\": 0, \"eggProgress\": 0, \"calls\": [0, 0, 0], ",
                 "\"nest\": [1], \"incubating\": 0, \"warmth\": 300, \"counts\": [2, 3], ");
             Assert.That(early, Is.Not.EqualTo(v5));
             Assert.That(SaveData.TryParse(early), Is.Not.Null);

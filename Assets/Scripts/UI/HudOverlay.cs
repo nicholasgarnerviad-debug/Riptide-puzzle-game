@@ -491,7 +491,10 @@ namespace Riptide.UI
             booster.Button.gameObject.SetActive(shown);
             if (shown)
             {
-                booster.Price.text = flow.BoosterCost(kind).ToString();
+                // §16.4: a Pod free use (Manta / Otter / Squid) reads FREE instead of a price.
+                booster.Price.text = flow.PodFreeBoostersLeft(kind) > 0
+                    ? flow.Strings.Get("booster.free")
+                    : flow.BoosterCost(kind).ToString();
                 booster.Button.interactable = flow.CanUseBooster(kind);
             }
         }

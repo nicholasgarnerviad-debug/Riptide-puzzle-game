@@ -162,7 +162,7 @@ namespace Riptide.UI
 
         public void Refresh()
         {
-            int chosen = flow.Meta.Save.BuddySpecies;
+            int chosen = flow.LeaderSpecies;
             species = chosen >= 0 && chosen < flow.Roster.Count ? chosen : 0;
             buddy.sprite = CreatureSprites.For(species);
             gift.gameObject.SetActive(flow.PetGiftCoins > 0);

@@ -24,7 +24,7 @@ namespace Riptide.Core
         BoosterDiscount,
         GiftBoost,
         RescueCoins,
-        EggRows,
+        EggPace,
         TideInterval,
         FreePops,
         FreeRerolls,
@@ -96,7 +96,8 @@ namespace Riptide.Core
     /// <summary>Where eggs come from and how many (§16.3); eggs are earned, never sold.</summary>
     public sealed class EggConfig
     {
-        public int RowsPerEgg { get; set; }
+        /// <summary>Finished boards (any mode, won or lost) per egg (§16.3).</summary>
+        public int BoardsPerEgg { get; set; }
         public int Welcome { get; set; }
         public IReadOnlyDictionary<int, int> VoyageMilestones { get; set; } = new Dictionary<int, int>();
         public int DeepZoneFrom { get; set; }
@@ -340,7 +341,7 @@ namespace Riptide.Core
 
             return new EggConfig
             {
-                RowsPerEgg = Positive(e, "rowsPerEgg"),
+                BoardsPerEgg = Positive(e, "boardsPerEgg"),
                 Welcome = NonNegative(e, "welcome"),
                 VoyageMilestones = milestones,
                 DeepZoneFrom = Positive(e, "deepZoneFrom"),
