@@ -10,12 +10,31 @@ camera + canvas solved for every portrait phone), mid-run save & resume (kill th
 resume the exact board), and the **Tidal Pop** UI overhaul (2026-10-18, UI spec §13) — a
 bright sunlit-ocean look with chunky sticker components (outlined, lipped, press-to-sink
 buttons), candy blocks, the Fredoka typeface, a persistent bottom tab bar, a winding
-seabed level map, and eight distinct procedural sea-creature sprites. A full pre-release audit is on record
+seabed level map — and the **Pets & Tides** expansion (2026-10-18, GDD §15): cute chibi sea-pets,
+creature powers, Pet Pals with a buddy, daily quests & badges, and a weekly Event Tide. A full pre-release audit is on record
 (`docs/AUDIT_REPORT.md`, verdict *ship after human gates*): 10,000-game determinism fuzz
 with cross-pipeline pins, balance re-verified against the §4 targets, every deferred
 visual gate consolidated into `docs/HUMAN_GATE_CHECKLIST.md`.
 On-device visual gates, store SDKs, and Play signing are pending —
 see `docs/DECISIONS.md` for every open item and every judgment call made along the way.
+
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/home.png" width="200" alt="Home">
+  <img src="docs/screenshots/level-map.png" width="200" alt="Level map">
+  <img src="docs/screenshots/game.png" width="200" alt="In a run, with the buddy on the tray">
+  <img src="docs/screenshots/results.png" width="200" alt="Level complete">
+</p>
+<p>
+  <img src="docs/screenshots/tidepool-pets.png" width="200" alt="Tidepool pet card">
+  <img src="docs/screenshots/quests.png" width="200" alt="Quests and badges">
+  <img src="docs/screenshots/event-tide.png" width="200" alt="Weekly Event Tide">
+</p>
+
+The eight rescue pets — open eyes, happy blink, and the locked silhouette (all drawn in code):
+
+<img src="docs/screenshots/pets.png" width="820" alt="The eight chibi sea-pets">
 
 ## Game modes
 
@@ -24,6 +43,11 @@ see `docs/DECISIONS.md` for every open item and every judgment call made along t
 | **Voyage** | 200 hand-tuned levels across 10 zones, star ratings, goals (rescue / rows / tides / score) |
 | **Endless Tide** | survival with escalating tide pressure, personal-best chase |
 | **Daily Riptide** | one date-seeded board for everyone, one attempt (one rescue retry), emoji share card, streaks |
+| **Event Tide** | a weekly themed board shared by everyone: featured creature, one goal, a one-time decoration prize |
+
+Around the modes: every rescued creature fires a **power** (the crab pinches coral, the turtle calms
+the water…; never in the Daily), pets **level up** from lifetime rescues and bring a daily gift, your
+**buddy** rides along and adds a coin bonus, and the **Quests** tab holds 3 daily quests plus 20 badges.
 
 ## Requirements
 
