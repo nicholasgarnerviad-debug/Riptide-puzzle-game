@@ -12,7 +12,7 @@ namespace Riptide.Core
     /// </summary>
     public sealed class SaveData
     {
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         public long Coins;
         public string VoyageProgress = "";
@@ -57,6 +57,12 @@ namespace Riptide.Core
 
         /// <summary>Sanity ceiling for the per-day quest arrays (a tampered save can't balloon them).</summary>
         public const int MaxQuestsPerDay = 8;
+
+        // v5: GDD §16 Sea Pals (its own object — see PalSave).
+        public PalSave Pals = new PalSave();
+
+        /// <summary>Set when a pre-v5 save was read: the Game layer seeds pals from rescues + buddy (§16.7). Not serialized.</summary>
+        public bool PalsNeedMigration;
 
         public string Serialize()
         {
@@ -127,7 +133,8 @@ namespace Riptide.Core
 
             sb.Append("],\n");
             sb.Append($"  \"stats\": [{TotalRowsCleared}, {BestClearAtOnce}, {TotalTides}, {PowersTriggered}, {QuestsCompleted}, {EventsCompleted}],\n");
-            sb.Append($"  \"event\": [{EventRewardWeek}, {EventProgressWeek}, {EventBestProgress}]\n");
+            sb.Append($"  \"event\": [{EventRewardWeek}, {EventProgressWeek}, {EventBestProgress}],\n");
+            sb.Append($"  \"pals\": {Pals.Serialize()}\n");
             sb.Append("}");
             return sb.ToString();
         }
@@ -267,6 +274,16 @@ namespace Riptide.Core
                     save.EventRewardWeek = evt.Items[0].AsInt();
                     save.EventProgressWeek = evt.Items[1].AsInt();
                     save.EventBestProgress = Math.Max(0, evt.Items[2].AsInt());
+                }
+
+                // v4 → v5 (GDD §16.7): pals are seeded from rescues + buddy by the Game layer.
+                if (version >= 5)
+                {
+                    save.Pals = PalSave.Parse(root.Require("pals").AsObject());
+                }
+                else
+                {
+                    save.PalsNeedMigration = true;
                 }
 
                 return save;

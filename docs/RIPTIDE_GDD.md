@@ -326,3 +326,64 @@ Deterministic: no RNG draws, so the deal stream is untouched. The sim emits `Pow
 ### 15.4 Weekly Event Tide (mode)
 - One event per ISO-ish week (`CivilDate.WeekIndex`), rotating through `events.rotation`. Endless ruleset + per-event overrides (start water, tide interval, spawn cadence, featured species) + one goal. Seed derives from the week, so the week's board is shared; attempts are unlimited.
 - First completion each week pays the event's coins and unlocks its event-only decoration (one-time). Boosters and the continue are allowed (it's a Voyage-like challenge, not a comparison mode). Powers are on.
+
+---
+
+## 16. Amendment — Sea Pals: eggs, evolution & the Pod (2026-10-18, Nick: "take inspiration of pokemon … eggs … unique sea creatures … collect more or rare ones they evolve and give perks depending which you select — expand this idea in full")
+
+Supersedes §15.2 (pet levels and the flat buddy coin bonus). The board's 8 rescue species (§2.5) and their in-run powers (§15.1) are unchanged — Sea Pals is a **meta layer**: the sim never sees evolution, and the Daily never sees a perk. All numbers are data in `Assets/Resources/Content/pals.json`.
+
+### 16.1 The pals — 12 lines × 3 stages
+Every creature is a **pal line** with three named, visually distinct stages (I baby → II grown → III grand). The first eight are the board species (met by rescuing *or* hatching); four **Deep Pals** never appear on the board and come only from eggs.
+
+| # | Line | Rarity | Where | Stage I | Stage II | Stage III | Pod perk (I / II / III) |
+|---|---|---|---|---|---|---|---|
+| 0 | Crab | Common | board + eggs | Pinchy | Clawdette | King Krabbo | **Treasure Pincers** — +5 / 10 / 15 % run coins |
+| 1 | Starfish | Common | board + eggs | Twinkle | Starla | Supernova | **Lucky Star** — +5 / 10 / 15 coins per Voyage star earned |
+| 2 | Seahorse | Common | board + eggs | Ripple | Galloper | Tidecharger | **Steady Current** — the tide's starting interval +1 / +1 / +2 moves |
+| 3 | Octopus | Uncommon | board + eggs | Inky | Octavia | Krakenling | **Ink Discount** — boosters cost −10 / 20 / 30 % |
+| 4 | Turtle | Uncommon | board + eggs | Shelly | Mossback | Elder Atoll | **Safe Harbor** — start water −1 / −1 / −2 (floored) |
+| 5 | Pufferfish | Uncommon | board + eggs | Puff | Spikeball | Blowfin Boss | **Puff Shield** — 1 / 1 / 2 free Bubble Pops per run |
+| 6 | Jellyfish | Rare | board + eggs | Glim | Lumina | Aurora Bell | **Warm Glow** — eggs incubate +25 / 50 / 75 % faster |
+| 7 | Axolotl | Epic | board (rare) + eggs | Lotl | Gillian | Axolord | **Second Wind** — 1 / 1 / 2 free continues per day |
+| 8 | Narwhal | Rare | eggs only | Tusky | Unicorna | Polaris | **Pal Gifts** — daily pet gift +25 / 50 / 100 % |
+| 9 | Manta Ray | Rare | eggs only | Flapjack | Glidewing | Skymanta | **Quest Glider** — quest & badge coins +15 / 30 / 50 % |
+| 10 | Anglerfish | Epic | eggs only | Bulb | Lanterna | Abyss Beacon | **Deep Luck** — shiny odds ×2 / 3 / 4 · 5 / 10 / 15 % egg tier-up |
+| 11 | Sea Dragon | Legendary | eggs only | Leafy | Drakelp | Tidewyrm | **Mythic Bond** — the Pod earns bond ×1.5 / 2 / 3 |
+
+### 16.2 Owning, bond and evolution
+- A pal is **owned** from its first rescue (board species) or first hatch. Owned pals start at stage I.
+- **Bond** grows per pal: +1 per board rescue of its species (every mode, the Daily included — bond is collection, not competition); +1 per finished run for each Pod member (+2 for the leader); a **duplicate hatch** adds bond by rarity (Common 3 · Uncommon 4 · Rare 6 · Epic 8 · Legendary 10). Sea Dragon's Mythic Bond multiplies run and rescue bond (not duplicates).
+- **Evolution** is the player's moment: when bond reaches the next threshold an *Evolve!* button lights up; tapping plays the evolution and the pal advances a stage. Thresholds (bond to reach II / III) by rarity: Common 15 / 50 · Uncommon 12 / 40 · Rare 10 / 30 · Epic 8 / 24 · Legendary 6 / 18 — rarer pals meet you less often, so they need less.
+- **Shiny ("Sparkle") pals:** each hatch has a 1-in-64 chance (Deep Luck raises it) to be a Sparkle — an alternate palette with a glint. Owning a Sparkle is per line and purely cosmetic (toggle on the pal card).
+
+### 16.3 Eggs
+Four egg types; **odds are always shown on the egg's card** and eggs are **earned only — never sold for coins or real money** (no loot boxes).
+
+| Egg | Rows to hatch | Drop table (weights, total 100) |
+|---|---|---|
+| Tide | 15 | Crab 25 · Starfish 25 · Seahorse 25 · Octopus 8 · Turtle 8 · Puffer 8 · Jelly 1 |
+| Coral | 30 | Crab 8 · Starfish 8 · Seahorse 8 · Octopus 22 · Turtle 22 · Puffer 22 · Jelly 6 · Narwhal 2 · Manta 2 |
+| Pearl | 50 | Octopus 10 · Turtle 10 · Puffer 10 · Jelly 25 · Narwhal 18 · Manta 18 · Axolotl 5 · Angler 4 |
+| Abyss | 80 | Jelly 15 · Narwhal 20 · Manta 20 · Axolotl 20 · Angler 17 · Sea Dragon 8 |
+
+- **Incubator:** one egg incubates at a time; every row you clear in any mode warms it (Warm Glow speeds it). When it's warm enough it hatches on your next visit to the Nest (the reveal is a moment, never automatic mid-run).
+- **Nest:** up to 6 waiting eggs; an egg earned into a full nest pays coins instead (Tide 30 · Coral 60 · Pearl 120 · Abyss 240).
+- **Where eggs come from** (each once, by key): a **Welcome egg** (Tide) the first time Sea Pals opens · Voyage first clears of each zone's level 5 and 15 (Tide), 10 (Coral), 20 (Pearl; Abyss in zones 6–10) · a Daily **win** (Tide) · claiming all of the day's quests (Coral) · the week's first **Event Tide** win (Pearl) · every 20 tides in one Endless run (Tide, max 2 per run). Deep Luck can upgrade any earned egg by one tier.
+- Hatching is deterministic from the save's hatch counter and a per-save seed (Core purity: no `System.Random`), so a hatch can be replayed and tested.
+
+### 16.4 The Pod and perks
+- The **Pod** is up to three pals you bring along: slot 1 is always open (the **leader** — the buddy on Home and the tray), slot 2 opens at 4 pals owned, slot 3 at 8.
+- Every Pod pal's perk applies at its current stage. **Perks never apply in the Daily** (comparison purity, like powers). Perks that touch the board (Steady Current, Safe Harbor) apply through the run config; the rest are meta (coins, boosters, continues, eggs, gifts, bond).
+- The **daily pet gift** (§15.2) becomes: Σ stages of all owned pals × 3 coins, capped at 120, × Pal Gifts.
+
+### 16.5 The Sea Dex
+A collection book of all 36 forms (12 lines × 3 stages) plus each line's Sparkle. Unseen forms are silhouettes with "???". Completing a line (all three stages) pays 100 coins once. New badges: *Hatchling* (hatch 1 egg) · *Egg Collector* (hatch 25) · *Full Pod* (own 8 pals) · *Sea Dex* (own all 12) · *Sparkle!* (own a Sparkle pal); *Best Friends* now means a stage III pal.
+
+### 16.6 Screens (UI direction mocked for sign-off before it is built)
+- The Tidepool tab becomes **Pals**: the Pod (leader + two slots with perks), the collection/Dex grid, the **Nest** (incubator ring, waiting eggs, odds), and the existing Tidepool diorama.
+- **Hatch** and **Evolve** are full-screen celebrations (egg wobble → crack taps → burst → reveal card with rarity color, NEW! or +bond; evolution glow → new form and name).
+- Home's buddy stage shows the incubating egg's warmth; Results show rows added to the egg and any egg earned.
+
+### 16.7 Migration (save v5)
+Bond starts at each species' lifetime rescues; every met species is owned at stage I (and can evolve on first look if its bond already qualifies — a welcome-back moment); the v4 buddy becomes the Pod leader; one Welcome egg is granted.

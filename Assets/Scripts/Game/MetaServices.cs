@@ -43,6 +43,27 @@ namespace Riptide.Game
             store.Load();
             Voyage = VoyageProgress.Deserialize(store.Data.VoyageProgress);
             wallet = new CoinWallet(Math.Max(0, store.Data.Coins));
+            PreparePals();
+        }
+
+        /// <summary>
+        /// GDD §16.7: a pre-v5 save is migrated the moment it loads (before anything can
+        /// re-save it as an empty v5), and every save gets its private hatch seed.
+        /// </summary>
+        private void PreparePals()
+        {
+            SaveData d = store.Data;
+            if (d.PalsNeedMigration)
+            {
+                CreatureRoster roster = RuntimeContent.LoadCreatures();
+                PalRules.MigrateLegacy(d.Pals, RuntimeContent.LoadPals(roster.Count), d.SpeciesRescues, d.BuddySpecies);
+                d.PalsNeedMigration = false;
+            }
+
+            if (d.Pals.Seed == 0)
+            {
+                d.Pals.Seed = unchecked((ulong)DateTime.UtcNow.Ticks * 0x9E3779B97F4A7C15UL) | 1UL;
+            }
         }
 
         public void SaveNow()

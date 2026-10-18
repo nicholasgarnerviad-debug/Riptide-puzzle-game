@@ -157,6 +157,24 @@ namespace Riptide.Core
                 CreatureSpeciesCount, DealColorCount, pieceWeights, Scoring, Goals, Preset, Escalation,
                 BoostersAllowed, powers, FeaturedSpecies);
 
+        /// <summary>
+        /// GDD §16.4 board-touching Pod perks: Steady Current lengthens the starting tide
+        /// interval, Safe Harbor lowers the starting water (floored at 0; the drain floor
+        /// follows it down). Zero / zero returns this config unchanged.
+        /// </summary>
+        public LevelConfig WithPalPerks(int tideIntervalBonus, int startWaterReduction)
+        {
+            if (tideIntervalBonus <= 0 && startWaterReduction <= 0)
+            {
+                return this;
+            }
+
+            int start = Math.Max(0, StartWaterLevel - Math.Max(0, startWaterReduction));
+            return new LevelConfig(start, Math.Min(MinWaterLevel, start), TideInterval + Math.Max(0, tideIntervalBonus),
+                CreatureSpawnIntervalTrays, CreatureSpeciesCount, DealColorCount, pieceWeights, Scoring, Goals, Preset,
+                Escalation, BoostersAllowed, Powers, FeaturedSpecies);
+        }
+
         private static IReadOnlyList<PresetCell> ValidatePreset(IReadOnlyList<PresetCell> preset, int startWaterLevel)
         {
             var seen = new HashSet<int>();

@@ -387,7 +387,7 @@ namespace Riptide.Core.Tests
             string v3 = new SaveData { Coins = 77 }.Serialize();
             int cut = v3.IndexOf(",\n  \"buddy\"", System.StringComparison.Ordinal);
             v3 = v3.Substring(0, cut) + "\n}";
-            v3 = v3.Replace("\"version\": 4", "\"version\": 3");
+            v3 = v3.Replace($"\"version\": {SaveData.CurrentVersion}", "\"version\": 3");
 
             SaveData? save = SaveData.TryParse(v3);
             Assert.That(save, Is.Not.Null, "a v3 save still loads");

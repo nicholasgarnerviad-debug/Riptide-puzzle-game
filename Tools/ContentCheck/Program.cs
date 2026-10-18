@@ -81,6 +81,37 @@ namespace Riptide.Tools.ContentCheck
                 Console.WriteLine($"OK expansion.json ({expansion.QuestPool.Count} quests, {expansion.Badges.Count} badges, " +
                     $"{expansion.Events.Count} events)");
 
+                // GDD §16 Sea Pals: every board species has a line, every egg's odds are
+                // disclosed as whole-percent-summing tables, every line can hatch somewhere.
+                PalsConfig pals = PalsLoader.Load(File.ReadAllText(Path.Combine(root, "pals.json")), "pals.json",
+                    roster.Count);
+                var hatchable = new bool[pals.Lines.Count];
+                foreach (EggType egg in pals.Eggs)
+                {
+                    if (egg.TotalWeight != 100)
+                    {
+                        Console.Error.WriteLine($"pals.json: egg '{egg.Id}' weights sum to {egg.TotalWeight}, not 100 " +
+                            "(odds are shown to players as percents).");
+                        return 1;
+                    }
+
+                    for (int i = 0; i < egg.Weights.Count; i++)
+                    {
+                        hatchable[i] |= egg.Weights[i] > 0;
+                    }
+                }
+
+                for (int i = 0; i < pals.Lines.Count; i++)
+                {
+                    if (!hatchable[i])
+                    {
+                        Console.Error.WriteLine($"pals.json: line '{pals.Lines[i].Key}' is in no egg — Deep Pals would be unobtainable.");
+                        return 1;
+                    }
+                }
+
+                Console.WriteLine($"OK pals.json ({pals.Lines.Count} lines, {pals.Eggs.Count} eggs)");
+
                 string themePath = Path.Combine(root, "ui_theme.json");
                 UiTheme theme = UiThemeLoader.Load(File.ReadAllText(themePath), "ui_theme.json");
                 int audit = AuditTheme(theme);

@@ -42,6 +42,10 @@ namespace Riptide.Game
         public static ExpansionConfig LoadExpansion(int speciesCount) =>
             ExpansionLoader.Load(LoadText("Content/expansion"), "expansion.json", speciesCount);
 
+        /// <summary>GDD §16 Sea Pals content (lines, eggs, perks, egg sources).</summary>
+        public static PalsConfig LoadPals(int boardSpeciesCount) =>
+            PalsLoader.Load(LoadText("Content/pals"), "pals.json", boardSpeciesCount);
+
         public static UiTheme LoadTheme() =>
             UiThemeLoader.Load(LoadText("Content/ui_theme"), "ui_theme.json");
 
