@@ -100,8 +100,18 @@ namespace Riptide.Core
         /// <summary>The highest Tideling stage reached (GDD §16; 0 = none).</summary>
         public int BestStage { get; }
 
+        /// <summary>GDD §16.5: Calls made, Tidelings owned, Legendaries owned, Sparkle forms owned.</summary>
+        public long Calls { get; }
+
+        public int Tidelings { get; }
+
+        public int Legendaries { get; }
+
+        public int Sparkles { get; }
+
         public PlayerStats(long rescues, int species, long rows, int bestClear, long tides, int stars, int levels,
-            long endlessBest, int streakBest, int decor, long powers, int quests, int events, int bestStage)
+            long endlessBest, int streakBest, int decor, long powers, int quests, int events, int bestStage,
+            long calls = 0, int tidelings = 0, int legendaries = 0, int sparkles = 0)
         {
             Rescues = rescues;
             Species = species;
@@ -117,7 +127,16 @@ namespace Riptide.Core
             Quests = quests;
             Events = events;
             BestStage = bestStage;
+            Calls = calls;
+            Tidelings = tidelings;
+            Legendaries = legendaries;
+            Sparkles = sparkles;
         }
+
+        /// <summary>The same stats with the Tideling counts filled in.</summary>
+        public PlayerStats WithTidelings(long calls, int tidelings, int legendaries, int sparkles) =>
+            new PlayerStats(Rescues, Species, Rows, BestClear, Tides, Stars, Levels, EndlessBest, StreakBest, Decor,
+                Powers, Quests, Events, BestStage, calls, tidelings, legendaries, sparkles);
 
         public long Get(BadgeStat stat) => stat switch
         {
@@ -135,6 +154,10 @@ namespace Riptide.Core
             BadgeStat.Quests => Quests,
             BadgeStat.Events => Events,
             BadgeStat.BestStage => BestStage,
+            BadgeStat.Calls => Calls,
+            BadgeStat.Tidelings => Tidelings,
+            BadgeStat.Legendaries => Legendaries,
+            BadgeStat.Sparkles => Sparkles,
             _ => 0,
         };
     }

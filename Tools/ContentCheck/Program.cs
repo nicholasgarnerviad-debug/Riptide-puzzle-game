@@ -225,6 +225,7 @@ namespace Riptide.Tools.ContentCheck
                 ("text.primary", "pop.purple.edge", 4.5),
                 ("text.primary", "pop.blue.edge", 4.5),
                 ("text.primary", "pop.navy.edge", 4.5),
+                ("text.primary", "pop.teal.edge", 4.5),
                 ("text.primary", "panel.edge", 4.5),
             };
 

@@ -98,6 +98,36 @@ namespace Riptide.UI
             // Home "Buddy Stage" (2026-10-18).
             "home.petGift", "buddy.next", "buddy.gift", "buddy.daily", "buddy.cheer1", "buddy.cheer2",
             "buddy.cheer3", "buddy.power", "buddy.pick",
+
+            // GDD §16.6 Tidelings tab, the Conch, Call reveals, growing up (Phase D).
+            "tl.leader", "tl.call", "tl.journal", "tl.journalCount", "tl.callToMeet", "tl.rescueToMeet",
+            "tl.inPod", "tl.notDaily", "tl.slotOpen", "stage.1", "stage.2", "stage.3",
+            "conch.title", "conch.legendary", "conch.epic", "conch.calls", "conch.nextCall", "conch.eggs",
+            "conch.egg", "conch.nextEgg", "conch.boards", "conch.odds", "conch.oddsEvery", "conch.each",
+            "conch.callOne", "conch.callTen", "conch.tenFree", "conch.earned", "conch.short",
+            "reveal.new", "reveal.bond", "reveal.sparkle", "reveal.again", "reveal.toPod", "reveal.ten",
+            "reveal.tenSub", "reveal.done", "reveal.eggsLeft", "reveal.growsAt", "reveal.new.short",
+            "grow.title", "grow.lineDone", "grow.yay",
+            "card.next", "card.leader", "card.slot", "card.slotLocked", "card.sparkleOn", "card.sparkleOff",
+            "card.rescueOnly", "results.nextEgg",
+            "badge.first_call", "badge.conch_keeper", "badge.full_pod", "badge.tide_journal", "badge.legend",
+            "badge.sparkle", "badgeStat.calls", "badgeStat.tidelings", "badgeStat.legendaries", "badgeStat.sparkles",
+            "perk.coins.name", "perk.coins.short", "perk.coins.desc",
+            "perk.starCoins.name", "perk.starCoins.short", "perk.starCoins.desc",
+            "perk.questBoost.name", "perk.questBoost.short", "perk.questBoost.desc",
+            "perk.boosterDiscount.name", "perk.boosterDiscount.short", "perk.boosterDiscount.desc",
+            "perk.giftBoost.name", "perk.giftBoost.short", "perk.giftBoost.desc",
+            "perk.rescueCoins.name", "perk.rescueCoins.short", "perk.rescueCoins.desc",
+            "perk.eggPace.name", "perk.eggPace.short", "perk.eggPace.desc",
+            "perk.tideInterval.name", "perk.tideInterval.short", "perk.tideInterval.desc",
+            "perk.freePops.name", "perk.freePops.short", "perk.freePops.desc",
+            "perk.freeRerolls.name", "perk.freeRerolls.short", "perk.freeRerolls.desc",
+            "perk.freeContinues.name", "perk.freeContinues.short", "perk.freeContinues.desc",
+            "perk.deepLuck.name", "perk.deepLuck.short", "perk.deepLuck.desc",
+            "perk.startWater.name", "perk.startWater.short", "perk.startWater.desc",
+            "perk.bondBoost.name", "perk.bondBoost.short", "perk.bondBoost.desc",
+            "perk.freeDrains.name", "perk.freeDrains.short", "perk.freeDrains.desc",
+            "perk.whaleSong.name", "perk.whaleSong.short", "perk.whaleSong.desc",
         };
     }
 }

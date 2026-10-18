@@ -47,7 +47,9 @@ namespace Riptide.UI
         private static Sprite Get(string key, int stage, CreatureArt.Variant variant, bool sparkle, bool grow)
         {
             string id = $"{key}/{stage}/{(int)variant}/{(sparkle ? 1 : 0)}/{(grow ? 1 : 0)}";
-            if (!cache.TryGetValue(id, out Sprite sprite))
+            // A sprite made in one play session is destroyed when it ends (editor with
+            // domain reload off) — Unity's null check catches that and we repaint.
+            if (!cache.TryGetValue(id, out Sprite sprite) || sprite == null)
             {
                 Texture2D tex = CreatureArt.Render(key, stage, variant, sparkle, grow);
                 sprite = Sprite.Create(tex, new Rect(0, 0, Size, Size), new Vector2(0.5f, 0.5f), PixelsPerUnit);

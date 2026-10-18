@@ -229,7 +229,31 @@ namespace Riptide.Game
 
         public int CallsUntilLegendary => PalRules.CallsUntilLegendary(PalState, Pals, PodPerks);
 
+        public int CallsUntilEpic => PalRules.CallsUntilEpic(PalState, Pals);
+
+        /// <summary>The Legendary pity right now (Deep Luck shortens it) — the Conch ring's full turn.</summary>
+        public int LegendaryPity => PalRules.LegendaryPity(Pals, PodPerks);
+
         public int PodSlotsOpen => PalRules.PodSlotsOpen(Pals, PalState.OwnedCount());
+
+        /// <summary>Tidelings owned, and forms seen (every stage reached counts) — the Journal's totals.</summary>
+        public (int owned, int forms) JournalCounts()
+        {
+            int owned = 0;
+            int forms = 0;
+            for (int i = 0; i < Pals.Lines.Count; i++)
+            {
+                int stage = PalState.StageOf(i);
+                owned += stage > 0 ? 1 : 0;
+                forms += stage;
+            }
+
+            return (owned, forms);
+        }
+
+        /// <summary>The Journal's line reward for this Tideling has been paid (all three forms seen).</summary>
+        public bool LineRewarded(int line) =>
+            line >= 0 && line < PalState.LineRewarded.Length && PalState.LineRewarded[line];
 
         public TidelingView Tideling(int line)
         {
@@ -321,6 +345,27 @@ namespace Riptide.Game
             return true;
         }
 
+        /// <summary>Tidelings owned, Legendaries owned and Sparkle forms owned (GDD §16.5 badges).</summary>
+        public (int owned, int legendaries, int sparkles) TidelingCounts()
+        {
+            int owned = 0;
+            int legendaries = 0;
+            int sparkles = 0;
+            PalSave save = PalState;
+            save.EnsureLines(Pals.Lines.Count);
+            for (int i = 0; i < Pals.Lines.Count; i++)
+            {
+                if (save.StageOf(i) > 0)
+                {
+                    owned++;
+                    legendaries += Pals.Lines[i].Rarity == PalRarity.Legendary ? 1 : 0;
+                    sparkles += save.Sparkle[i] ? 1 : 0;
+                }
+            }
+
+            return (owned, legendaries, sparkles);
+        }
+
         /// <summary>The highest stage any Tideling has reached (the "All Grown Up" badge).</summary>
         public int BestStage()
         {
@@ -338,6 +383,9 @@ namespace Riptide.Game
         /// <summary>The board species of the Pod leader (−1 when none, or a Call-only leader the board art can't draw yet).</summary>
         public int LeaderSpecies =>
             PalState.Leader >= 0 && PalState.Leader < Pals.Lines.Count ? Pals.Lines[PalState.Leader].BoardSpecies : -1;
+
+        /// <summary>The Pod leader's line (−1 when none) — Home's stage draws its form.</summary>
+        public int LeaderLine => PalState.Leader >= 0 && PalState.Leader < Pals.Lines.Count ? PalState.Leader : -1;
 
         /// <summary>A species' Tideling stage (0 = not owned).</summary>
         public int PetLevel(int species) => PalState.StageOf(Pals.LineForSpecies(species));

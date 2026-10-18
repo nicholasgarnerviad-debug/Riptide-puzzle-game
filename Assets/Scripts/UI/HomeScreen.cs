@@ -10,7 +10,7 @@ namespace Riptide.UI
     /// Spec §4.1 Home, "Buddy Stage" edition (Nick's pick of five Home directions,
     /// 2026-10-18): chest · streak · wordmark · coins along the top; your buddy pet
     /// center stage (<see cref="BuddyStage"/>: speech bubble, pet gift, taps); its
-    /// name pill (→ Tidepool); the level card (zone ribbon, level, zone stars,
+    /// name pill (→ Tidelings) and egg count; the level card (zone ribbon, level, zone stars,
     /// progress, one huge PLAY — the card body opens the map); and the Daily ·
     /// Event Tide · Endless cards above the tab bar (GDD §15.4).
     /// </summary>
@@ -33,6 +33,8 @@ namespace Riptide.UI
         private TextMeshProUGUI streakCount = null!;
         private TextMeshProUGUI petName = null!;
         private PopBar petBar = null!;
+        private TextMeshProUGUI eggCount = null!;
+        private RectTransform eggPill = null!;
         private TextMeshProUGUI ribbonLabel = null!;
         private TextMeshProUGUI levelLabel = null!;
         private TextMeshProUGUI zoneStars = null!;
@@ -64,7 +66,7 @@ namespace Riptide.UI
             RectTransform card = screen.BuildLevelCard(root);
             (RectTransform daily, RectTransform tide, RectTransform endless) = screen.BuildModeTiles(root);
 
-            screen.sections = new[] { topBar, screen.stage.Rect, pill, card, daily, tide, endless };
+            screen.sections = new[] { topBar, screen.stage.Rect, pill, screen.eggPill, card, daily, tide, endless };
             screen.Refresh();
             return root;
         }
@@ -117,7 +119,7 @@ namespace Riptide.UI
         {
             RectTransform pill = PopKit.Panel(root, "buddyPill", new Vector2(560f, 96f), PopTone.Navy, 48f, 7f);
             pill.anchorMin = pill.anchorMax = new Vector2(0.5f, 0f);
-            pill.anchoredPosition = new Vector2(0f, PillCenter);
+            pill.anchoredPosition = new Vector2(-110f, PillCenter);
             var hit = pill.gameObject.AddComponent<Image>();
             hit.sprite = SpriteFactory.Solid();
             hit.color = new Color(0f, 0f, 0f, 0f);
@@ -141,6 +143,19 @@ namespace Riptide.UI
             petBar = PopBar.Create(pill, "petBar", new Vector2(160f, 46f), PopTone.Coral, "micro");
             petBar.Rect.anchorMin = petBar.Rect.anchorMax = new Vector2(1f, 0.5f);
             petBar.Rect.anchoredPosition = new Vector2(-104f, 0f);
+
+            // GDD §16.6: your eggs beside the leader's name — a tap opens the Tidelings tab.
+            eggCount = TidelingUi.EggPill(root, "eggPill", new Vector2(200f, 96f));
+            eggPill = (RectTransform)eggCount.transform.parent;
+            eggPill.anchorMin = eggPill.anchorMax = new Vector2(0.5f, 0f);
+            eggPill.anchoredPosition = new Vector2(300f, PillCenter);
+            var eggHit = eggPill.gameObject.AddComponent<Image>();
+            eggHit.sprite = SpriteFactory.Solid();
+            eggHit.color = new Color(0f, 0f, 0f, 0f);
+            var eggButton = eggPill.gameObject.AddComponent<Button>();
+            eggButton.transition = Selectable.Transition.None;
+            eggButton.onClick.AddListener(() => flow.GoTo(FlowScreen.Tidepool));
+            eggPill.gameObject.AddComponent<PressEffect>();
             return pill;
         }
 
@@ -341,16 +356,16 @@ namespace Riptide.UI
         private void RefreshBuddy()
         {
             stage.Refresh();
-            int buddy = flow.LeaderSpecies;
-            bool chosen = buddy >= 0 && buddy < flow.Roster.Count;
-            petBar.gameObject.SetActive(chosen);
-            if (!chosen)
+            eggCount.text = flow.Eggs.ToString();
+            int line = flow.LeaderLine;
+            petBar.gameObject.SetActive(line >= 0);
+            if (line < 0)
             {
                 petName.text = flow.Strings.Get("buddy.pick");
                 return;
             }
 
-            TidelingView leader = flow.Tideling(flow.Pals.LineForSpecies(buddy));
+            TidelingView leader = flow.Tideling(line);
             petName.text = $"{leader.FormName} · {string.Format(flow.Strings.Get("pet.level"), leader.Stage)}";
             petBar.Set(leader.NextBond.HasValue ? leader.Bond : 1, leader.NextBond ?? 1, "");
         }

@@ -8,13 +8,15 @@ using UnityEngine.UI;
 namespace Riptide.UI
 {
     /// <summary>
-    /// Spec §4.6 Tidepool: a 3-screen-wide horizontally scrolling diorama with a
-    /// 2-layer parallax background, creatures idle-bobbing at fixed slots (locked
-    /// species = dark silhouette + "???"), tap → bottom card with portrait, name,
-    /// lifetime rescues and a flavor line cycling its 3 entries. Decorations get
-    /// an edit-mode toggle: owned pieces place at predefined slot points (save
-    /// v3); unowned show in the tray with their coin cost (the shop entry);
-    /// event prizes are earned, never sold. Pets live in TidepoolScreen.Pets.
+    /// The Tidelings tab (GDD §16.6; Nick's mix of the three mocked directions,
+    /// 2026-10-18): the Tidepool diorama (§4.6, 3 screens wide, 2-layer parallax)
+    /// is now where your Pod swims — the leader center, the other two beside it —
+    /// with every other Tideling you own idling further along; the Conch sits on the
+    /// sand (egg count, CALL); the Tide Journal card below shows each tier's
+    /// tier-framed cards. Decorations keep their edit mode: owned pieces place at
+    /// slot points (save v3), unowned show in the tray with their coin cost; event
+    /// prizes are earned, never sold. Pod and Conch live in TidepoolScreen.Pod,
+    /// the Journal in TidepoolScreen.Journal.
     /// </summary>
     public sealed partial class TidepoolScreen : MonoBehaviour, IScreenRefresh
     {
@@ -23,25 +25,20 @@ namespace Riptide.UI
 
         private GameFlow flow = null!;
         private CoinCounter coins = null!;
+        private TextMeshProUGUI eggCount = null!;
+        private RectTransform frame = null!;
         private RectTransform content = null!;
         private RectTransform parallaxFar = null!;
         private RectTransform parallaxNear = null!;
-        private ScrollRect scroll = null!;
         private Button editToggle = null!;
-        private RectTransform infoCard = null!;
         private RectTransform tray = null!;
         private TextMeshProUGUI hint = null!;
 
-        private readonly List<(int id, CreatureChip chip, TextMeshProUGUI name, RectTransform rt, float baseY)> chips
-            = new List<(int, CreatureChip, TextMeshProUGUI, RectTransform, float)>();
         private readonly List<(Button marker, RectTransform slotRt, TextMeshProUGUI label, Image dot)> decoSlots
             = new List<(Button, RectTransform, TextMeshProUGUI, Image)>();
 
         private bool editMode;
         private string selectedDecoration = "";
-        private int flavorCursor;
-        private int shownSpecies = -1;
-        private float bobTime;
 
         public static RectTransform Build(RectTransform parent, GameFlow flow)
         {
@@ -49,18 +46,11 @@ namespace Riptide.UI
             var screen = root.gameObject.AddComponent<TidepoolScreen>();
             screen.flow = flow;
 
-            // Tidal Pop header: coin pill right, the Edit toggle in the left slot
-            // (tab screens have no back button — the tab bar is the way out).
-            screen.coins = ScreenChrome.Header(root, flow, flow.Strings.Get("tidepool.title"), null, coins: true)!;
-            screen.editToggle = PopKit.Button(root, "edit", flow.Strings.Get("tidepool.edit"), PopTone.White,
-                screen.ToggleEdit, new Vector2(210f, 116f), "body");
-            var editRt = (RectTransform)screen.editToggle.transform;
-            editRt.anchorMin = editRt.anchorMax = new Vector2(0f, 1f);
-            editRt.anchoredPosition = new Vector2(150f, -ScreenChrome.HeaderRefPx * 0.5f);
-            screen.BuildGiftButton(root);
-
+            screen.BuildHeader(root);
             screen.BuildDiorama(root);
-            screen.BuildInfoCard(root);
+            screen.BuildPod();
+            screen.BuildConch();
+            screen.BuildJournal(root);
             screen.BuildTray(root);
 
             screen.hint = UiText.CreateOutlined(root, "hint", flow.Strings.Get("tidepool.placeHint"),
@@ -73,19 +63,48 @@ namespace Riptide.UI
             return root;
         }
 
-        // Vertical budget (ref-px from the safe bottom): tab bar, then the info /
+        // Vertical budget (ref-px from the safe bottom): tab bar, then the Journal /
         // decoration card, then the diorama window up to the header.
         private const float InfoBottom = ScreenChrome.TabFloorRefPx - 20f;
         private const float InfoHeight = 640f;
         private const float InfoTop = InfoBottom + InfoHeight;
 
+        /// <summary>Tidal Pop header, Tidelings edition: the title left, eggs and coins right.</summary>
+        private void BuildHeader(RectTransform root)
+        {
+            RectTransform header = UiComponents.Rect(root, "header", Vector2.zero);
+            header.anchorMin = new Vector2(0f, 1f);
+            header.anchorMax = new Vector2(1f, 1f);
+            header.pivot = new Vector2(0.5f, 1f);
+            header.offsetMin = new Vector2(0f, -ScreenChrome.HeaderRefPx);
+            header.offsetMax = Vector2.zero;
+
+            TextMeshProUGUI title = UiText.CreateOutlined(header, "title", flow.Strings.Get("tidepool.title"), "title",
+                "text.primary", "panel.edge", 0.26f, TextAlignmentOptions.MidlineLeft);
+            title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            title.rectTransform.pivot = new Vector2(0f, 0.5f);
+            title.rectTransform.sizeDelta = new Vector2(420f, 100f);
+            title.rectTransform.anchoredPosition = new Vector2(44f, 0f);
+
+            coins = PopKit.CoinPill(header, () => flow.GoTo(FlowScreen.Shop));
+            var coinPill = (RectTransform)coins.transform.parent;
+            coinPill.anchorMin = coinPill.anchorMax = new Vector2(1f, 0.5f);
+            coinPill.anchoredPosition = new Vector2(-205f, 0f);
+
+            eggCount = TidelingUi.EggPill(header, "eggPill", new Vector2(220f, 104f));
+            var eggPill = (RectTransform)eggCount.transform.parent;
+            eggPill.anchorMin = eggPill.anchorMax = new Vector2(1f, 0.5f);
+            eggPill.anchoredPosition = new Vector2(-500f, 0f);
+            Tappable(eggPill, OpenConch);
+        }
+
         private void BuildDiorama(RectTransform root)
         {
             // Tidal Pop: the diorama is a rounded aquarium window — navy rim, a
             // sunlit water gradient, sand dunes on the floor.
-            RectTransform frame = UiComponents.Rect(root, "dioramaFrame", Vector2.zero);
+            frame = UiComponents.Rect(root, "dioramaFrame", Vector2.zero);
             UiComponents.Stretch(frame);
-            frame.offsetMin = new Vector2(26f, InfoTop + 60f);
+            frame.offsetMin = new Vector2(26f, InfoTop + 40f);
             frame.offsetMax = new Vector2(-26f, -ScreenChrome.HeaderRefPx);
             PopKit.Well(frame, "rim", "panel.edge", PopKit.Radius("r.l"));
 
@@ -98,8 +117,7 @@ namespace Riptide.UI
             viewportImage.raycastTarget = true;
             viewport.gameObject.AddComponent<Mask>();
 
-            // Visual pass: the diorama is a SCENE, not stacked rectangles —
-            // water column light, sunbeams, then dune/kelp silhouette layers.
+            // Water column light and sunbeams, then dune/kelp silhouette layers.
             RectTransform waterGrad = UiComponents.Rect(viewport, "waterGrad", Vector2.zero);
             waterGrad.anchorMin = new Vector2(0f, 0.35f);
             waterGrad.anchorMax = new Vector2(1f, 1f);
@@ -129,7 +147,7 @@ namespace Riptide.UI
             parallaxFar = SilhouetteLayer(viewport, "far", "sand.shade", 300f, kelp: false);
             parallaxNear = SilhouetteLayer(viewport, "near", "sand", 230f, kelp: true);
 
-            scroll = viewport.gameObject.AddComponent<ScrollRect>();
+            var scroll = viewport.gameObject.AddComponent<ScrollRect>();
             content = UiComponents.Rect(viewport, "content", Vector2.zero);
             content.anchorMin = new Vector2(0f, 0f);
             content.anchorMax = new Vector2(0f, 1f);
@@ -139,51 +157,13 @@ namespace Riptide.UI
             scroll.horizontal = true;
             scroll.vertical = false;
 
-            // Creature slots, fixed positions across the three screens.
-            for (int i = 0; i < flow.Roster.Count; i++)
-            {
-                CreatureSpecies species = flow.Roster.Species[i];
-                int speciesId = species.Id;
-                float x = 260f + i * (ContentWidth - 480f) / Mathf.Max(1, flow.Roster.Count - 1);
-                float y = (i % 2 == 0) ? 110f : -10f;
-
-                // Visual pass: each creature sits in a circular well so it reads
-                // as an inhabitant, not a blob adrift in the void.
-                RectTransform well = UiComponents.Rect(content, $"well{speciesId}", new Vector2(176f, 176f));
-                UiComponents.Place(well, new Vector2(0f, 0.5f), new Vector2(176f, 176f));
-                well.anchoredPosition = new Vector2(x, y);
-                var wellBg = well.gameObject.AddComponent<Image>();
-                wellBg.sprite = PopSprites.Circle();
-                wellBg.raycastTarget = false;
-                ThemedElement.Bind(well.gameObject, "panel.edge");
-                RectTransform wellInner = UiComponents.Rect(well, "inner", new Vector2(160f, 160f));
-                UiComponents.Place(wellInner, new Vector2(0.5f, 0.5f), new Vector2(160f, 160f));
-                var wellInnerImage = wellInner.gameObject.AddComponent<Image>();
-                wellInnerImage.sprite = PopSprites.Circle();
-                wellInnerImage.raycastTarget = false;
-                ThemedElement.Bind(wellInner.gameObject, "pop.blue.top");
-
-                CreatureChip chip = UiComponents.CreatureChipComponent(well, (byte)speciesId);
-                var chipRt = (RectTransform)chip.transform;
-                UiComponents.Place(chipRt, new Vector2(0.5f, 0.5f), new Vector2(140f, 140f));
-                var button = chip.gameObject.AddComponent<Button>();
-                button.onClick.AddListener(() => OnSpeciesTapped(speciesId));
-                BuildPetPill(well);
-
-                TextMeshProUGUI name = UiText.CreateOutlined(content, $"name{speciesId}", "", "micro", "text.primary", "panel.edge");
-                UiComponents.Place(name.rectTransform, new Vector2(0f, 0.5f), new Vector2(220f, 40f));
-                name.rectTransform.anchoredPosition = new Vector2(x, y - 122f);
-
-                chips.Add((speciesId, chip, name, well, y));
-            }
-
             // §4.6 decoration slot points along the floor.
             for (int slot = 0; slot < DecoSlotCount; slot++)
             {
                 float x = 200f + slot * (ContentWidth - 400f) / (DecoSlotCount - 1);
                 RectTransform slotRt = UiComponents.Rect(content, $"decoSlot{slot}", new Vector2(120f, 120f));
                 UiComponents.Place(slotRt, new Vector2(0f, 0.5f), new Vector2(120f, 120f));
-                slotRt.anchoredPosition = new Vector2(x, -210f);
+                slotRt.anchoredPosition = new Vector2(x, -330f);
 
                 var dotGo = new GameObject("dot", typeof(RectTransform));
                 dotGo.transform.SetParent(slotRt, false);
@@ -199,6 +179,13 @@ namespace Riptide.UI
                 marker.onClick.AddListener(() => OnSlotTapped(slotCopy));
                 decoSlots.Add((marker, slotRt, label, dot));
             }
+
+            // Decorate toggle, top-right of the window.
+            editToggle = PopKit.Button(frame, "edit", flow.Strings.Get("tidepool.edit"), PopTone.White,
+                ToggleEdit, new Vector2(210f, 110f), "body");
+            var editRt = (RectTransform)editToggle.transform;
+            editRt.anchorMin = editRt.anchorMax = new Vector2(1f, 1f);
+            editRt.anchoredPosition = new Vector2(-136f, -86f);
         }
 
         /// <summary>A scrolling seabed silhouette: tiled dunes, optional kelp and rocks.</summary>
@@ -212,7 +199,6 @@ namespace Riptide.UI
             layer.sizeDelta = new Vector2(ContentWidth + 600f, height);
             layer.anchoredPosition = Vector2.zero;
 
-            // Tiled dune strips across the layer width.
             const float duneTile = 760f;
             for (float x = 0f; x < ContentWidth + 600f; x += duneTile)
             {
@@ -229,7 +215,7 @@ namespace Riptide.UI
 
             if (kelp)
             {
-                float[] kelpXs = { 180f, 740f, 1260f, 1840f, 2420f, 2980f };
+                float[] kelpXs = { 40f, 1020f, 1460f, 1840f, 2420f, 2980f };
                 for (int i = 0; i < kelpXs.Length; i++)
                 {
                     string id = i % 3 == 2 ? "rocks" : "kelp";
@@ -263,12 +249,22 @@ namespace Riptide.UI
             return card;
         }
 
-        private static void Pin(RectTransform rt, float left, float y, float width, float height)
+        /// <summary>Makes a plain rect a pressable (transparent hit target + press scale).</summary>
+        private static Button Tappable(RectTransform rt, System.Action onTap)
         {
-            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(0f, 0.5f);
-            rt.sizeDelta = new Vector2(width, height);
-            rt.anchoredPosition = new Vector2(left, y);
+            if (!rt.TryGetComponent(out Image hit))
+            {
+                hit = rt.gameObject.AddComponent<Image>();
+                hit.sprite = SpriteFactory.Solid();
+                hit.color = new Color(0f, 0f, 0f, 0f);
+            }
+
+            hit.raycastTarget = true;
+            var button = rt.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            button.onClick.AddListener(() => onTap());
+            rt.gameObject.AddComponent<PressEffect>();
+            return button;
         }
 
         private void ToggleEdit()
@@ -382,15 +378,9 @@ namespace Riptide.UI
         public void Refresh()
         {
             coins.SetInstant(flow.Meta.Coins);
+            eggCount.text = flow.Eggs.ToString();
             editToggle.GetComponentInChildren<TextMeshProUGUI>().text =
                 flow.Strings.Get(editMode ? "tidepool.done" : "tidepool.edit");
-
-            foreach ((int id, CreatureChip chip, TextMeshProUGUI name, RectTransform _, float _) in chips)
-            {
-                bool rescued = flow.Meta.Save.RescuesFor(id) > 0;
-                chip.Apply(rescued ? CreatureChip.State.Normal : CreatureChip.State.Silhouette);
-                name.text = rescued ? flow.Roster.Species[id].Name : flow.Strings.Get("tidepool.unknown");
-            }
 
             for (int slot = 0; slot < decoSlots.Count; slot++)
             {
@@ -405,7 +395,7 @@ namespace Riptide.UI
                 marker.interactable = editMode;
             }
 
-            infoCard.gameObject.SetActive(!editMode);
+            journal.gameObject.SetActive(!editMode);
             tray.gameObject.SetActive(editMode);
             hint.gameObject.SetActive(editMode && !string.IsNullOrEmpty(selectedDecoration));
             if (editMode)
@@ -413,7 +403,8 @@ namespace Riptide.UI
                 RebuildTray();
             }
 
-            RefreshPets();
+            RefreshPod();
+            RefreshJournal();
         }
 
         private Decoration? Find(string id)
@@ -431,21 +422,12 @@ namespace Riptide.UI
 
         private void Update()
         {
-            UpdatePets();
+            UpdatePod();
 
-            // §4.6 idle bob + parallax; both park under reduced motion.
+            // §4.6 parallax parks under reduced motion.
             if (ThemeRuntime.ReducedMotion)
             {
                 return;
-            }
-
-            bobTime += Time.deltaTime;
-            for (int i = 0; i < chips.Count; i++)
-            {
-                (int _, CreatureChip _, TextMeshProUGUI _, RectTransform rt, float baseY) = chips[i];
-                Vector2 pos = rt.anchoredPosition;
-                pos.y = baseY + Mathf.Sin(bobTime * 1.4f + i * 0.9f) * 6f;
-                rt.anchoredPosition = pos;
             }
 
             float scrollX = content.anchoredPosition.x;

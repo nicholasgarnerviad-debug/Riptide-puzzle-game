@@ -68,6 +68,12 @@ namespace Riptide.Core
         Quests,
         Events,
         BestStage,
+
+        // GDD §16.5 Tideling badges.
+        Calls,
+        Tidelings,
+        Legendaries,
+        Sparkles,
     }
 
     public sealed class BadgeDef

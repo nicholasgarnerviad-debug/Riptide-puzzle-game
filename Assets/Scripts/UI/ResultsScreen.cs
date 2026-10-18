@@ -41,6 +41,8 @@ namespace Riptide.UI
         private CoinCounter coins = null!;
         private Button doubleCoins = null!;
         private TextMeshProUGUI bonusLine = null!;
+        private RectTransform eggRow = null!;
+        private EggPips eggPips = null!;
         private RectTransform card = null!;
         private Button primary = null!;
         private Button retry = null!;
@@ -152,6 +154,24 @@ namespace Riptide.UI
             bonusLine = UiText.Create(card, "bonus", "", "body", "text.inkSoft");
             bonusLine.rectTransform.anchorMin = bonusLine.rectTransform.anchorMax = new Vector2(0.5f, 0f);
             bonusLine.rectTransform.sizeDelta = new Vector2(860f, 50f);
+
+            // GDD §16.6: a quiet "next egg" pip row — egg news is never a popup.
+            eggRow = UiComponents.Rect(card, "eggRow", new Vector2(520f, 52f));
+            eggRow.anchorMin = eggRow.anchorMax = new Vector2(0.5f, 0f);
+            RectTransform egg = TidelingUi.Egg(eggRow, "egg", 50f);
+            egg.anchorMin = egg.anchorMax = new Vector2(0f, 0.5f);
+            egg.anchoredPosition = new Vector2(25f, 2f);
+            TextMeshProUGUI next = UiText.Create(eggRow, "label", flow.Strings.Get("results.nextEgg"), "caption",
+                "text.inkSoft", TextAlignmentOptions.MidlineLeft);
+            next.rectTransform.anchorMin = next.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            next.rectTransform.pivot = new Vector2(0f, 0.5f);
+            next.rectTransform.sizeDelta = new Vector2(240f, 44f);
+            next.rectTransform.anchoredPosition = new Vector2(66f, 0f);
+            eggPips = TidelingUi.Pips(eggRow, "pips", flow.Pals.Eggs.BoardsPerEgg, 30f);
+            var pipsRt = (RectTransform)eggPips.transform;
+            pipsRt.anchorMin = pipsRt.anchorMax = new Vector2(1f, 0.5f);
+            pipsRt.pivot = new Vector2(1f, 0.5f);
+            pipsRt.anchoredPosition = Vector2.zero;
         }
 
         private static TextMeshProUGUI Chip(RectTransform card, int index, string icon, string label)
@@ -369,8 +389,11 @@ namespace Riptide.UI
             coinRow.gameObject.SetActive(coinsShown);
             bonusLine.text = bonus;
             bonusLine.gameObject.SetActive(bonus.Length > 0);
-            bonusLine.rectTransform.anchoredPosition = new Vector2(0f, coinsShown ? 226f : 62f);
-            card.sizeDelta = new Vector2(980f, coinsShown ? 820f : bonus.Length > 0 ? 700f : 640f);
+            float eggY = coinsShown ? 226f : 62f;
+            eggRow.anchoredPosition = new Vector2(0f, eggY);
+            eggPips.Set(outcome.BoardsTowardEgg);
+            bonusLine.rectTransform.anchoredPosition = new Vector2(0f, eggY + 56f);
+            card.sizeDelta = new Vector2(980f, coinsShown ? 880f : bonus.Length > 0 ? 760f : 700f);
             coins.SetInstant(0);
             if (outcome.CoinsAwarded > 0)
             {

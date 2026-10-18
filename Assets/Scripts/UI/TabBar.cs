@@ -7,7 +7,7 @@ namespace Riptide.UI
 {
     /// <summary>
     /// Tidal Pop persistent bottom tab bar (Nick's pick, 2026-10-18): Home ·
-    /// Tidepool · Quests (GDD §15.3, with a claimable-count bubble) · Shop ·
+    /// Tidelings (GDD §16.6) · Quests (GDD §15.3, with a claimable-count bubble) · Shop ·
     /// Settings, one tap from every menu screen. The active tab
     /// rises as a raised blue tile; ZoneMap highlights Home (it is Voyage's page).
     /// Hidden in play and on results (those screens own their CTAs). Navigation
@@ -20,9 +20,9 @@ namespace Riptide.UI
 
         private static readonly FlowScreen[] Tabs =
             { FlowScreen.Home, FlowScreen.Tidepool, FlowScreen.Quests, FlowScreen.Shop, FlowScreen.Settings };
-        private static readonly string[] IconIds = { "home", "fish", "trophy", "bag", "gear" };
+        private static readonly string[] IconIds = { "home", "tideling", "trophy", "bag", "gear" };
         private static readonly string[] IconTokens =
-            { "panel.light", "pop.yellow", "pop.yellow", "pop.green", "panel.shade" };
+            { "panel.light", "pop.coral", "pop.yellow", "pop.green", "panel.shade" };
         private static readonly string[] LabelKeys =
             { "tab.home", "home.tidepool", "tab.quests", "shop.title", "home.settings" };
 

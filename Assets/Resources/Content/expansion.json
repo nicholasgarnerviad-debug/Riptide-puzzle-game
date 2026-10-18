@@ -52,7 +52,13 @@
     { "id": "powers_25", "stat": "powers", "target": 25, "reward": 120, "icon": "drop" },
     { "id": "quests_10", "stat": "quests", "target": 10, "reward": 120, "icon": "check" },
     { "id": "events_1", "stat": "events", "target": 1, "reward": 100, "icon": "calendar" },
-    { "id": "pet_max", "stat": "bestStage", "target": 3, "reward": 250, "icon": "trophy" }
+    { "id": "pet_max", "stat": "bestStage", "target": 3, "reward": 250, "icon": "trophy" },
+    { "id": "first_call", "stat": "calls", "target": 1, "reward": 25, "icon": "conch" },
+    { "id": "conch_keeper", "stat": "calls", "target": 100, "reward": 300, "icon": "conch" },
+    { "id": "full_pod", "stat": "tidelings", "target": 8, "reward": 150, "icon": "crown" },
+    { "id": "tide_journal", "stat": "tidelings", "target": 16, "reward": 500, "icon": "star" },
+    { "id": "legend", "stat": "legendaries", "target": 1, "reward": 200, "icon": "crown" },
+    { "id": "sparkle", "stat": "sparkles", "target": 1, "reward": 100, "icon": "glint" }
   ],
   "events": [
     { "id": "crab_carnival", "featuredSpecies": 0, "startWaterLevel": 1, "startTideInterval": 6, "creatureSpawnIntervalTrays": 3, "goal": "rescue", "goalTarget": 4, "rewardCoins": 150, "rewardDecoration": "golden_crab" },

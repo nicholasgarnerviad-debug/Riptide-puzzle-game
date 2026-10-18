@@ -17,6 +17,7 @@ namespace Riptide.UI
         White,
         Navy,
         Locked,
+        Teal,
     }
 
     /// <summary>
@@ -47,6 +48,7 @@ namespace Riptide.UI
             PopTone.Blue => "blue",
             PopTone.White => "white",
             PopTone.Navy => "navy",
+            PopTone.Teal => "teal",
             _ => "locked",
         };
 

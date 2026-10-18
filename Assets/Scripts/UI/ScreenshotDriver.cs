@@ -196,13 +196,7 @@ namespace Riptide.UI
                     yield return Shoot(tab.ToString().ToLowerInvariant());
                 }
 
-                Button? petChip = buddy >= 0 ? GameObject.Find($"CreatureChip{buddy}")?.GetComponent<Button>() : null;
-                if (petChip != null)
-                {
-                    petChip.onClick.Invoke();
-                    yield return Settle();
-                    yield return Shoot("tidepool_pet");
-                }
+                yield return ShootTidelings(flow);
 
                 flow.GoTo(FlowScreen.Home);
                 yield return Settle();
@@ -215,6 +209,76 @@ namespace Riptide.UI
                 yield return Shoot("game_buddy");
                 flow.GoTo(FlowScreen.Home);
                 File.WriteAllText(Done, "OK\n");
+            }
+
+            /// <summary>GDD §16.6: a Tideling's card, the Conch, both reveals and growing up.</summary>
+            private IEnumerator ShootTidelings(GameFlow flow)
+            {
+                var tab = Object.FindFirstObjectByType<TidepoolScreen>();
+                if (tab == null)
+                {
+                    yield break;
+                }
+
+                // A Pod of three and a Tideling ready to grow, so every piece shows.
+                PalSave pals = flow.Meta.Save.Pals;
+                pals.EnsureLines(flow.Pals.Lines.Count);
+                foreach (int line in new[] { 0, 1, 2, 3, 4, 6, 8, 11 })
+                {
+                    pals.Stage[line] = System.Math.Max(pals.Stage[line], line == 0 ? 3 : 2);
+                }
+
+                pals.Pod[0] = 0;
+                pals.Pod[1] = 6;
+                pals.Pod[2] = 11;
+                pals.Eggs = System.Math.Max(pals.Eggs, 62);
+
+                // The dev save carries over between captures: grow whichever Tideling still can.
+                int grow = 4;
+                for (int line = 0; line < flow.Pals.Lines.Count; line++)
+                {
+                    TidelingView t = flow.Tideling(line);
+                    if (t.Owned && t.NextBond.HasValue)
+                    {
+                        grow = line;
+                        pals.Bond[line] = System.Math.Max(pals.Bond[line], t.NextBond.Value);
+                        break;
+                    }
+                }
+
+                tab.Refresh();
+                yield return Settle();
+                yield return Shoot("tidelings");
+
+                tab.OpenSheet(grow);
+                yield return Settle();
+                yield return Shoot("tidelings_card");
+                var sheet = Object.FindFirstObjectByType<TidelingSheet>();
+                sheet?.transform.Find("content/info/action")?.GetComponent<Button>()?.onClick.Invoke();
+                yield return Settle();
+                yield return Shoot("grow_up");
+                while (Overlay.DismissTop())
+                {
+                }
+
+                yield return Settle();
+                tab.OpenConch();
+                yield return Settle();
+                yield return Shoot("conch");
+                var conch = Object.FindFirstObjectByType<ConchScreen>();
+                conch?.transform.Find("content/callOne")?.GetComponent<Button>()?.onClick.Invoke();
+                yield return Settle();
+                yield return Shoot("reveal_one");
+                Overlay.DismissTop();
+                yield return Settle();
+                conch?.transform.Find("content/callTen")?.GetComponent<Button>()?.onClick.Invoke();
+                yield return Settle();
+                yield return Shoot("reveal_ten");
+                while (Overlay.DismissTop())
+                {
+                }
+
+                yield return Settle();
             }
 
             private static IEnumerator DriveMoves(GameFlow flow, ulong seed, int moves)

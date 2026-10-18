@@ -255,6 +255,19 @@ namespace Riptide.Core.Tests
         }
 
         [Test]
+        public void TidelingBadges_ReadCallsOwnedLegendariesAndSparkles()
+        {
+            var stats = new PlayerStats(0, 0, 50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2).WithTidelings(12, 8, 1, 0);
+            Assert.That(stats.Rows, Is.EqualTo(50), "the other stats ride along");
+            Assert.That(stats.BestStage, Is.EqualTo(2));
+            Assert.That(BadgeRules.Earned(new BadgeDef("first_call", BadgeStat.Calls, 1, 25, "conch"), stats), Is.True);
+            Assert.That(BadgeRules.Earned(new BadgeDef("conch_keeper", BadgeStat.Calls, 100, 300, "conch"), stats), Is.False);
+            Assert.That(BadgeRules.Earned(new BadgeDef("full_pod", BadgeStat.Tidelings, 8, 150, "crown"), stats), Is.True);
+            Assert.That(BadgeRules.Earned(new BadgeDef("legend", BadgeStat.Legendaries, 1, 200, "crown"), stats), Is.True);
+            Assert.That(BadgeRules.Earned(new BadgeDef("sparkle", BadgeStat.Sparkles, 1, 100, "glint"), stats), Is.False);
+        }
+
+        [Test]
         public void EventSchedule_WeeksRotate_DaysLeftCountdown_AndConfigMapsTheGoal()
         {
             long monday = CivilDate.ToEpochDays(2026, 10, 12);

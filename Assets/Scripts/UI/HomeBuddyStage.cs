@@ -34,6 +34,7 @@ namespace Riptide.UI
         private Vector2 heartABase;
         private Vector2 heartBBase;
         private int species;
+        private int leaderLine = -1;
         private int lineIndex;
         private float size = 400f;
         private float laidOutHeight = -1f;
@@ -44,7 +45,7 @@ namespace Riptide.UI
 
         public RectTransform Rect => zone;
 
-        /// <summary>The species standing on the stage (the buddy, or the crab until one is picked).</summary>
+        /// <summary>The leader's board species (the crab until a leader is picked, or for a Call-only leader).</summary>
         public int Species => species;
 
         /// <summary>What the buddy is saying right now. Test surface.</summary>
@@ -164,7 +165,8 @@ namespace Riptide.UI
         {
             int chosen = flow.LeaderSpecies;
             species = chosen >= 0 && chosen < flow.Roster.Count ? chosen : 0;
-            buddy.sprite = CreatureSprites.For(species);
+            leaderLine = flow.LeaderLine;
+            buddy.sprite = Face(closed: false);
             gift.gameObject.SetActive(flow.PetGiftCoins > 0);
             giftReady.SetActive(flow.PetGiftAvailable);
             lineIndex = 0;
@@ -195,7 +197,9 @@ namespace Riptide.UI
             Say(lineIndex switch
             {
                 1 => flow.Strings.Get("buddy.cheer1"),
-                2 => string.Format(flow.Strings.Get("buddy.power"), ExpansionText.PowerName(flow, species)),
+                2 => string.Format(flow.Strings.Get("buddy.power"), leaderLine >= 0
+                    ? TidelingUi.AbilityName(flow, flow.Pals.Lines[leaderLine])
+                    : ExpansionText.PowerName(flow, species)),
                 3 => flow.Strings.Get("buddy.cheer2"),
                 4 => flow.Strings.Get("buddy.cheer3"),
                 _ => PrimaryLine(),
@@ -226,6 +230,11 @@ namespace Riptide.UI
             line.text = text;
             popT = 0f;
         }
+
+        /// <summary>The leader's Tideling form (any line, Call-only ones too); the crab stands in until there is one.</summary>
+        private Sprite Face(bool closed) => leaderLine >= 0
+            ? TidelingUi.Art(flow.Tideling(leaderLine), closed)
+            : closed ? CreatureSprites.Blink(species) : CreatureSprites.For(species);
 
         /// <summary>A happy hop with the closed-eye smile. Public as test surface.</summary>
         public void Hop() => hopT = 0f;
@@ -284,7 +293,11 @@ namespace Riptide.UI
             }
 
             bool blinking = Time.time > nextBlink && Time.time < nextBlink + 0.14f;
-            buddy.sprite = happy || blinking ? CreatureSprites.Blink(species) : CreatureSprites.For(species);
+            Sprite face = Face(happy || blinking);
+            if (buddy.sprite != face)
+            {
+                buddy.sprite = face;
+            }
 
             if (!reduced)
             {

@@ -183,7 +183,11 @@ namespace Riptide.Game
             return true;
         }
 
-        public PlayerStats Stats() => Meta.BuildStats(Roster.Count, BestStage());
+        public PlayerStats Stats()
+        {
+            (int owned, int legendaries, int sparkles) = TidelingCounts();
+            return Meta.BuildStats(Roster.Count, BestStage()).WithTidelings(PalState.Calls, owned, legendaries, sparkles);
+        }
 
         public bool BadgeClaimed(BadgeDef badge) => Meta.Save.BadgesClaimed.Contains(badge.Id);
 

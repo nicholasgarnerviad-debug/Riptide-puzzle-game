@@ -358,6 +358,10 @@ namespace Riptide.Core
         public static int CallsUntilLegendary(PalSave pals, PalsConfig cfg, PalPerks perks) =>
             Math.Max(1, LegendaryPity(cfg, perks) - pals.SinceLegendary);
 
+        /// <summary>Calls left until a guaranteed Epic-or-better (the Conch's inner ring).</summary>
+        public static int CallsUntilEpic(PalSave pals, PalsConfig cfg) =>
+            Math.Max(1, cfg.Call.EpicPity - pals.SinceEpic);
+
         /// <summary>One Call for <c>call.cost</c> eggs; null when the nest is short.</summary>
         public static CallResult? Call(PalSave pals, PalsConfig cfg, PalPerks perks)
         {

@@ -136,6 +136,12 @@ namespace Riptide.UI
                 return;
             }
 
+            // A full-screen moment (the Conch, a reveal, a Tideling's card) closes first.
+            if (Overlay.DismissTop())
+            {
+                return;
+            }
+
             BackDecision decision = BackRouter.Decide(flow.Screen, PauseShown, AgeGateOpen, PreviousScreen());
             switch (decision.Action)
             {

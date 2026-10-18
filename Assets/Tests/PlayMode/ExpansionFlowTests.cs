@@ -142,7 +142,7 @@ namespace Riptide.PlayMode.Tests
         }
 
         [UnityTest]
-        public IEnumerator Tidepool_PetCard_MakesABuddy_AndTheGiftPaysOncePerDay()
+        public IEnumerator Tidelings_CardSheet_MakesALeader_AndTheGiftPaysOncePerDay()
         {
             GameFlow flow = null!;
             ScreenManager screens = null!;
@@ -154,16 +154,25 @@ namespace Riptide.PlayMode.Tests
                 PalRules.RecordRescue(flow.Meta.Save.Pals, flow.Pals, 0, PalPerks.None);
             }
 
+            PalRules.RecordRescue(flow.Meta.Save.Pals, flow.Pals, 1, PalPerks.None);
             Assert.That(flow.PetLevel(0), Is.EqualTo(1), "a rescued Common is befriended as a Baby");
             Assert.That(flow.PetBond(0), Is.EqualTo(5), "every rescue adds bond");
+            Assert.That(flow.LeaderSpecies, Is.EqualTo(0), "the first friend leads the Pod");
             flow.GoTo(FlowScreen.Tidepool);
             yield return null;
 
-            GameObject.Find("CreatureChip0")!.GetComponent<Button>().onClick.Invoke();
+            var tab = Object.FindFirstObjectByType<TidepoolScreen>();
+            Assert.That(tab!.PodShown(0), Is.EqualTo(flow.Pals.LineForSpecies(0)), "the leader swims center stage");
+            GameObject.Find("card_starfish")!.GetComponent<Button>().onClick.Invoke();
             yield return null;
-            ButtonAt("infoCard", "makeBuddy").onClick.Invoke();
-            Assert.That(flow.LeaderSpecies, Is.EqualTo(0), "the shown Tideling leads the Pod");
+            var sheet = Object.FindFirstObjectByType<TidelingSheet>();
+            Assert.That(sheet != null && sheet.IsOpen && sheet.Line == flow.Pals.LineForSpecies(1), Is.True,
+                "a Journal card opens its Tideling's card");
+            sheet!.transform.Find("content/info/pod/slot0").GetComponent<Button>().onClick.Invoke();
+            Assert.That(flow.LeaderSpecies, Is.EqualTo(1), "the card's Leader slot makes it lead");
             Assert.That(flow.SetBuddy(3), Is.False, "a Tideling you don't have can't lead");
+            sheet.Close();
+            yield return null;
 
             long before = flow.Meta.Coins;
             int gift = flow.PetGiftCoins;

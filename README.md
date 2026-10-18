@@ -10,8 +10,10 @@ camera + canvas solved for every portrait phone), mid-run save & resume (kill th
 resume the exact board), and the **Tidal Pop** UI overhaul (2026-10-18, UI spec §13) — a
 bright sunlit-ocean look with chunky sticker components (outlined, lipped, press-to-sink
 buttons), candy blocks, the Fredoka typeface, a persistent bottom tab bar, a winding
-seabed level map — and the **Pets & Tides** expansion (2026-10-18, GDD §15): cute chibi sea-pets,
-creature powers, Pet Pals with a buddy, daily quests & badges, and a weekly Event Tide. A full pre-release audit is on record
+seabed level map — the **Pets & Tides** expansion (2026-10-18, GDD §15): cute chibi sea-pets,
+creature powers, daily quests & badges, and a weekly Event Tide — and **Tidelings** (GDD §16): 16
+collectible sea creatures in four tiers that grow up through three forms, answer the Conch when you
+spend eggs (earned by playing, never sold), and ride along in a Pod of three. A full pre-release audit is on record
 (`docs/AUDIT_REPORT.md`, verdict *ship after human gates*): 10,000-game determinism fuzz
 with cross-pipeline pins, balance re-verified against the §4 targets, every deferred
 visual gate consolidated into `docs/HUMAN_GATE_CHECKLIST.md`.
@@ -27,7 +29,8 @@ see `docs/DECISIONS.md` for every open item and every judgment call made along t
   <img src="docs/screenshots/results.png" width="200" alt="Level complete">
 </p>
 <p>
-  <img src="docs/screenshots/tidepool-pets.png" width="200" alt="Tidepool pet card">
+  <img src="docs/screenshots/tidelings.png" width="200" alt="The Tidelings tab: your Pod in the tidepool, the Conch, the Tide Journal">
+  <img src="docs/screenshots/conch.png" width="200" alt="The Conch: guarantee rings, eggs, disclosed odds, Call ×1 / ×10">
   <img src="docs/screenshots/quests.png" width="200" alt="Quests and badges">
   <img src="docs/screenshots/event-tide.png" width="200" alt="Weekly Event Tide">
 </p>
@@ -46,8 +49,9 @@ The eight rescue pets — open eyes, happy blink, and the locked silhouette (all
 | **Event Tide** | a weekly themed board shared by everyone: featured creature, one goal, a one-time decoration prize |
 
 Around the modes: every rescued creature fires a **power** (the crab pinches coral, the turtle calms
-the water…; never in the Daily), pets **level up** from lifetime rescues and bring a daily gift, your
-**buddy** rides along and adds a coin bonus, and the **Quests** tab holds 3 daily quests plus 20 badges.
+the water…; never in the Daily); every 5 finished boards lays an **egg**, and eggs sound the **Conch** —
+a Tideling answers (odds and guarantees on screen), grows up as you bond with it, and its ability
+helps your runs from the Pod (never in the Daily); the **Quests** tab holds 3 daily quests plus 26 badges.
 
 ## Requirements
 
@@ -88,7 +92,7 @@ Non-negotiables the codebase is built around:
 ## Testing
 
 ```bash
-./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (266) → content validation
+./run_all_tests.sh   # 3 gates: Core purity grep → dotnet test (267) → content validation
 ```
 
 The content gate also runs the accessibility audits: WCAG text contrast, block-palette
@@ -99,11 +103,11 @@ every booster, drown-continues — and replays each twice with per-move state-ha
 (0 divergences); 32 are pinned to `CrossPipelineFuzzPins.cs` and replayed under both the
 dotnet shim and Unity's Mono, which must agree hash-for-hash.
 
-Unity-side suites (EditMode mirrors the 266; PlayMode adds 70 integration tests: board
+Unity-side suites (EditMode mirrors the 267; PlayMode adds 73 integration tests: board
 acceptance, flow smoke, monetization threading, monkey runs, event-queue ordering,
 navigation matrix, strings coverage, real-click regression, perf budgets, kill-and-resume
 round trips, safe-area math, clock-rollback, creature-sprite distinctness, Pets & Tides
-flows) run from the
+flows, Tidelings flows, art and screens) run from the
 Test Runner window — or headlessly via the trigger files below.
 
 ## Editor automation (file triggers)

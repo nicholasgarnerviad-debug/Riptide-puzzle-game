@@ -45,7 +45,7 @@ namespace Riptide.UI
                     Poly(a, new[] { new Vector2(14f, 72f), new Vector2(114f, 72f), new Vector2(c, 12f) });
                     return true;
                 default:
-                    return false;
+                    return DrawShell(id, a);
             }
         }
     }

@@ -312,7 +312,20 @@ namespace Riptide.Core.Tests
             const int n = 6000;
             for (int i = 0; i < n; i++)
             {
+                // The Conch's rings count down to the same guarantees the rolls honor.
+                int untilEpic = PalRules.CallsUntilEpic(pals, cfg);
+                int untilLegend = PalRules.CallsUntilLegendary(pals, cfg, PalPerks.None);
                 CallResult r = PalRules.Call(pals, cfg, PalPerks.None)!.Value;
+                if (untilEpic == 1)
+                {
+                    Assert.That(r.Tier, Is.GreaterThanOrEqualTo(PalRarity.Epic), "the ring said the next call");
+                }
+
+                if (untilLegend == 1)
+                {
+                    Assert.That(r.Tier, Is.EqualTo(PalRarity.Legendary));
+                }
+
                 sinceEpic = r.Tier >= PalRarity.Epic ? 0 : sinceEpic + 1;
                 sinceLegend = r.Tier == PalRarity.Legendary ? 0 : sinceLegend + 1;
                 Assert.That(sinceEpic, Is.LessThan(cfg.Call.EpicPity), "an Epic+ by the 10th call");
