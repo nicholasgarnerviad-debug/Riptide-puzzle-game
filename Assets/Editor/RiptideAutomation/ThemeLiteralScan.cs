@@ -54,7 +54,9 @@ namespace Riptide.EditorAutomation
             {
                 bool themed = graphic.GetComponent<Riptide.UI.ThemedElement>() != null;
                 bool neutralWhite = graphic.color == Color.white;
-                if (!themed && !neutralWhite)
+                // Fully transparent graphics are raycast hit targets, not color.
+                bool hitTarget = graphic.color.a == 0f;
+                if (!themed && !neutralWhite && !hitTarget)
                 {
                     Debug.LogWarning(
                         $"[ThemeLiteralScan] {path}: '{graphic.gameObject.name}' has a hardcoded color and no ThemedElement (spec §1).",
